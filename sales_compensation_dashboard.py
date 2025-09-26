@@ -83,10 +83,15 @@ if model_type == "Modelo Optimaxx PLUS (Seguros)":
     avg_pm = np.average(pm_values, weights=pm_probs)
     st.sidebar.metric("Prima Mensual Promedio", f"${avg_pm:,.0f}")
     
+    # Definir avg_acv equivalente para compatibilidad
+    avg_acv = avg_pm * 8.1  # Compensación total
+    commission_rate = 0.20  # 20% va a closers
 else:
     # Modelo genérico original
     avg_acv = st.sidebar.number_input("Valor Promedio del Contrato ($)", min_value=5000, max_value=50000, value=15000, step=500)
     commission_rate = st.sidebar.number_input("Tasa Base de Comisión (%)", min_value=1.0, max_value=5.0, value=2.7, step=0.1) / 100
+    avg_pm = 0  # No aplica para modelo genérico
+    persist_18 = 0.9  # Default
 
 # Behavioral Incentives
 st.sidebar.subheader("🧠 Incentivos Conductuales")
@@ -151,22 +156,12 @@ def run_monte_carlo_simulation(daily_leads, contact_rate, meeting_rate, close_ra
     
     return pd.DataFrame(results)
 
-# Run simulation based on model type
-if model_type == "Modelo Optimaxx PLUS (Seguros)":
-    # For Optimaxx, use average PM to simulate as "ACV equivalent"
-    # This is a simplified approach - the real Optimaxx model is in the section below
-    avg_acv_equivalent = avg_pm * 8.1  # PM × 8.1 = compensación total
-    commission_rate_equivalent = 0.20  # 20% goes to closers
-    monte_carlo_results = run_monte_carlo_simulation(
-        daily_leads, contact_rate, meeting_rate, close_rate, 
-        avg_acv_equivalent, commission_rate_equivalent, total_team_size, lead_cost
-    )
-else:
-    # Original model
-    monte_carlo_results = run_monte_carlo_simulation(
-        daily_leads, contact_rate, meeting_rate, close_rate, 
-        avg_acv, commission_rate, total_team_size, lead_cost
-    )
+# Run simulation
+# avg_acv y commission_rate ya están definidos para ambos modelos
+monte_carlo_results = run_monte_carlo_simulation(
+    daily_leads, contact_rate, meeting_rate, close_rate, 
+    avg_acv, commission_rate, total_team_size, lead_cost
+)
 
 # Show Optimaxx PLUS specific section if selected
 if model_type == "Modelo Optimaxx PLUS (Seguros)" and OPTIMAXX_AVAILABLE:
