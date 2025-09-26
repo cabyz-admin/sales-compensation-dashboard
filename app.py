@@ -9,6 +9,7 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
+from reverse_engineering_module import add_reverse_engineering_tab
 
 # Configuración
 st.set_page_config(
@@ -378,12 +379,13 @@ if warnings:
                 st.success(s)
 
 # Tabs principales
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "🎯 Modelo Bowtie",
     "💰 Costos Unitarios",
     "💵 Compensación",
     "📊 P&L Completo",
-    "🚀 Simulador"
+    "🚀 Simulador",
+    "🔄 Ingeniería Inversa"
 ])
 
 with tab1:
@@ -599,3 +601,7 @@ Necesitas:
         if monthly_ebitda < 0:
             st.error("❌ EBITDA Negativo")
             st.write("• Reduce costos urgentemente")
+
+with tab6:
+    # Añadir el módulo de ingeniería inversa
+    add_reverse_engineering_tab(st.container())
