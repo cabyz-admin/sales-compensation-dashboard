@@ -1,0 +1,42 @@
+,,,,,,,,,,,,,,,,
+ORG GOALS,,,,Per AE' Comp Modeling,,,,,,,,,,,,
+Revenue,"$400,000",,,Attainment Tiers,Variable 2,,,ACV (or Bonus),,,Base Comp,"OTE Comp
+(Base + VC)","Total Comp
+(OTE + Bonus)",Revenue Attainment,"Rep Cost of 
+Sales","Rep Cost of 
+Pipeline"
+# AE,1,,,,Close Deals,Accel,Earned VC2,%Revenue,Accel,Variable,,,,,,
+Per Rep Rev,"$400,000",,,0%,0,0.6x,$0,$0,0.6x,$0,"$66,000","$66,000","$66,000",$0,Uh-Oh...,Uh-Oh...
+Close Rate,30%,,,40%,16,0.6x,$0,"$160,000",0.6x,"$26,400","$66,000","$92,400","$92,400","$160,000",57.75%,17.3%
+Pipeline Goal,"$1,333,333",,,70%,28,0.8x,$0,"$280,000",0.8x,"$61,600","$66,000","$127,600","$127,600","$280,000",45.57%,13.7%
+Avg ACV,"$10,000",,,100%,40,1.0x,$0,"$400,000",1.2x,"$132,000","$66,000","$198,000","$198,000","$400,000",49.50%,14.9%
+Demo Req,133,,,110%,44,1.2x,$0,"$440,000",1.5x,"$181,500","$66,000","$247,500","$247,500","$440,000",56.25%,16.9%
+,,,,150%,60,1.6x,$0,"$600,000",1.3x,"$214,500","$66,000","$280,500","$280,500","$600,000",46.75%,14.0%
+,,,,,,,,,,,,,,,,
+COMPENSATION SETUP,,,,,,,,,,,,,,,,
+OTE,"$110,000",,,,,,,,,,,,,,,
+Base,"$66,000",60%,,,,w/ Cost of Management,,,,w/ Cost of SDR Team,,,,,,
+Variable,"$44,000",40%,,Attainment Tiers,Revenue Attainment,"Sales Mgmt
+Cost Allocation",Total Cost per SDR,"Total Cost of 
+Sales","Total Cost of 
+Pipeline","Sales Mgmt
+Cost Allocation",Total Cost per SDR,"Total Cost of 
+Sales","Total Cost of 
+Pipeline",,,
+Mgmt Cost,,,,,,,,,,,,,,,,
+Add'l SDR Team Cost,,,,0%,$0,$0,"$66,000",Uh-Oh...,Uh-Oh...,$0,"$66,000",Uh-Oh...,Uh-Oh...,,,
+,,,,40%,"$160,000",$0,"$92,400",57.8%,17.3%,$0,"$92,400",57.8%,17.3%,,,
+VARIABLE STRUCTURE,,,,70%,"$280,000",$0,"$127,600",45.6%,13.7%,$0,"$127,600",45.6%,13.7%,,,
+Close Deals,40,0%,,100%,"$400,000",$0,"$198,000",49.5%,14.9%,$0,"$198,000",49.5%,14.9%,,,
+V2 Comp ,$0,,,110%,"$440,000",$0,"$247,500",56.3%,16.9%,$0,"$247,500",56.3%,16.9%,,,
+Per Unit,$0,,,150%,"$600,000",$0,"$280,500",46.8%,14.0%,$0,"$280,500",46.8%,14.0%,,,
+ACV Class,Variable,100%,,,,,,,,,,,,,,
+,27.5%,,,,,,,,,,,,,,,
+,Total,100%,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,
+,,,,Expectations,,Annual,Monthly,Weekly,,,,,,,,
+Video Explainer,,,,SAO (Team),,133,11.1,2.6,,,,,,,,
+,,,,SAO (Rep),,133,11.1,2.6,,,,,,,,
+Here is how Vouris can help,,,,Closed Won (Team),,40,3.3,0.8,,,,,,,,
+Sales Growth Audit,,,,Closed Wom (Rep),,40,3.3,0.8,,,,,,,,
+SDR & AE Training,,,,,,,,,,,,,,,,

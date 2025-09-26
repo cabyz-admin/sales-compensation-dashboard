@@ -7,6 +7,13 @@ from plotly.subplots import make_subplots
 import random
 from datetime import datetime, timedelta
 
+# Importar el modelo Optimaxx PLUS
+try:
+    from optimaxx_plus_model import OptimaxPlusConfig, OptimaxPlusCalculator
+    OPTIMAXX_AVAILABLE = True
+except ImportError:
+    OPTIMAXX_AVAILABLE = False
+
 # Set page config
 st.set_page_config(
     page_title="Dashboard de Compensación de Ventas y Monte Carlo",
@@ -16,6 +23,13 @@ st.set_page_config(
 
 st.title("🎯 Estructura Avanzada de Compensación de Ventas y Simulación Monte Carlo")
 st.markdown("**Modelo de Comisiones Basado en Psicología Conductual de Primeros Principios con Matemáticas Transparentes**")
+
+# Model Selection
+model_type = st.selectbox(
+    "🔄 Seleccionar Modelo de Negocio",
+    ["Modelo Genérico (ACV)", "Modelo Optimaxx PLUS (Seguros)"],
+    help="Elige el modelo de compensación según tu tipo de negocio"
+)
 
 # Sidebar for inputs
 st.sidebar.header("📋 Parámetros del Modelo")
@@ -40,8 +54,38 @@ close_rate = st.sidebar.number_input("Tasa de Cierre (%)", min_value=15.0, max_v
 
 # Financial Parameters
 st.sidebar.subheader("💰 Parámetros Financieros")
-avg_acv = st.sidebar.number_input("Valor Promedio del Contrato ($)", min_value=5000, max_value=50000, value=15000, step=500)
-commission_rate = st.sidebar.number_input("Tasa Base de Comisión (%)", min_value=1.0, max_value=5.0, value=2.7, step=0.1) / 100
+
+if model_type == "Modelo Optimaxx PLUS (Seguros)":
+    st.sidebar.info("📊 **Modelo Optimaxx PLUS**\nCompensación = PM × 300 × 2.7%\n70% inmediato + 30% diferido (mes 18)")
+    
+    # Primas mensuales para Optimaxx
+    col1, col2 = st.sidebar.columns(2)
+    with col1:
+        pm_2k = st.number_input("% PM $2,000", min_value=0, max_value=100, value=20, step=5)
+        pm_3k = st.number_input("% PM $3,000", min_value=0, max_value=100, value=50, step=5)
+    with col2:
+        pm_4k = st.number_input("% PM $4,000", min_value=0, max_value=100, value=20, step=5)
+        pm_5k = st.number_input("% PM $5,000", min_value=0, max_value=100, value=10, step=5)
+    
+    # Normalizar probabilidades
+    total_prob = pm_2k + pm_3k + pm_4k + pm_5k
+    if total_prob > 0:
+        pm_probs = [pm_2k/total_prob, pm_3k/total_prob, pm_4k/total_prob, pm_5k/total_prob]
+    else:
+        pm_probs = [0.2, 0.5, 0.2, 0.1]
+    
+    persist_18 = st.sidebar.number_input("Persistencia 18 meses (%)", min_value=70.0, max_value=95.0, value=90.0, step=1.0) / 100
+    carrier_rate = 0.027  # Fijo en 2.7%
+    
+    # Prima promedio ponderada (para cálculos simplificados)
+    pm_values = [2000, 3000, 4000, 5000]
+    avg_pm = np.average(pm_values, weights=pm_probs)
+    st.sidebar.metric("Prima Mensual Promedio", f"${avg_pm:,.0f}")
+    
+else:
+    # Modelo genérico original
+    avg_acv = st.sidebar.number_input("Valor Promedio del Contrato ($)", min_value=5000, max_value=50000, value=15000, step=500)
+    commission_rate = st.sidebar.number_input("Tasa Base de Comisión (%)", min_value=1.0, max_value=5.0, value=2.7, step=0.1) / 100
 
 # Behavioral Incentives
 st.sidebar.subheader("🧠 Incentivos Conductuales")
@@ -106,8 +150,94 @@ def run_monte_carlo_simulation(daily_leads, contact_rate, meeting_rate, close_ra
     
     return pd.DataFrame(results)
 
-# Run simulation
-monte_carlo_results = run_monte_carlo_simulation(daily_leads, contact_rate, meeting_rate, close_rate, avg_acv, commission_rate, total_team_size, lead_cost)
+# Run simulation based on model type
+if model_type == "Modelo Optimaxx PLUS (Seguros)":
+    # For Optimaxx, use average PM to simulate as "ACV equivalent"
+    # This is a simplified approach - the real Optimaxx model is in the section below
+    avg_acv_equivalent = avg_pm * 8.1  # PM × 8.1 = compensación total
+    commission_rate_equivalent = 0.20  # 20% goes to closers
+    monte_carlo_results = run_monte_carlo_simulation(
+        daily_leads, contact_rate, meeting_rate, close_rate, 
+        avg_acv_equivalent, commission_rate_equivalent, total_team_size, lead_cost
+    )
+else:
+    # Original model
+    monte_carlo_results = run_monte_carlo_simulation(
+        daily_leads, contact_rate, meeting_rate, close_rate, 
+        avg_acv, commission_rate, total_team_size, lead_cost
+    )
+
+# Show Optimaxx PLUS specific section if selected
+if model_type == "Modelo Optimaxx PLUS (Seguros)" and OPTIMAXX_AVAILABLE:
+    st.header("🏦 Modelo Optimaxx PLUS - Compensación de Seguros")
+    
+    # Create Optimaxx calculator
+    config = OptimaxPlusConfig(
+        LEADS_DAILY=daily_leads,
+        CPL=lead_cost,
+        CONTACT_RATE=contact_rate,
+        MEETING_RATE=meeting_rate,
+        CLOSE_RATE=close_rate,
+        PM_VALUES=pm_values,
+        PM_PROBS=pm_probs,
+        PERSIST_18=persist_18,
+        TEAM_SIZE=total_team_size,
+        PCT_BENCH=bench_percentage/100
+    )
+    calculator = OptimaxPlusCalculator(config)
+    
+    # Show example calculation
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.subheader("📝 Ejemplo PM=$3,000")
+        sale = calculator.calculate_sale_value(3000)
+        st.code(f"""
+Prima Mensual: $3,000
+Plazo: 300 meses (25 años)
+Carrier Rate: 2.7%
+
+Compensación Total:
+{sale['formula']}
+
+Pago Inmediato (70%): ${sale['comp_now']:,.0f}
+Pago Diferido (30%): ${sale['comp_deferred']:,.0f}
+LTV Esperado: ${sale['ltv_expected']:,.0f}
+        """)
+    
+    with col2:
+        st.subheader("💰 Distribución Interna")
+        dist = calculator.calculate_internal_distribution(sale['comp_now'])
+        st.code(f"""
+Base: ${sale['comp_now']:,.0f}
+
+Closer (20% × 1.0x):
+${dist['closer_pay']:,.0f} ({dist['closer_rate']:.1%})
+
+Setter (15% × 1.15x):
+${dist['setter_pay']:,.0f} ({dist['setter_rate']:.1%})
+
+Margen Corporación:
+${dist['corp_margin']:,.0f} ({dist['margin_rate']:.1%})
+        """)
+    
+    with col3:
+        st.subheader("📊 Unit Economics")
+        ue = calculator.calculate_unit_economics()
+        st.code(f"""
+Ventas/Mes: {ue['monthly_sales']:.0f}
+Ingresos: ${ue['monthly_revenue']:,.0f}
+Costos: ${ue['monthly_costs']:,.0f}
+
+CAC: ${ue['cac']:,.0f}
+LTV: ${ue['ltv']:,.0f}
+Ratio: {ue['ltv_cac_ratio']:.1f}:1
+
+EBITDA Mensual:
+${ue['monthly_ebitda']:,.0f}
+EBITDA Diario:
+${ue['monthly_ebitda']/30:,.0f}
+        """)
 
 # Main dashboard layout with Monte Carlo insights
 st.header("📊 Resumen Ejecutivo con Simulación Monte Carlo (1000 Escenarios)")
