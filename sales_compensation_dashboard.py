@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 # Importar el modelo Optimaxx PLUS
 try:
     from optimaxx_plus_model import OptimaxPlusConfig, OptimaxPlusCalculator
+    from sales_process_integration import add_sales_process_integration
     OPTIMAXX_AVAILABLE = True
 except ImportError:
     OPTIMAXX_AVAILABLE = False
@@ -238,6 +239,10 @@ ${ue['monthly_ebitda']:,.0f}
 EBITDA Diario:
 ${ue['monthly_ebitda']/30:,.0f}
         """)
+    
+    # Agregar vista integrada del proceso de ventas
+    st.markdown("---")
+    add_sales_process_integration(config, calculator)
 
 # Main dashboard layout with Monte Carlo insights
 st.header("📊 Resumen Ejecutivo con Simulación Monte Carlo (1000 Escenarios)")
