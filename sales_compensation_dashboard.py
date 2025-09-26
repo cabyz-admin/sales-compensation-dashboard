@@ -9,74 +9,298 @@ from datetime import datetime, timedelta
 
 # Set page config
 st.set_page_config(
-    page_title="Sales Compensation & Monte Carlo Dashboard",
+    page_title="Dashboard de Compensación de Ventas y Monte Carlo",
     page_icon="📊",
     layout="wide"
 )
 
-st.title("🎯 Advanced Sales Compensation Structure & Monte Carlo Simulation")
-st.markdown("**First-Principles Behavioral Psychology-Based Commission Model with Transparent Math**")
+st.title("🎯 Estructura Avanzada de Compensación de Ventas y Simulación Monte Carlo")
+st.markdown("**Modelo de Comisiones Basado en Psicología Conductual de Primeros Principios con Matemáticas Transparentes**")
 
 # Sidebar for inputs
-st.sidebar.header("📋 Model Parameters")
+st.sidebar.header("📋 Parámetros del Modelo")
 
 # Team Structure Parameters
-st.sidebar.subheader("Team Structure")
-total_team_size = st.sidebar.slider("Total Team Size", 5, 50, 20)
-bench_percentage = st.sidebar.slider("Bench Percentage (%)", 10, 40, 20)
-setter_percentage = st.sidebar.slider("Appointment Setter Percentage (%)", 30, 60, 40)
+st.sidebar.subheader("🏢 Estructura del Equipo")
+total_team_size = st.sidebar.number_input("Tamaño Total del Equipo", min_value=5, max_value=50, value=20, step=1)
+bench_percentage = st.sidebar.number_input("Porcentaje en Banco (%)", min_value=10.0, max_value=40.0, value=20.0, step=1.0)
+setter_percentage = st.sidebar.number_input("Porcentaje de Setters (%)", min_value=30.0, max_value=60.0, value=40.0, step=1.0)
 closer_percentage = 100 - bench_percentage - setter_percentage
 
 # Lead Generation Parameters
-st.sidebar.subheader("Lead Generation")
-daily_leads = st.sidebar.slider("Daily Leads", 50, 500, 200)
-lead_cost = st.sidebar.slider("Cost per Lead ($)", 10, 100, 25)
+st.sidebar.subheader("📈 Generación de Leads")
+daily_leads = st.sidebar.number_input("Leads Diarios", min_value=50, max_value=500, value=200, step=10)
+lead_cost = st.sidebar.number_input("Costo por Lead ($)", min_value=10, max_value=100, value=25, step=1)
 
 # Conversion Rates
-st.sidebar.subheader("Conversion Rates")
-contact_rate = st.sidebar.slider("Contact Rate (%)", 40, 90, 70) / 100
-meeting_rate = st.sidebar.slider("Meeting Booking Rate (%)", 20, 60, 35) / 100
-close_rate = st.sidebar.slider("Close Rate (%)", 15, 45, 25) / 100
+st.sidebar.subheader("📊 Tasas de Conversión")
+contact_rate = st.sidebar.number_input("Tasa de Contacto (%)", min_value=40.0, max_value=90.0, value=70.0, step=1.0) / 100
+meeting_rate = st.sidebar.number_input("Tasa de Reuniones (%)", min_value=20.0, max_value=60.0, value=35.0, step=1.0) / 100
+close_rate = st.sidebar.number_input("Tasa de Cierre (%)", min_value=15.0, max_value=45.0, value=25.0, step=1.0) / 100
 
 # Financial Parameters
-st.sidebar.subheader("Financial Parameters")
-avg_acv = st.sidebar.slider("Average Contract Value ($)", 5000, 50000, 15000)
-commission_rate = st.sidebar.slider("Base Commission Rate (%)", 1.0, 5.0, 2.7) / 100
+st.sidebar.subheader("💰 Parámetros Financieros")
+avg_acv = st.sidebar.number_input("Valor Promedio del Contrato ($)", min_value=5000, max_value=50000, value=15000, step=500)
+commission_rate = st.sidebar.number_input("Tasa Base de Comisión (%)", min_value=1.0, max_value=5.0, value=2.7, step=0.1) / 100
 
 # Behavioral Incentives
-st.sidebar.subheader("Behavioral Incentives")
-quick_response_bonus = st.sidebar.slider("Quick Response Bonus (%)", 5, 15, 10) / 100
-follow_up_bonus = st.sidebar.slider("Follow-up Completion Bonus (%)", 2, 8, 5) / 100
+st.sidebar.subheader("🧠 Incentivos Conductuales")
+quick_response_bonus = st.sidebar.number_input("Bono Respuesta Rápida (%)", min_value=5.0, max_value=15.0, value=10.0, step=0.5) / 100
+follow_up_bonus = st.sidebar.number_input("Bono Seguimiento (%)", min_value=2.0, max_value=8.0, value=5.0, step=0.5) / 100
 
 # Target Parameters
-st.sidebar.subheader("Business Targets")
-daily_ebitda_target = st.sidebar.slider("Daily EBITDA Target ($)", 5000, 20000, 10000)
+st.sidebar.subheader("🎯 Objetivos de Negocio")
+daily_ebitda_target = st.sidebar.number_input("Objetivo EBITDA Diario ($)", min_value=5000, max_value=20000, value=10000, step=500)
 
 # Calculate team composition
 bench_count = int(total_team_size * bench_percentage / 100)
 setter_count = int(total_team_size * setter_percentage / 100)
 closer_count = total_team_size - bench_count - setter_count
 
-# Main dashboard layout
+# Auto-run Monte Carlo simulation for immediate insights
+@st.cache_data
+def run_monte_carlo_simulation(daily_leads, contact_rate, meeting_rate, close_rate, avg_acv, commission_rate, total_team_size, lead_cost):
+    n_simulations = 1000
+    results = []
+    
+    for i in range(n_simulations):
+        # Add variability to key parameters
+        sim_daily_leads = np.random.normal(daily_leads, daily_leads * 0.1)
+        sim_contact_rate = np.random.beta(7, 3) * 0.9
+        sim_meeting_rate = np.random.beta(4, 6) * 0.6
+        sim_close_rate = np.random.beta(3, 9) * 0.4
+        sim_acv = np.random.lognormal(np.log(avg_acv), 0.2)
+        
+        # Calculate monthly metrics
+        monthly_leads = sim_daily_leads * 30
+        monthly_contacts = monthly_leads * sim_contact_rate
+        monthly_meetings = monthly_contacts * sim_meeting_rate
+        monthly_sales = monthly_meetings * sim_close_rate
+        monthly_revenue = monthly_sales * sim_acv
+        
+        # Cost calculations
+        lead_costs = monthly_leads * lead_cost
+        base_salaries = total_team_size * 4000
+        total_commission = monthly_revenue * commission_rate
+        monthly_ebitda = monthly_revenue - lead_costs - base_salaries - total_commission
+        daily_ebitda = monthly_ebitda / 30
+        
+        # CAC and LTV
+        cac = (lead_costs + base_salaries * 0.3) / monthly_sales if monthly_sales > 0 else 0
+        ltv = sim_acv * 2.5
+        ltv_cac_ratio = ltv / cac if cac > 0 else 0
+        
+        results.append({
+            'monthly_leads': monthly_leads,
+            'monthly_contacts': monthly_contacts,
+            'monthly_meetings': monthly_meetings,
+            'monthly_sales': monthly_sales,
+            'monthly_revenue': monthly_revenue,
+            'monthly_commission': total_commission,
+            'monthly_ebitda': monthly_ebitda,
+            'daily_ebitda': daily_ebitda,
+            'cac': cac,
+            'ltv': ltv,
+            'ltv_cac_ratio': ltv_cac_ratio
+        })
+    
+    return pd.DataFrame(results)
+
+# Run simulation
+monte_carlo_results = run_monte_carlo_simulation(daily_leads, contact_rate, meeting_rate, close_rate, avg_acv, commission_rate, total_team_size, lead_cost)
+
+# Main dashboard layout with Monte Carlo insights
+st.header("📊 Resumen Ejecutivo con Simulación Monte Carlo (1000 Escenarios)")
+
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    avg_revenue = monte_carlo_results['monthly_revenue'].mean()
+    revenue_std = monte_carlo_results['monthly_revenue'].std()
+    st.metric("Ingresos Mensuales Promedio", f"${avg_revenue:,.0f}", f"±${revenue_std:,.0f}")
+
+with col2:
+    avg_ebitda = monte_carlo_results['daily_ebitda'].mean()
+    ebitda_std = monte_carlo_results['daily_ebitda'].std()
+    st.metric("EBITDA Diario Promedio", f"${avg_ebitda:,.0f}", f"±${ebitda_std:,.0f}")
+
+with col3:
+    avg_ltv_cac = monte_carlo_results['ltv_cac_ratio'].mean()
+    st.metric("Ratio LTV:CAC Promedio", f"{avg_ltv_cac:.1f}:1", "Objetivo: 3:1")
+
+with col4:
+    success_rate = (monte_carlo_results['daily_ebitda'] >= daily_ebitda_target).mean() * 100
+    st.metric("Tasa de Éxito", f"{success_rate:.1f}%", f"Días alcanzando ${daily_ebitda_target:,}")
+
+# Team composition
+st.header("👥 Composición del Equipo")
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.metric("Bench Team", f"{bench_count} people", f"{bench_percentage}%")
+    st.metric("Equipo en Banco", f"{bench_count} personas", f"{bench_percentage}%")
 with col2:
-    st.metric("Appointment Setters", f"{setter_count} people", f"{setter_percentage}%")
+    st.metric("Appointment Setters", f"{setter_count} personas", f"{setter_percentage}%")
 with col3:
-    st.metric("Closers", f"{closer_count} people", f"{closer_percentage}%")
+    st.metric("Closers", f"{closer_count} personas", f"{closer_percentage}%")
+
+# Detailed Monte Carlo Analysis
+st.header("🎲 Análisis Detallado Monte Carlo")
+
+# Create percentile analysis table
+percentiles = [10, 25, 50, 75, 90, 95]
+percentile_data = []
+
+for p in percentiles:
+    percentile_data.append({
+        'Percentil': f"{p}%",
+        'EBITDA Diario': f"${np.percentile(monte_carlo_results['daily_ebitda'], p):,.0f}",
+        'Ingresos Mensuales': f"${np.percentile(monte_carlo_results['monthly_revenue'], p):,.0f}",
+        'Ventas Mensuales': f"{np.percentile(monte_carlo_results['monthly_sales'], p):.0f}",
+        'Ratio LTV:CAC': f"{np.percentile(monte_carlo_results['ltv_cac_ratio'], p):.1f}:1"
+    })
+
+percentile_df = pd.DataFrame(percentile_data)
+st.table(percentile_df)
+
+# Add Monte Carlo visualization
+fig = make_subplots(
+    rows=2, cols=2,
+    subplot_titles=('Distribución EBITDA Diario', 'Distribución Ingresos Mensuales', 
+                  'Distribución Ratio LTV:CAC', 'Distribución Ventas Mensuales'),
+    specs=[[{"secondary_y": False}, {"secondary_y": False}],
+           [{"secondary_y": False}, {"secondary_y": False}]]
+)
+
+# Daily EBITDA histogram
+fig.add_trace(
+    go.Histogram(x=monte_carlo_results['daily_ebitda'], name="EBITDA Diario", nbinsx=50, 
+                marker_color='rgba(55, 128, 191, 0.7)'),
+    row=1, col=1
+)
+
+# Monthly Revenue histogram
+fig.add_trace(
+    go.Histogram(x=monte_carlo_results['monthly_revenue'], name="Ingresos Mensuales", nbinsx=50,
+                marker_color='rgba(50, 171, 96, 0.7)'),
+    row=1, col=2
+)
+
+# LTV:CAC ratio histogram
+fig.add_trace(
+    go.Histogram(x=monte_carlo_results['ltv_cac_ratio'], name="Ratio LTV:CAC", nbinsx=50,
+                marker_color='rgba(219, 64, 82, 0.7)'),
+    row=2, col=1
+)
+
+# Monthly Sales histogram
+fig.add_trace(
+    go.Histogram(x=monte_carlo_results['monthly_sales'], name="Ventas Mensuales", nbinsx=50,
+                marker_color='rgba(128, 0, 128, 0.7)'),
+    row=2, col=2
+)
+
+fig.update_layout(height=600, showlegend=False, title_text="Análisis de Distribuciones Monte Carlo")
+st.plotly_chart(fig, use_container_width=True)
+
+# Reverse Engineering Section
+st.header("🔄 Ingeniería Inversa para Crecimiento")
+
+st.subheader("📈 Análisis de Objetivos de Crecimiento")
+
+# Calculate what's needed to hit targets
+target_monthly_ebitda = daily_ebitda_target * 30
+current_monthly_revenue = daily_leads * 30 * contact_rate * meeting_rate * close_rate * avg_acv
+current_costs = (daily_leads * 30 * lead_cost) + (total_team_size * 4000)
+current_commission = current_monthly_revenue * commission_rate
+current_monthly_ebitda = current_monthly_revenue - current_costs - current_commission
+
+# Required revenue to hit EBITDA target
+required_revenue = target_monthly_ebitda + current_costs + (target_monthly_ebitda + current_costs) * commission_rate / (1 - commission_rate)
+required_sales = required_revenue / avg_acv
+required_leads = required_sales / (contact_rate * meeting_rate * close_rate)
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.subheader("🎯 Situación Actual")
+    st.code(f"""
+# Matemáticas Actuales
+Leads Diarios: {daily_leads:,}
+Leads Mensuales: {daily_leads * 30:,}
+Contactos: {daily_leads * 30 * contact_rate:,.0f} ({contact_rate:.1%})
+Reuniones: {daily_leads * 30 * contact_rate * meeting_rate:,.0f} ({meeting_rate:.1%})
+Ventas: {daily_leads * 30 * contact_rate * meeting_rate * close_rate:.0f} ({close_rate:.1%})
+
+Ingresos Mensuales: ${current_monthly_revenue:,.0f}
+EBITDA Mensual: ${current_monthly_ebitda:,.0f}
+EBITDA Diario: ${current_monthly_ebitda/30:,.0f}
+    """)
+
+with col2:
+    st.subheader("🚀 Requerimientos para Objetivo")
+    st.code(f"""
+# Para alcanzar ${daily_ebitda_target:,}/día
+EBITDA Objetivo Mensual: ${target_monthly_ebitda:,}
+Ingresos Requeridos: ${required_revenue:,.0f}
+Ventas Requeridas: {required_sales:.0f}/mes
+Leads Requeridos: {required_leads:.0f}/mes
+Leads Diarios Requeridos: {required_leads/30:.0f}
+
+Brecha Actual:
+Leads: {(required_leads/30) - daily_leads:+.0f} leads/día
+Ingresos: ${required_revenue - current_monthly_revenue:+,.0f}/mes
+    """)
+
+# Growth scenarios based on your original model tiers
+st.subheader("📊 Escenarios de Crecimiento (Basado en Niveles de Rendimiento)")
+
+# Tier structure from your original CSV
+tiers_data = [
+    {"nivel": "0-40%", "multiplicador": 0.6, "descripcion": "Modo Recuperación", "ventas_mes": 16, "ingreso_anual": 160000},
+    {"nivel": "40-70%", "multiplicador": 0.8, "descripcion": "Construyendo Momentum", "ventas_mes": 28, "ingreso_anual": 280000},
+    {"nivel": "70-100%", "multiplicador": 1.0, "descripcion": "Rendimiento Objetivo", "ventas_mes": 40, "ingreso_anual": 400000},
+    {"nivel": "100-150%", "multiplicador": 1.2, "descripcion": "Superando Expectativas", "ventas_mes": 44, "ingreso_anual": 440000},
+    {"nivel": "150%+", "multiplicador": 1.6, "descripcion": "Rendimiento Elite", "ventas_mes": 60, "ingreso_anual": 600000}
+]
+
+# Calculate detailed metrics for each tier
+enhanced_tiers = []
+for tier in tiers_data:
+    monthly_sales = tier["ventas_mes"]
+    monthly_revenue = tier["ingreso_anual"] / 12
+    required_meetings = monthly_sales / close_rate
+    required_contacts = required_meetings / meeting_rate
+    required_leads = required_contacts / contact_rate
+    daily_leads_needed = required_leads / 30
+    
+    # Commission calculations
+    base_commission = monthly_revenue * commission_rate
+    accelerated_commission = base_commission * tier["multiplicador"]
+    
+    enhanced_tiers.append({
+        "Nivel de Rendimiento": tier["nivel"],
+        "Descripción": tier["descripcion"],
+        "Ventas/Mes": monthly_sales,
+        "Ingresos Mensuales": f"${monthly_revenue:,.0f}",
+        "Leads Diarios Necesarios": f"{daily_leads_needed:.0f}",
+        "Comisión Base": f"${base_commission:,.0f}",
+        "Comisión Acelerada": f"${accelerated_commission:,.0f}",
+        "Multiplicador": f"{tier['multiplicador']}x"
+    })
+
+tiers_df = pd.DataFrame(enhanced_tiers)
+st.dataframe(tiers_df, use_container_width=True)
 
 # Compensation Structure Section
-st.header("💰 Compensation Structure Design")
+st.header("💰 Estructura de Compensación")
 
 # Bench System
-st.subheader("🏃‍♂️ Bench System (Performance Recovery)")
+st.subheader("🏃‍♂️ Sistema de Banco (Recuperación de Rendimiento)")
 st.markdown("""
-**Bench Criteria:** Underperforming team members who haven't met KPIs
-- **Task:** Call old leads and secure 5 meetings to return to active duty
-- **Compensation:** Base salary only ($3,000/month) + $100 per meeting booked
-- **Behavioral Psychology:** Creates urgency and clear path back to earning potential
+**Criterios para el Banco:** Miembros del equipo con bajo rendimiento que no han cumplido KPIs
+- **Tarea:** Llamar leads antiguos y asegurar 5 reuniones para volver al servicio activo
+- **Compensación:** Solo salario base ($3,000/mes) + $100 por reunión agendada
+- **Psicología Conductual:** Crea urgencia y un camino claro de regreso al potencial de ganancias
 """)
 
 # Appointment Setter Incentives
