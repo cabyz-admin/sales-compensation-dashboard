@@ -1288,15 +1288,17 @@ with tabs[0]:
     if channels:
         aggregated = MultiChannelGTM.aggregate_channels(channels)
         
-        # Update global metrics from channels
-        monthly_leads = aggregated['total_leads']
-        monthly_sales = aggregated['total_sales']
-        monthly_revenue_total = aggregated['total_revenue']
-        
-        # Calculate meetings and contacts from aggregated channels
-        monthly_meetings = sum(ch['meetings_held'] for ch in channels)
-        monthly_contacts = sum(ch['monthly_leads'] * ch['contact_rate'] for ch in channels)
-        monthly_meetings_scheduled = sum(ch['monthly_leads'] * ch['contact_rate'] * ch['meeting_rate'] for ch in channels)
+        # Update global metrics from channels (use aggregated values)
+        monthly_leads = aggregated.get('total_leads', monthly_leads)
+        monthly_sales = aggregated.get('total_sales', monthly_sales)
+        monthly_revenue_total = aggregated.get('total_revenue', monthly_revenue_total)
+        monthly_contacts = aggregated.get('total_contacts', 0)
+        monthly_meetings_scheduled = aggregated.get('total_meetings_scheduled', 0)
+        monthly_meetings = aggregated.get('total_meetings_held', 0)
+        blended_contact_rate = aggregated.get('blended_contact_rate', 0)
+        blended_meeting_rate = aggregated.get('blended_meeting_rate', 0)
+        blended_showup_rate = aggregated.get('blended_show_up_rate', 0)
+        blended_close_rate = aggregated.get('blended_close_rate', 0)
         
         # Recalculate revenue components based on channel sales
         monthly_revenue_immediate = monthly_sales * comp_immediate
@@ -1305,7 +1307,7 @@ with tabs[0]:
         
         # Recalculate financial metrics with updated values
         # Total costs (marketing + compensation + opex)
-        total_marketing_costs = sum(ch.get('total_marketing_cost', 0) for ch in channels)
+        total_marketing_costs = aggregated.get('total_cost', sum(ch.get('total_marketing_cost', 0) for ch in channels))
         total_sales_comp = monthly_sales * (comp_immediate + comp_deferred) * 0.3  # Assume 30% goes to sales team
         monthly_total_costs = total_marketing_costs + total_sales_comp + monthly_opex
         
@@ -1318,6 +1320,9 @@ with tabs[0]:
         ltv = total_comp  # Use insurance model value
         ltv_cac_ratio = ltv / cac if cac > 0 else 0
         roas = monthly_revenue_total / total_marketing_costs if total_marketing_costs > 0 else 0
+        # Update global spend & payback with channel-derived values
+        monthly_marketing = total_marketing_costs
+        payback_months = cac / (comp_immediate / 12) if comp_immediate > 0 else 999
         
         # Consolidated Business Metrics Section - Moved to aggregated area
         st.markdown("### 📊 Business Performance Dashboard")
@@ -1338,8 +1343,8 @@ with tabs[0]:
             capacity_util = monthly_meetings / (num_closers * 60) if num_closers > 0 and monthly_meetings > 0 else 0
             st.metric("📅 Capacity Used", f"{capacity_util:.0%}", "OK" if capacity_util < 0.9 else "Overloaded")
         with primary_cols[5]:
-            if monthly_meetings > 0 and close_rate > 0:
-                pipeline_value = monthly_meetings * comp_immediate / close_rate
+            if monthly_meetings > 0 and blended_close_rate > 0:
+                pipeline_value = monthly_meetings * comp_immediate / blended_close_rate
                 pipeline_coverage = pipeline_value / monthly_revenue_target if monthly_revenue_target > 0 else 0
             else:
                 pipeline_coverage = 0
@@ -1356,9 +1361,9 @@ with tabs[0]:
         with activity_cols[2]:
             st.metric("✅ Monthly Sales", f"{monthly_sales:.0f}", f"{monthly_sales/num_closers:.1f} per closer" if num_closers > 0 else "N/A")
         with activity_cols[3]:
-            st.metric("📈 Close Rate", f"{close_rate:.0%}", f"Show-up: {show_up_rate:.0%}")
+            st.metric("📈 Close Rate", f"{blended_close_rate:.0%}", f"Show-up: {blended_showup_rate:.0%}")
         with activity_cols[4]:
-            st.metric("🕒 Sales Cycle", f"{sales_cycle_days} days", f"Velocity: {monthly_sales/sales_cycle_days*30:.0f}/mo")
+            st.metric("🕒 Sales Cycle", f"{sales_cycle_days} days", f"Velocity: {monthly_sales/sales_cycle_days*30:.0f}/mo" if sales_cycle_days > 0 else "-")
         
         # Financial Details (Third Row)
         st.markdown("**Financial Performance**")
@@ -1417,19 +1422,19 @@ with tabs[0]:
             velocity = monthly_sales / sales_cycle_days * 30 if sales_cycle_days > 0 else 0
             st.metric("🚀 Sales Velocity", f"{velocity:.1f} deals/mo")
         with timing_metrics[3]:
-            st.metric("🎯 Win Rate", f"{close_rate:.1%}")
+            st.metric("🎯 Win Rate", f"{blended_close_rate:.1%}")
         
         # Channel-specific metrics
         st.markdown("**Channel Performance**")
         channel_summary = st.columns(4)
         with channel_summary[0]:
-            st.metric("Total Channel Leads", f"{aggregated['total_leads']:,.0f}")
+            st.metric("Total Channel Leads", f"{monthly_leads:,.0f}")
         with channel_summary[1]:
-            st.metric("Total Channel Sales", f"{aggregated['total_sales']:,.0f}")
+            st.metric("Total Channel Sales", f"{monthly_sales:,.0f}")
         with channel_summary[2]:
-            st.metric("Blended CAC", f"${aggregated['blended_cac']:,.0f}")
+            st.metric("Blended CAC", f"${aggregated.get('blended_cac', cac):,.0f}")
         with channel_summary[3]:
-            st.metric("Blended Close Rate", f"{aggregated['blended_close_rate']:.1%}")
+            st.metric("Blended Close Rate", f"{blended_close_rate:.1%}")
         
         # Channel comparison table
         st.markdown("### 📈 Channel Performance Breakdown")
