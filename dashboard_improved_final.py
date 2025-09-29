@@ -308,50 +308,78 @@ else:
 
 monthly_leads = daily_leads * 30
 
-# SECTION 4: CONVERSION RATES
-st.sidebar.header("📊 4. Conversion Funnel")
+# SECTION 4: DEFAULT RATES (Used only if no channels configured)
+st.sidebar.header("📊 4. Channel Configuration")
+st.sidebar.info("🚀 Configure channels in the main view for granular control")
+st.sidebar.markdown("**Default rates (fallback):**")
 
-# Use columns for better layout
-col1, col2 = st.sidebar.columns(2)
-with col1:
-    contact_rate = st.sidebar.number_input(
-        "Contact Rate %", min_value=0, max_value=100, value=60, step=5
-    ) / 100
-    meeting_rate = st.sidebar.number_input(
-        "Meeting Rate %", min_value=0, max_value=100, value=35, step=5
-    ) / 100
-    show_up_rate = st.sidebar.number_input(
-        "Show-up Rate %", min_value=0, max_value=100, value=75, step=5,
-        help="% of scheduled meetings that prospects actually attend"
-    ) / 100
-with col2:
-    close_rate = st.sidebar.number_input(
-        "Close Rate %", min_value=0, max_value=100, value=25, step=5
-    ) / 100
-    onboard_rate = st.sidebar.number_input(
-        "Onboard Rate %", min_value=0, max_value=100, value=95, step=1
-    ) / 100
+# Default conversion rates (used only when no channels are configured)
+contact_rate = 0.60  # Default 60%
+meeting_rate = 0.35  # Default 35%
+show_up_rate = 0.75  # Default 75%
+close_rate = 0.25    # Default 25%
+onboard_rate = 0.95  # Default 95%
 
-# Post-sale metrics
+# Display defaults for reference
+st.sidebar.text(f"• Contact: {contact_rate*100:.0f}%")
+st.sidebar.text(f"• Meeting: {meeting_rate*100:.0f}%")
+st.sidebar.text(f"• Show-up: {show_up_rate*100:.0f}%")
+st.sidebar.text(f"• Close: {close_rate*100:.0f}%")
+
+# Post-sale metrics (still needed for all channels)
 st.sidebar.markdown("""<div style="background: #121212; color: white; padding: 10px; border-radius: 5px; margin-bottom: 10px;"><h5 style="margin: 0; color: #64B5F6;">🔄 Retention Metrics</h5></div>""", unsafe_allow_html=True)
 grr_rate = st.sidebar.number_input(
     "GRR @ 18m (%)", min_value=0, max_value=100, value=90, step=5
 ) / 100
 
-# SECTION 5: DEAL ECONOMICS
+# SECTION 5: DEAL ECONOMICS - Insurance Model (Allianz)
 st.sidebar.header("💰 5. Deal Economics")
 
+st.sidebar.markdown("**Insurance Contract Model**")
 avg_pm = st.sidebar.number_input(
-    "Avg Monthly Premium (MXN)",
-    min_value=1000, max_value=10000, value=3000, step=100
+    "Monthly Premium (MXN)",
+    min_value=1000, max_value=10000, value=3000, step=100,
+    help="Monthly premium paid by client (e.g., $3,000 MXN)"
 )
 
-# Optimaxx calculations
-carrier_rate = 0.027
-contract_months = 300
-total_comp = avg_pm * contract_months * carrier_rate
-comp_immediate = total_comp * 0.7
-comp_deferred = total_comp * 0.3
+contract_years = st.sidebar.number_input(
+    "Contract Length (years)",
+    min_value=1, max_value=30, value=25, step=1,
+    help="Insurance contract duration (e.g., 25 years)"
+)
+
+# Allianz/Insurance carrier compensation model
+carrier_rate = st.sidebar.slider(
+    "Carrier Compensation Rate (%)",
+    min_value=1.0, max_value=5.0, value=2.7, step=0.1,
+    help="% of total premium that carrier pays as compensation"
+) / 100
+
+# Calculate total compensation based on insurance model
+contract_months = contract_years * 12
+total_contract_value = avg_pm * contract_months
+total_comp = total_contract_value * carrier_rate  # What corporation receives
+
+# Payment split (70/30 structure)
+immediate_pct = st.sidebar.slider(
+    "Upfront Payment (%)",
+    min_value=50, max_value=100, value=70, step=5,
+    help="% paid immediately upon closing"
+) / 100
+deferred_pct = 1 - immediate_pct
+
+comp_immediate = total_comp * immediate_pct  # Paid upfront
+comp_deferred = total_comp * deferred_pct    # Paid at month 18
+
+# Display deal economics summary
+st.sidebar.markdown("---")
+st.sidebar.markdown("**📊 Deal Summary**")
+st.sidebar.info(f"""
+• Contract Value: ${total_contract_value:,.0f} MXN
+• Total Comp (2.7%): ${total_comp:,.0f} MXN
+• Upfront (70%): ${comp_immediate:,.0f} MXN
+• Month 18 (30%): ${comp_deferred:,.0f} MXN
+""")
 
 st.sidebar.success(f"""
 **Per Sale Value:**
@@ -494,15 +522,24 @@ sales_cycle_days = st.sidebar.number_input(
 
 # ============= CALCULATIONS =============
 
-# Funnel calculations with show-up rate
-monthly_contacts = monthly_leads * contact_rate
-monthly_meetings_scheduled = monthly_contacts * meeting_rate
-monthly_meetings_held = monthly_meetings_scheduled * show_up_rate
-monthly_sales = monthly_meetings_held * close_rate
-monthly_onboarded = monthly_sales * onboard_rate
+# Initialize with zeros - will be calculated from channels
+monthly_contacts = 0
+monthly_meetings_scheduled = 0
+monthly_meetings_held = 0
+monthly_sales = 0
+monthly_onboarded = 0
+monthly_meetings = 0
 
-# For backward compatibility, use held meetings as "meetings"
-monthly_meetings = monthly_meetings_held
+# These will be overridden by channel calculations
+# Only use legacy calculations if no channels are defined
+if 'gtm_channels' not in st.session_state or len(st.session_state.gtm_channels) == 0:
+    # Fallback to simple calculations for initial state
+    monthly_contacts = monthly_leads * contact_rate
+    monthly_meetings_scheduled = monthly_contacts * meeting_rate
+    monthly_meetings_held = monthly_meetings_scheduled * show_up_rate
+    monthly_sales = monthly_meetings_held * close_rate
+    monthly_onboarded = monthly_sales * onboard_rate
+    monthly_meetings = monthly_meetings_held
 
 # Cost calculations
 volume_metrics = {
@@ -518,14 +555,17 @@ cost_breakdown = ImprovedCostCalculator.calculate_acquisition_costs(
     cost_type, cost_value, volume_metrics
 )
 
-# Revenue calculations
-revenue_timeline = EnhancedRevenueCalculator.calculate_monthly_timeline(
-    monthly_sales, avg_pm, projection_months,
-    carrier_rate, 0.7, 0.3, grr_rate, 0.0
-)
+# Revenue calculations - safe calculation even during configuration
+try:
+    revenue_timeline = EnhancedRevenueCalculator.calculate_monthly_timeline(
+        max(monthly_sales, 0), avg_pm, projection_months,
+        carrier_rate, 0.7, 0.3, grr_rate, 0.0
+    )
+except:
+    revenue_timeline = []
 
-# Current month values
-monthly_revenue_immediate = monthly_sales * comp_immediate
+# Current month values - safe calculations
+monthly_revenue_immediate = max(monthly_sales, 0) * comp_immediate
 monthly_revenue_deferred = 0  # Month 1 has no deferred
 monthly_revenue_total = monthly_revenue_immediate
 
@@ -581,53 +621,8 @@ current_state = {
 
 # ============= MAIN DASHBOARD =============
 
-# Top-line metrics with better alerts
-col1, col2, col3, col4, col5, col6 = st.columns(6)
-
-with col1:
-    st.metric(
-        "Monthly Revenue",
-        f"${monthly_revenue_total:,.0f}",
-        f"{(monthly_revenue_total/monthly_revenue_target - 1)*100:.1f}% vs target"
-    )
-
-with col2:
-    st.metric(
-        "Monthly Sales",
-        f"{monthly_sales:.0f}",
-        f"{monthly_sales/num_closers:.1f} per closer" if num_closers > 0 else "N/A"
-    )
-
-with col3:
-    st.metric(
-        "EBITDA Margin",
-        f"{ebitda_margin:.1%}",
-        "Healthy" if ebitda_margin >= 0.25 else "Needs Work"
-    )
-
-with col4:
-    st.metric(
-        "LTV:CAC",
-        f"{ltv_cac_ratio:.1f}:1",
-        "Good" if ltv_cac_ratio >= 3 else "Too Low"
-    )
-
-with col5:
-    capacity_util = monthly_meetings / (num_closers * 60) if num_closers > 0 else 0
-    st.metric(
-        "Capacity Used",
-        f"{capacity_util:.0%}",
-        "OK" if capacity_util < 0.9 else "Overloaded"
-    )
-
-with col6:
-    pipeline_value = monthly_meetings * comp_immediate / close_rate
-    pipeline_coverage = pipeline_value / monthly_revenue_target if monthly_revenue_target > 0 else 0
-    st.metric(
-        "Pipeline Coverage",
-        f"{pipeline_coverage:.1f}x",
-        "Good" if pipeline_coverage >= 3 else "Low"
-    )
+# Top metrics moved to consolidated Business Performance Dashboard section
+# All metrics are now displayed in the aggregated section below
 
 # ============= ALERTS AND SUGGESTIONS (Improved) =============
 
@@ -649,11 +644,18 @@ if revenue_gap > 0:
         alert_type = 'warning'
         urgency = '📊 BELOW TARGET'
     
+    # Calculate required metrics safely
+    required_sales = revenue_gap / comp_immediate if comp_immediate > 0 else 0
+    required_close_rate = (monthly_sales * monthly_revenue_target / max(monthly_revenue_total, 1)) / max(monthly_meetings, 1)
+    
     alerts.append({
         'type': alert_type,
-        'message': f'{urgency}: Revenue shortfall of ${revenue_gap:,.0f} ({gap_pct:.1f}% below target) - Missing {revenue_gap/comp_immediate:.0f} sales',
-        'action': f'URGENT: Increase sales by {revenue_gap/comp_immediate:.0f} units/month OR improve close rate to {(monthly_sales * monthly_revenue_target / monthly_revenue_total) / monthly_meetings:.1%}'
+        'message': f'{urgency}: Revenue shortfall of ${revenue_gap:,.0f} ({gap_pct:.1f}% below target) - Missing {required_sales:.0f} sales',
+        'action': f'URGENT: Increase sales by {required_sales:.0f} units/month OR improve close rate to {required_close_rate:.1%}'
     })
+
+# Calculate capacity utilization
+capacity_util = monthly_meetings / (num_closers * 60) if num_closers > 0 else 0
 
 # Check team capacity with multiple thresholds
 if capacity_util > 0.95:
@@ -940,60 +942,42 @@ with tabs[0]:
             for metric, value in team_metrics.items():
                 st.write(f"🔹 {metric}: {value}")
     
-    # Conversion Funnel Configuration
-    with st.expander("🎁 **Conversion Funnel**", expanded=False):
-        funnel_col1, funnel_col2, funnel_col3 = st.columns(3)
-        
-        with funnel_col1:
-            st.markdown("**Lead Generation**")
-            contact_rate_main = st.slider("Contact Rate %", 0, 100, int(contact_rate*100), 5, key="contact_main") / 100
-            meeting_rate_main = st.slider("Meeting Rate %", 0, 100, int(meeting_rate*100), 5, key="meeting_main") / 100
-            show_up_rate_main = st.slider("Show-up Rate %", 0, 100, int(show_up_rate*100), 5, key="showup_main") / 100
-            close_rate_main = st.slider("Close Rate %", 0, 100, int(close_rate*100), 5, key="close_main") / 100
-        
-        with funnel_col2:
-            st.markdown("**Funnel Metrics**")
-            conversion_total = contact_rate_main * meeting_rate_main * show_up_rate_main * close_rate_main
-            st.metric("Overall Conversion", f"{conversion_total*100:.2f}%")
-            st.metric("Leads per Sale", f"{1/conversion_total if conversion_total > 0 else 0:.0f}")
-            st.metric("Meeting to Close", f"{close_rate_main*100:.0f}%")
-        
-        with funnel_col3:
-            st.markdown("**Benchmarks**")
-            if close_rate_main < 0.20:
-                st.error(f"🔴 Close rate {close_rate_main:.0%} below 20% benchmark")
-            else:
-                st.success(f"✅ Close rate {close_rate_main:.0%} meets benchmark")
-            
-            if show_up_rate_main < 0.70:
-                st.warning(f"🟡 Show-up rate {show_up_rate_main:.0%} below 70% target")
-            else:
-                st.success(f"✅ Show-up rate {show_up_rate_main:.0%} healthy")
+    # Multi-Channel GTM is now the primary funnel configuration
+    # Legacy conversion funnel removed - all configuration happens through channels
     
     # Deal Economics Configuration
-    with st.expander("💰 **Deal Economics**", expanded=False):
+    with st.expander("💰 **Deal Economics** (Used by All Channels)", expanded=False):
+        st.info("⚠️ These values automatically apply to all channels")
         deal_col1, deal_col2, deal_col3 = st.columns(3)
         
         with deal_col1:
-            st.markdown("**Pricing Structure**")
-            avg_pm_main = st.number_input("Avg Monthly Premium (MXN)", value=avg_pm, step=100, key="avg_pm_main")
-            comp_immediate_main = st.slider("Immediate Comp %", 50, 100, 70, 5, key="comp_imm_main") / 100
-            comp_deferred_main = 1 - comp_immediate_main
-            comp_immediate_val = avg_pm_main * 20 * comp_immediate_main
-            comp_deferred_val = avg_pm_main * 20 * comp_deferred_main
+            st.markdown("**Insurance Contract Structure**")
+            avg_pm_main = st.number_input("Monthly Premium (MXN)", value=avg_pm, step=100, key="avg_pm_main")
+            contract_years_main = st.number_input("Contract Years", value=contract_years, min_value=1, max_value=30, key="contract_years_main")
+            carrier_rate_main = st.slider("Carrier Rate %", 1.0, 5.0, carrier_rate*100, 0.1, key="carrier_rate_main") / 100
+            
+            # Recalculate based on insurance model
+            total_contract_main = avg_pm_main * contract_years_main * 12
+            total_comp_main = total_contract_main * carrier_rate_main
+            comp_immediate_val = total_comp_main * 0.7
+            comp_deferred_val = total_comp_main * 0.3
         
         with deal_col2:
-            st.markdown("**Compensation Split**")
-            st.metric("Total Deal Value", f"${avg_pm_main * 20:,.0f}")
-            st.metric("Immediate (70%)", f"${comp_immediate_val:,.0f}")
-            st.metric("Deferred (30%)", f"${comp_deferred_val:,.0f}")
+            st.markdown("**Compensation Breakdown**")
+            st.metric("Contract Value", f"${total_contract_main:,.0f} MXN")
+            st.metric("Total Comp (2.7%)", f"${total_comp_main:,.0f}")
+            st.metric("Upfront (70%)", f"${comp_immediate_val:,.0f}")
+            st.metric("Month 18 (30%)", f"${comp_deferred_val:,.0f}")
         
         with deal_col3:
-            st.markdown("**Deal Metrics**")
-            deal_size_usd = avg_pm_main * 20 / 18  # Convert MXN to USD
+            st.markdown("**Per Deal Economics**")
+            # Convert to USD for display (using 18:1 exchange rate)
+            deal_size_usd = total_comp_main / 18
+            monthly_value = avg_pm_main / 18
             st.metric("Deal Size (USD)", f"${deal_size_usd:,.0f}")
-            st.metric("Annual Value", f"${avg_pm_main * 12 / 18:,.0f}")
-            st.metric("LTV @ 18mo", f"${avg_pm_main * 18 / 18:,.0f}")
+            st.metric("Monthly Premium (USD)", f"${monthly_value:,.0f}")
+            st.metric("Contract Length", f"{contract_years_main} years")
+            st.info(f"📊 Effective commission: {carrier_rate_main*100:.1f}% of premium")
     
     # Operating Costs Configuration (Marketing moved to channels)
     with st.expander("🏢 **Operating Costs**", expanded=False):
@@ -1081,8 +1065,13 @@ with tabs[0]:
         close_rate = close_rate_main
     if 'avg_pm_main' in locals():
         avg_pm = avg_pm_main
-        comp_immediate = comp_immediate_val
-        comp_deferred = comp_deferred_val
+        if 'total_comp_main' in locals():
+            total_comp = total_comp_main
+            comp_immediate = comp_immediate_val
+            comp_deferred = comp_deferred_val
+        else:
+            comp_immediate = comp_immediate_val
+            comp_deferred = comp_deferred_val
     if 'office_rent_main' in locals():
         office_rent = office_rent_main
         software_costs = software_costs_main
@@ -1151,27 +1140,37 @@ with tabs[0]:
                     key=f"main_{channel_config['id']}_cost_point"
                 )
                 
-                leads = st.number_input("Monthly Leads", value=1000, step=100, key=f"main_{channel_config['id']}_leads")
-                
-                # Calculate CPL based on selected cost point
-                # We need to get the conversion rates first for cost calculations
-                # Store default values that will be updated later
+                # Dynamic quantity input based on cost point
+                # Input the quantity that matches the cost point
                 if cost_point == "Cost per Lead":
                     cpl = st.number_input("Cost per Lead ($)", value=50, step=10, key=f"main_{channel_config['id']}_cpl_direct")
+                    leads = st.number_input("Monthly Leads", value=1000, step=100, key=f"main_{channel_config['id']}_leads")
+                    
                 elif cost_point == "Cost per Contact":
                     cost_per_contact = st.number_input("Cost per Contact ($)", value=75, step=10, key=f"main_{channel_config['id']}_cpc")
-                    # Will calculate CPL after we have contact_rt
-                    cpl = cost_per_contact * 0.65  # Use default 65% contact rate for now
+                    contacts_target = st.number_input("Monthly Contacts Target", value=650, step=50, key=f"main_{channel_config['id']}_contacts")
+                    # Leads will be calculated after we get contact rate
+                    leads = contacts_target  # Temporary, will recalculate with actual rate
+                    cpl = cost_per_contact  # Temporary
+                    
                 elif cost_point == "Cost per Meeting":
                     cost_per_meeting = st.number_input("Cost per Meeting ($)", value=200, step=25, key=f"main_{channel_config['id']}_cpm")
-                    # Will calculate CPL after we have rates
-                    cpl = cost_per_meeting * (0.65 * 0.40)  # Use default rates for now
+                    meetings_target = st.number_input("Monthly Meetings Target", value=20, step=5, key=f"main_{channel_config['id']}_meetings")
+                    # Leads will be calculated after we get conversion rates
+                    leads = meetings_target * 5  # Rough estimate
+                    cpl = cost_per_meeting / 5  # Temporary
+                    
                 elif cost_point == "Cost per Sale":
                     cost_per_sale = st.number_input("Cost per Sale ($)", value=500, step=50, key=f"main_{channel_config['id']}_cps")
-                    # Will calculate CPL after we have rates
-                    cpl = cost_per_sale * (0.65 * 0.40 * 0.70 * 0.25)  # Use default rates for now
+                    sales_target = st.number_input("Monthly Sales Target", value=5, step=1, key=f"main_{channel_config['id']}_sales")
+                    # Leads will be calculated after we get conversion rates
+                    leads = sales_target * 20  # Rough estimate
+                    cpl = cost_per_sale / 20  # Temporary
+                    
                 else:  # Total Budget
                     total_budget = st.number_input("Total Budget ($)", value=10000, step=1000, key=f"main_{channel_config['id']}_budget")
+                    # For budget, still ask for estimated leads
+                    leads = st.number_input("Estimated Monthly Leads", value=1000, step=100, key=f"main_{channel_config['id']}_leads_budget")
                     cpl = total_budget / leads if leads > 0 else 0
             
             with cfg_col2:
@@ -1180,24 +1179,60 @@ with tabs[0]:
                 showup_rt = st.slider("Show-up %", 0, 100, 70, 5, key=f"main_{channel_config['id']}_showup") / 100
                 close_rt = st.slider("Close %", 0, 100, 25, 5, key=f"main_{channel_config['id']}_close") / 100
                 
-                # Now recalculate CPL based on actual rates if not using direct CPL
+                # Now calculate actual leads needed based on target quantities and rates
                 if cost_point == "Cost per Contact":
+                    # Calculate leads from contact target
+                    leads = contacts_target / contact_rt if contact_rt > 0 else contacts_target
                     cpl = cost_per_contact / contact_rt if contact_rt > 0 else cost_per_contact
+                    st.info(f"📊 Need {leads:.0f} leads to get {contacts_target} contacts")
+                    
                 elif cost_point == "Cost per Meeting":
-                    conversion = contact_rt * meeting_rt
-                    cpl = cost_per_meeting / conversion if conversion > 0 else cost_per_meeting
+                    # Calculate leads from meeting target
+                    conversion_to_meeting = contact_rt * meeting_rt * showup_rt
+                    leads = meetings_target / conversion_to_meeting if conversion_to_meeting > 0 else meetings_target * 5
+                    cpl = cost_per_meeting / conversion_to_meeting if conversion_to_meeting > 0 else cost_per_meeting
+                    st.info(f"📊 Need {leads:.0f} leads to get {meetings_target} meetings")
+                    
                 elif cost_point == "Cost per Sale":
-                    conversion = contact_rt * meeting_rt * showup_rt * close_rt
-                    cpl = cost_per_sale / conversion if conversion > 0 else cost_per_sale
+                    # Calculate leads from sales target
+                    full_conversion = contact_rt * meeting_rt * showup_rt * close_rt
+                    leads = sales_target / full_conversion if full_conversion > 0 else sales_target * 20
+                    cpl = cost_per_sale / full_conversion if full_conversion > 0 else cost_per_sale
+                    st.info(f"📊 Need {leads:.0f} leads to get {sales_target} sales")
+                    
                 elif cost_point == "Total Budget":
                     cpl = total_budget / leads if leads > 0 else 0
+                    st.info(f"📊 Effective CPL: ${cpl:.2f}")
             
             with cfg_col3:
-                avg_deal = st.number_input("Avg Deal ($)", value=15000, step=1000, key=f"main_{channel_config['id']}_deal")
+                # Use the deal value from insurance model
+                st.markdown("**Deal Value (from Insurance Model)**")
+                st.info(f"💰 Deal Value: ${total_comp:,.0f}")
+                st.caption(f"• Contract: ${total_contract_value:,.0f} MXN")
+                st.caption(f"• Commission: {carrier_rate*100:.1f}%")
+                st.caption(f"• Upfront: ${comp_immediate:,.0f}")
+                st.caption(f"• Month 18: ${comp_deferred:,.0f}")
+                
                 cycle_days = st.slider("Sales Cycle", 7, 180, 30, 7, key=f"main_{channel_config['id']}_cycle")
                 source = st.selectbox("Source", ['Inbound', 'Outbound', 'Partner', 'Events'], key=f"main_{channel_config['id']}_source")
             
-            # Calculate channel metrics with dynamic cost point
+            # Calculate channel metrics with proper cost point handling
+            # The key is to calculate total marketing cost correctly based on selected method
+            if cost_point == "Cost per Lead":
+                total_marketing_cost = leads * cpl
+            elif cost_point == "Cost per Contact":
+                contacts_needed = leads * contact_rt
+                total_marketing_cost = contacts_needed * cost_per_contact
+            elif cost_point == "Cost per Meeting":
+                meetings_from_channel = leads * contact_rt * meeting_rt * showup_rt
+                total_marketing_cost = meetings_from_channel * cost_per_meeting
+            elif cost_point == "Cost per Sale":
+                sales_from_channel = leads * contact_rt * meeting_rt * showup_rt * close_rt
+                total_marketing_cost = sales_from_channel * cost_per_sale
+            elif cost_point == "Total Budget":
+                total_marketing_cost = total_budget
+            
+            # Now define channel with corrected metrics - using deal value from insurance model
             channel = MultiChannelGTM.define_channel(
                 name=channel_name,
                 lead_source=source,
@@ -1207,18 +1242,23 @@ with tabs[0]:
                 meeting_rate=meeting_rt,
                 show_up_rate=showup_rt,
                 close_rate=close_rt,
-                avg_deal_value=avg_deal,
-                cpl=cpl,
+                avg_deal_value=total_comp,  # Use total compensation from insurance model
+                cpl=total_marketing_cost / leads if leads > 0 else 0,  # Effective CPL
                 sales_cycle_days=cycle_days
             )
             
-            # Add cost point info to channel for display
+            # Add comprehensive cost info to channel
             channel['cost_point'] = cost_point
-            channel['total_cost'] = leads * cpl
-            # Calculate additional metrics for channel
-            channel['ltv'] = channel['avg_deal_value']  # Simplified LTV
+            channel['total_marketing_cost'] = total_marketing_cost
+            channel['effective_cpl'] = total_marketing_cost / leads if leads > 0 else 0
+            
+            # Recalculate CAC based on actual total cost
+            channel['cac'] = total_marketing_cost / channel['sales'] if channel['sales'] > 0 else 0
+            
+            # Calculate proper LTV and metrics using insurance model
+            channel['ltv'] = total_comp  # Use full deal value from insurance model
             channel['ltv_cac'] = channel['ltv'] / channel['cac'] if channel['cac'] > 0 else 0
-            channel['roas'] = channel['revenue'] / (channel['monthly_leads'] * channel['cpl']) if channel['cpl'] > 0 else 0
+            channel['roas'] = channel['revenue'] / total_marketing_cost if total_marketing_cost > 0 else 0
             
             channels.append(channel)
             
@@ -1239,21 +1279,62 @@ with tabs[0]:
     if channels:
         aggregated = MultiChannelGTM.aggregate_channels(channels)
         
+        # Update global metrics from channels
+        monthly_leads = aggregated['total_leads']
+        monthly_sales = aggregated['total_sales']
+        monthly_revenue_total = aggregated['total_revenue']
+        
+        # Calculate meetings and contacts from aggregated channels
+        monthly_meetings = sum(ch['meetings_held'] for ch in channels)
+        monthly_contacts = sum(ch['monthly_leads'] * ch['contact_rate'] for ch in channels)
+        monthly_meetings_scheduled = sum(ch['monthly_leads'] * ch['contact_rate'] * ch['meeting_rate'] for ch in channels)
+        
+        # Recalculate revenue components based on channel sales
+        monthly_revenue_immediate = monthly_sales * comp_immediate
+        monthly_revenue_deferred = monthly_sales * comp_deferred
+        monthly_revenue_total = monthly_revenue_immediate + monthly_revenue_deferred
+        
+        # Recalculate financial metrics with updated values
+        # Total costs (marketing + compensation + opex)
+        total_marketing_costs = sum(ch.get('total_marketing_cost', 0) for ch in channels)
+        total_sales_comp = monthly_sales * (comp_immediate + comp_deferred) * 0.3  # Assume 30% goes to sales team
+        monthly_total_costs = total_marketing_costs + total_sales_comp + monthly_opex
+        
+        # EBITDA calculation
+        monthly_ebitda = monthly_revenue_total - monthly_total_costs
+        ebitda_margin = monthly_ebitda / monthly_revenue_total if monthly_revenue_total > 0 else 0
+        
+        # CAC and other metrics
+        cac = total_marketing_costs / monthly_sales if monthly_sales > 0 else 0
+        ltv = total_comp  # Use insurance model value
+        ltv_cac_ratio = ltv / cac if cac > 0 else 0
+        roas = monthly_revenue_total / total_marketing_costs if total_marketing_costs > 0 else 0
+        
         # Consolidated Business Metrics Section - Moved to aggregated area
         st.markdown("### 📊 Business Performance Dashboard")
         
         # Primary KPIs - Most Important (First Row)
         st.markdown("**Primary Business Metrics**")
-        primary_cols = st.columns(4)
+        primary_cols = st.columns(6)
         
         with primary_cols[0]:
-            st.metric("💵 MRR Target", f"${monthly_revenue_target:,.0f}", f"Actual: ${monthly_revenue_total:,.0f}")
+            st.metric("💵 Monthly Revenue", f"${monthly_revenue_total:,.0f}", f"{(monthly_revenue_total/monthly_revenue_target - 1)*100:.1f}% vs target")
         with primary_cols[1]:
-            st.metric("💰 EBITDA", f"${monthly_ebitda:,.0f}", f"{ebitda_margin:.0%} margin")
+            st.metric("💰 EBITDA", f"${monthly_ebitda:,.0f}", f"{ebitda_margin:.1%} margin")
         with primary_cols[2]:
             st.metric("🎯 LTV:CAC", f"{ltv_cac_ratio:.1f}:1", "Target: >3:1")
         with primary_cols[3]:
             st.metric("🚀 ROAS", f"{roas:.1f}x", f"Target: >4x")
+        with primary_cols[4]:
+            capacity_util = monthly_meetings / (num_closers * 60) if num_closers > 0 and monthly_meetings > 0 else 0
+            st.metric("📅 Capacity Used", f"{capacity_util:.0%}", "OK" if capacity_util < 0.9 else "Overloaded")
+        with primary_cols[5]:
+            if monthly_meetings > 0 and close_rate > 0:
+                pipeline_value = monthly_meetings * comp_immediate / close_rate
+                pipeline_coverage = pipeline_value / monthly_revenue_target if monthly_revenue_target > 0 else 0
+            else:
+                pipeline_coverage = 0
+            st.metric("📊 Pipeline Coverage", f"{pipeline_coverage:.1f}x", "Good" if pipeline_coverage >= 3 else "Low")
         
         # Sales Activity Metrics (Second Row)
         st.markdown("**Sales Activity**")
@@ -1264,7 +1345,7 @@ with tabs[0]:
         with activity_cols[1]:
             st.metric("🤝 Meetings", f"{monthly_meetings:,.0f}/mo", f"{monthly_meetings/20:.0f}/day")
         with activity_cols[2]:
-            st.metric("✅ Sales", f"{monthly_sales:,.0f}/mo", f"{monthly_sales/20:.1f}/day")
+            st.metric("✅ Monthly Sales", f"{monthly_sales:.0f}", f"{monthly_sales/num_closers:.1f} per closer" if num_closers > 0 else "N/A")
         with activity_cols[3]:
             st.metric("📈 Close Rate", f"{close_rate:.0%}", f"Show-up: {show_up_rate:.0%}")
         with activity_cols[4]:
@@ -1284,6 +1365,50 @@ with tabs[0]:
             st.metric("📅 Revenue (Def)", f"${monthly_revenue_deferred:,.0f}", "30% split")
         with finance_cols[4]:
             st.metric("🏢 Team", f"{team_total} people", f"Burn: ${monthly_opex:,.0f}/mo")
+        
+        # Sales Process Timeline - Moved from Analytics section
+        st.markdown("**Sales Process & Pipeline Stages**")
+        
+        # Create a visual timeline of the sales process
+        timeline_data = [
+            {"stage": "Lead Generated", "day": 0, "icon": "👥", "count": monthly_leads},
+            {"stage": "First Contact", "day": 1, "icon": "📞", "count": monthly_contacts},
+            {"stage": "Meeting Scheduled", "day": 3, "icon": "📅", "count": monthly_meetings_scheduled},
+            {"stage": "Meeting Held", "day": 5, "icon": "🤝", "count": monthly_meetings},
+            {"stage": "Deal Closed", "day": sales_cycle_days, "icon": "✅", "count": monthly_sales},
+        ]
+        
+        # Create compact timeline visualization
+        timeline_cols = st.columns(len(timeline_data))
+        
+        for idx, stage_data in enumerate(timeline_data):
+            with timeline_cols[idx]:
+                # Calculate conversion rate from previous stage
+                if idx > 0:
+                    prev_count = timeline_data[idx-1]['count']
+                    conversion = (stage_data['count'] / prev_count * 100) if prev_count > 0 else 0
+                    color = "#4CAF50" if conversion >= 70 else "#FF9800" if conversion >= 50 else "#F44336"
+                else:
+                    conversion = 100
+                    color = "#2196F3"
+                
+                st.metric(
+                    stage_data['icon'] + " " + stage_data['stage'],
+                    f"{stage_data['count']:.0f}",
+                    f"Day {stage_data['day']} | {conversion:.0f}%" if idx > 0 else f"Day {stage_data['day']}"
+                )
+        
+        # Timing metrics row
+        timing_metrics = st.columns(4)
+        with timing_metrics[0]:
+            st.metric("🕒 Lead to Meeting", "5 days")
+        with timing_metrics[1]:
+            st.metric("⏱️ Meeting to Close", f"{sales_cycle_days - 5} days")
+        with timing_metrics[2]:
+            velocity = monthly_sales / sales_cycle_days * 30 if sales_cycle_days > 0 else 0
+            st.metric("🚀 Sales Velocity", f"{velocity:.1f} deals/mo")
+        with timing_metrics[3]:
+            st.metric("🎯 Win Rate", f"{close_rate:.1%}")
         
         # Channel-specific metrics
         st.markdown("**Channel Performance**")
@@ -1572,13 +1697,9 @@ with tabs[0]:
     with retention_col1:
         # Retention inputs in expandable section
         with st.expander("📊 **Configure Retention Metrics**", expanded=False):
-            starting_mrr = st.number_input(
-                "Starting MRR ($)", 
-                value=float(monthly_revenue_total),
-                step=10000.0,
-                key="retention_mrr",
-                help="Monthly Recurring Revenue at start of period"
-            )
+            # Use actual current MRR from business metrics
+            starting_mrr = monthly_revenue_total  # Use actual monthly revenue
+            st.info(f"💵 Using Current MRR: ${starting_mrr:,.0f}")
             
             # Retention components
             churn_pct = st.slider("Monthly Churn %", 0.0, 20.0, 3.0, 0.5, key="retention_churn") / 100
