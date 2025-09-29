@@ -894,6 +894,7 @@ with tabs[0]:
     gtm_monthly_meetings = gtm_metrics.get('monthly_meetings', monthly_meetings)
     gtm_monthly_sales = gtm_metrics.get('monthly_sales', monthly_sales)
     gtm_monthly_revenue_immediate = gtm_metrics.get('monthly_revenue_immediate', monthly_revenue_immediate)
+    gtm_blended_contact_rate = gtm_metrics.get('blended_contact_rate', contact_rate)
 
     # Team Structure Configuration
     with st.expander("👥 **Team Structure**", expanded=False):
@@ -962,7 +963,7 @@ with tabs[0]:
         daily_col1, daily_col2, daily_col3 = st.columns(3)
         
         daily_leads = gtm_monthly_leads / working_days if working_days > 0 else 0
-        daily_contacts = daily_leads * blended_contact_rate
+        daily_contacts = daily_leads * gtm_blended_contact_rate
         daily_meetings_scheduled = gtm_monthly_meetings_scheduled / working_days if working_days > 0 else 0
         daily_meetings = gtm_monthly_meetings / working_days if working_days > 0 else 0
         daily_sales = gtm_monthly_sales / working_days if working_days > 0 else 0
