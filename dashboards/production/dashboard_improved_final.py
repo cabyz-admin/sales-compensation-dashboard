@@ -13,8 +13,15 @@ from datetime import datetime, timedelta
 import sys
 import os
 
-# Add the current directory to Python path for module imports
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Ensure project root and modules directory are on Python path
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+DASHBOARDS_DIR = os.path.dirname(CURRENT_DIR)
+PROJECT_ROOT = os.path.dirname(DASHBOARDS_DIR)
+MODULES_DIR = os.path.join(PROJECT_ROOT, "modules")
+
+for path in [MODULES_DIR, PROJECT_ROOT, CURRENT_DIR]:
+    if path not in sys.path:
+        sys.path.insert(0, path)
 
 # Import improved modules
 try:
