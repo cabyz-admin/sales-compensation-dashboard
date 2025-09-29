@@ -897,6 +897,31 @@ with tabs[0]:
             num_setters_main = st.number_input("📞 Setters", min_value=0, max_value=50, value=num_setters, step=1, key="setters_main")
             num_bench_main = st.number_input("🏋 Bench", min_value=0, max_value=20, value=num_bench, step=1, key="bench_main")
             num_managers_main = st.number_input("👔 Managers", min_value=0, max_value=10, value=num_managers, step=1, key="managers_main")
+            st.markdown("**Capacity Settings**")
+            meetings_per_closer = st.slider(
+                "Meetings/Closer/Day",
+                min_value=1.0,
+                max_value=8.0,
+                value=3.0,
+                step=0.5,
+                help="Average meetings each closer can run per working day"
+            )
+            working_days = st.slider(
+                "Working Days/Month",
+                min_value=15,
+                max_value=26,
+                value=20,
+                step=1,
+                help="Number of active selling days per month"
+            )
+            meetings_per_setter = st.slider(
+                "Meetings Booked/Setter/Day",
+                min_value=0.5,
+                max_value=5.0,
+                value=2.0,
+                step=0.5,
+                help="Average meetings each setter confirms and books per day"
+            )
         
         with team_col2:
             st.markdown("**Team Metrics**")
@@ -909,9 +934,11 @@ with tabs[0]:
         
         with team_col3:
             st.markdown("**Capacity Analysis**")
-            capacity = num_closers_main * 60  # 60 meetings per closer
-            capacity_util_main = monthly_meetings / capacity if capacity > 0 else 0
-            st.metric("Monthly Capacity", f"{capacity} meetings")
+            monthly_closer_capacity = num_closers_main * meetings_per_closer * working_days
+            capacity_util_main = monthly_meetings / monthly_closer_capacity if monthly_closer_capacity > 0 else 0
+            st.metric("Closer Capacity", f"{monthly_closer_capacity:,.0f} meetings/mo")
+            monthly_setter_capacity = num_setters_main * meetings_per_setter * working_days
+            st.metric("Setter Booking Capacity", f"{monthly_setter_capacity:,.0f} meetings/mo")
             st.metric("Utilization", f"{capacity_util_main:.0%}")
             if capacity_util_main > 0.9:
                 st.warning("⚠️ Overloaded!")
@@ -924,14 +951,20 @@ with tabs[0]:
         st.markdown("**Daily Activity Requirements**")
         daily_col1, daily_col2, daily_col3 = st.columns(3)
         
+        daily_leads = monthly_leads / working_days if working_days > 0 else 0
+        daily_meetings = monthly_meetings / working_days if working_days > 0 else 0
+        daily_sales = monthly_sales / working_days if working_days > 0 else 0
+        daily_revenue = monthly_revenue_immediate / working_days if working_days > 0 else 0
+        daily_meetings_scheduled = monthly_meetings_scheduled / working_days if working_days > 0 else 0
+        
         with daily_col1:
             st.markdown("**Per Setter:**")
             if num_setters_main > 0:
-                daily_leads = monthly_leads / 20  # Assuming 20 working days
                 setter_metrics = {
                     "Leads to process": f"{daily_leads/num_setters_main:.1f}",
                     "Contacts to make": f"{(daily_leads * contact_rate)/num_setters_main:.1f}",
-                    "Meetings to book": f"{(daily_leads * contact_rate * meeting_rate)/num_setters_main:.1f}"
+                    "Meetings to book": f"{daily_meetings_scheduled/num_setters_main:.1f}",
+                    "Capacity target": f"{meetings_per_setter:.1f} bookings"
                 }
                 for metric, value in setter_metrics.items():
                     st.write(f"🔹 {metric}: {value}")
@@ -940,9 +973,10 @@ with tabs[0]:
             st.markdown("**Per Closer:**")
             if num_closers_main > 0:
                 closer_metrics = {
-                    "Meetings to run": f"{(monthly_meetings/20)/num_closers_main:.1f}",
-                    "Sales to close": f"{(monthly_sales/20)/num_closers_main:.2f}",
-                    "Revenue to generate": f"${((monthly_sales/20) * comp_immediate)/num_closers_main:,.0f}"
+                    "Meetings to run": f"{daily_meetings/num_closers_main:.1f}",
+                    "Capacity target": f"{meetings_per_closer:.1f} meetings",
+                    "Sales to close": f"{daily_sales/num_closers_main:.2f}",
+                    "Revenue to generate": f"${(daily_sales * comp_immediate)/num_closers_main:,.0f}"
                 }
                 for metric, value in closer_metrics.items():
                     st.write(f"🔹 {metric}: {value}")
@@ -951,9 +985,9 @@ with tabs[0]:
             st.markdown("**Team Totals:**")
             team_metrics = {
                 "Total leads/day": f"{daily_leads:.0f}",
-                "Total meetings/day": f"{monthly_meetings/20:.1f}",
-                "Total sales/day": f"{monthly_sales/20:.1f}",
-                "Revenue/day": f"${monthly_revenue_immediate/20:,.0f}"
+                "Total meetings/day": f"{daily_meetings:.1f}",
+                "Total sales/day": f"{daily_sales:.1f}",
+                "Revenue/day": f"${daily_revenue:,.0f}"
             }
             for metric, value in team_metrics.items():
                 st.write(f"🔹 {metric}: {value}")
