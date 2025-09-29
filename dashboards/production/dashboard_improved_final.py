@@ -887,6 +887,14 @@ with tabs[0]:
             st.metric("Revenue/Sale", f"${comp_immediate:,.0f}")
             st.metric("Target vs Current", f"{(monthly_revenue_total/monthly_revenue_target_main*100):.0f}%")
     
+    # Pull latest GTM metrics (updates set after channel aggregation)
+    gtm_metrics = st.session_state.get('gtm_metrics', {})
+    gtm_monthly_leads = gtm_metrics.get('monthly_leads', monthly_leads)
+    gtm_monthly_meetings_scheduled = gtm_metrics.get('monthly_meetings_scheduled', monthly_meetings_scheduled)
+    gtm_monthly_meetings = gtm_metrics.get('monthly_meetings', monthly_meetings)
+    gtm_monthly_sales = gtm_metrics.get('monthly_sales', monthly_sales)
+    gtm_monthly_revenue_immediate = gtm_metrics.get('monthly_revenue_immediate', monthly_revenue_immediate)
+
     # Team Structure Configuration
     with st.expander("👥 **Team Structure**", expanded=False):
         team_col1, team_col2, team_col3 = st.columns(3)
@@ -935,11 +943,13 @@ with tabs[0]:
         with team_col3:
             st.markdown("**Capacity Analysis**")
             monthly_closer_capacity = num_closers_main * meetings_per_closer * working_days
-            capacity_util_main = monthly_meetings / monthly_closer_capacity if monthly_closer_capacity > 0 else 0
+            capacity_util_main = gtm_monthly_meetings / monthly_closer_capacity if monthly_closer_capacity > 0 else 0
             st.metric("Closer Capacity", f"{monthly_closer_capacity:,.0f} meetings/mo")
             monthly_setter_capacity = num_setters_main * meetings_per_setter * working_days
+            setter_util = gtm_monthly_meetings_scheduled / monthly_setter_capacity if monthly_setter_capacity > 0 else 0
             st.metric("Setter Booking Capacity", f"{monthly_setter_capacity:,.0f} meetings/mo")
             st.metric("Utilization", f"{capacity_util_main:.0%}")
+            st.metric("Setter Utilization", f"{setter_util:.0%}")
             if capacity_util_main > 0.9:
                 st.warning("⚠️ Overloaded!")
             elif capacity_util_main > 0.75:
@@ -951,18 +961,19 @@ with tabs[0]:
         st.markdown("**Daily Activity Requirements**")
         daily_col1, daily_col2, daily_col3 = st.columns(3)
         
-        daily_leads = monthly_leads / working_days if working_days > 0 else 0
-        daily_meetings = monthly_meetings / working_days if working_days > 0 else 0
-        daily_sales = monthly_sales / working_days if working_days > 0 else 0
-        daily_revenue = monthly_revenue_immediate / working_days if working_days > 0 else 0
-        daily_meetings_scheduled = monthly_meetings_scheduled / working_days if working_days > 0 else 0
+        daily_leads = gtm_monthly_leads / working_days if working_days > 0 else 0
+        daily_contacts = daily_leads * blended_contact_rate
+        daily_meetings_scheduled = gtm_monthly_meetings_scheduled / working_days if working_days > 0 else 0
+        daily_meetings = gtm_monthly_meetings / working_days if working_days > 0 else 0
+        daily_sales = gtm_monthly_sales / working_days if working_days > 0 else 0
+        daily_revenue = gtm_monthly_revenue_immediate / working_days if working_days > 0 else 0
         
         with daily_col1:
             st.markdown("**Per Setter:**")
             if num_setters_main > 0:
                 setter_metrics = {
                     "Leads to process": f"{daily_leads/num_setters_main:.1f}",
-                    "Contacts to make": f"{(daily_leads * contact_rate)/num_setters_main:.1f}",
+                    "Contacts to make": f"{daily_contacts/num_setters_main:.1f}",
                     "Meetings to book": f"{daily_meetings_scheduled/num_setters_main:.1f}",
                     "Capacity target": f"{meetings_per_setter:.1f} bookings"
                 }
@@ -976,7 +987,7 @@ with tabs[0]:
                     "Meetings to run": f"{daily_meetings/num_closers_main:.1f}",
                     "Capacity target": f"{meetings_per_closer:.1f} meetings",
                     "Sales to close": f"{daily_sales/num_closers_main:.2f}",
-                    "Revenue to generate": f"${(daily_sales * comp_immediate)/num_closers_main:,.0f}"
+                    "Revenue to generate": f"${(daily_revenue)/num_closers_main:,.0f}"
                 }
                 for metric, value in closer_metrics.items():
                     st.write(f"🔹 {metric}: {value}")
@@ -1346,6 +1357,17 @@ with tabs[0]:
         monthly_revenue_deferred = monthly_sales * comp_deferred
         monthly_revenue_total = monthly_revenue_immediate + monthly_revenue_deferred
         
+        # Persist GTM metrics for team capacity section
+        st.session_state['gtm_metrics'] = {
+            'monthly_leads': monthly_leads,
+            'monthly_meetings_scheduled': monthly_meetings_scheduled,
+            'monthly_meetings': monthly_meetings,
+            'monthly_sales': monthly_sales,
+            'monthly_revenue_immediate': monthly_revenue_immediate,
+            'monthly_revenue_total': monthly_revenue_total,
+            'blended_contact_rate': blended_contact_rate
+        }
+
         # Recalculate financial metrics with updated values
         # Total costs (marketing + compensation + opex)
         total_marketing_costs = aggregated.get('total_cost', sum(ch.get('total_marketing_cost', 0) for ch in channels))
