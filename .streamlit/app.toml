@@ -1,2 +1,2 @@
 [app]
-entrypoint = "dashboard_cloud.py"
+entrypoint = "dashboards/cloud/dashboard_cloud.py"
