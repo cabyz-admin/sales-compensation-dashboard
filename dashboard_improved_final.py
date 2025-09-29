@@ -10,23 +10,32 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.express as px
 from datetime import datetime, timedelta
+import sys
+import os
+
+# Add the current directory to Python path for module imports
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Import improved modules
-from modules.calculations_improved import (
-    ImprovedCostCalculator,
-    ImprovedCompensationCalculator,
-    ImprovedPnLCalculator,
-    ImprovedReverseEngineering
-)
-from modules.calculations_enhanced import (
-    EnhancedRevenueCalculator,
-    BottleneckAnalyzer,
-    HealthScoreCalculator
-)
-from modules.revenue_retention import (
-    RevenueRetentionCalculator,
-    MultiChannelGTM
-)
+try:
+    from modules.calculations_improved import (
+        ImprovedCostCalculator,
+        ImprovedCompensationCalculator,
+        ImprovedPnLCalculator,
+        ImprovedReverseEngineering
+    )
+    from modules.calculations_enhanced import (
+        EnhancedRevenueCalculator,
+        BottleneckAnalyzer,
+        HealthScoreCalculator
+    )
+    from modules.revenue_retention import (
+        RevenueRetentionCalculator,
+        MultiChannelGTM
+    )
+except ImportError as e:
+    st.error(f"Module import error: {e}")
+    st.stop()
 
 # ============= CONFIGURACIÓN =============
 st.set_page_config(
