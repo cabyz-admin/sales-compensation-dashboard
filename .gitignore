@@ -37,7 +37,7 @@ ENV/
 Thumbs.db
 
 # Streamlit
-.streamlit/
+# .streamlit/ - We need this for deployment
 
 # Node.js (for the other files)
 node_modules/
