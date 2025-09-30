@@ -239,222 +239,37 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ============= SIDEBAR - IMPROVED INPUTS (KEPT FOR BACKWARDS COMPATIBILITY) =============
-st.sidebar.title("⚙️ Model Configuration")
+# ============= BASELINE INPUT DEFAULTS (legacy sidebar removed) =============
+monthly_revenue_target = st.session_state.get('monthly_revenue_target_value', 4_166_667)
+annual_revenue = st.session_state.get('annual_revenue_value', monthly_revenue_target * 12)
 
-# SECTION 1: REVENUE TARGETS (Flexible)
-st.sidebar.header("🎯 1. Revenue Targets")
+num_closers = st.session_state.get('closers_value', 8)
+num_setters = st.session_state.get('setters_value', 4)
+num_bench = st.session_state.get('bench_value', 2)
+num_managers = st.session_state.get('managers_value', 2)
 
-col1, col2 = st.sidebar.columns(2)
-with col1:
-    target_period = st.sidebar.selectbox(
-        "Input Period",
-        ["Annual", "Monthly", "Weekly", "Daily"],
-        index=1
-    )
-with col2:
-    if target_period == "Annual":
-        revenue_input = st.sidebar.number_input("Annual Target ($)", value=50000000, step=1000000)
-        monthly_revenue_target = revenue_input / 12
-    elif target_period == "Monthly":
-        revenue_input = st.sidebar.number_input("Monthly Target ($)", value=4166667, step=100000)
-        monthly_revenue_target = revenue_input
-    elif target_period == "Weekly":
-        revenue_input = st.sidebar.number_input("Weekly Target ($)", value=961538, step=25000)
-        monthly_revenue_target = revenue_input * 4.33
-    else:  # Daily
-        revenue_input = st.sidebar.number_input("Daily Target ($)", value=192308, step=5000)
-        monthly_revenue_target = revenue_input * 21.67
+cost_type = st.session_state.get('lead_cost_type', 'CPL')
+cost_value = st.session_state.get('lead_cost_value', 150)
+daily_leads = st.session_state.get('lead_volume_daily', 155)
+monthly_leads = st.session_state.get('lead_volume_monthly', daily_leads * 30)
 
-# Show all breakdowns
-annual_revenue = monthly_revenue_target * 12
-# Fixed spacing in revenue breakdown with black background
-st.sidebar.markdown(f"""
-<div style="background: #121212; padding: 15px; border-radius: 10px; border-left: 4px solid #2196F3; color: white;">
-    <h4 style="margin: 0; color: #64B5F6;">📊 Revenue Breakdown</h4>
-    <div style="margin-top: 10px; line-height: 1.8; color: white;">
-        • <b>Annual:</b> ${annual_revenue:,.0f}<br>
-        • <b>Monthly:</b> ${monthly_revenue_target:,.0f}<br>
-        • <b>Weekly:</b> ${monthly_revenue_target/4.33:,.0f}<br>
-        • <b>Daily:</b> ${monthly_revenue_target/21.67:,.0f}
-    </div>
-</div>
-""", unsafe_allow_html=True)
+contact_rate = st.session_state.get('default_contact_rate', 0.60)
+meeting_rate = st.session_state.get('default_meeting_rate', 0.35)
+show_up_rate = st.session_state.get('default_showup_rate', 0.75)
+close_rate = st.session_state.get('default_close_rate', 0.25)
+onboard_rate = st.session_state.get('default_onboard_rate', 0.95)
 
-# SECTION 2: TEAM CONTROL (Improved from fixed)
-st.sidebar.header("👥 2. Team Structure")
+grr_rate = st.session_state.get('grr_rate_main', 0.90)
 
-# Better layout with clear categories
-st.sidebar.markdown("""<div style="background: #121212; color: white; padding: 10px; border-radius: 5px; margin-bottom: 10px;"><h5 style="margin: 0; color: #81C784;">🏢 Sales Team</h5></div>""", unsafe_allow_html=True)
-col1, col2 = st.sidebar.columns(2)
-with col1:
-    num_closers = st.sidebar.number_input(
-        "💼 Closers", min_value=0, max_value=50, value=8, step=1,
-        help="Active closers handling meetings"
-    )
-    num_setters = st.sidebar.number_input(
-        "📞 Setters", min_value=0, max_value=50, value=4, step=1,
-        help="SDRs setting appointments"
-    )
-with col2:
-    num_bench = st.sidebar.number_input(
-        "🏈 Bench", min_value=0, max_value=20, value=2, step=1,
-        help="In recovery/training"
-    )
-    num_managers = st.sidebar.number_input(
-        "👔 Managers", min_value=0, max_value=10, value=2, step=1,
-        help="Team leads & supervisors"
-    )
+avg_pm = st.session_state.get('avg_pm_value', 3000)
+contract_years = st.session_state.get('contract_years_value', 25)
+carrier_rate = st.session_state.get('carrier_rate_value', 0.027)
 
-# Team metrics
-team_total = num_closers + num_setters + num_bench + num_managers
-active_ratio = (num_closers + num_setters) / max(1, team_total)
-setter_closer_ratio = num_setters / max(1, num_closers)
+total_contract_value = avg_pm * contract_years * 12
+total_comp = total_contract_value * carrier_rate
+comp_immediate = total_comp * 0.70
+comp_deferred = total_comp * 0.30
 
-# Alerts for team structure
-team_alerts = []
-if num_bench / max(1, team_total) > 0.25:
-    team_alerts.append("⚠️ >25% on bench indicates training issues")
-if setter_closer_ratio < 0.5:
-    team_alerts.append("⚠️ Low setter:closer ratio may limit lead coverage")
-if setter_closer_ratio > 2:
-    team_alerts.append("⚠️ High setter:closer ratio may create bottlenecks")
-
-# Fixed spacing in team metrics with black background
-st.sidebar.markdown(f"""
-<div style="background: #121212; padding: 15px; border-radius: 10px; border-left: 4px solid #4CAF50; color: white;">
-    <h4 style="margin: 0; color: #81C784;">👥 Team Metrics</h4>
-    <div style="margin-top: 10px; line-height: 1.8; color: white;">
-        • <b>Total:</b> {team_total} people<br>
-        • <b>Active:</b> {active_ratio:.0%}<br>
-        • <b>S:C Ratio:</b> {setter_closer_ratio:.1f}:1
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-if team_alerts:
-    for alert in team_alerts:
-        st.sidebar.warning(alert)
-
-# SECTION 3: LEAD GENERATION (Flexible input)
-st.sidebar.header("📈 3. Lead Generation")
-
-# Choose input method
-cost_input_type = st.sidebar.radio(
-    "Cost Input Method",
-    ["CPL (Cost per Lead)", "CPA (Cost per Appointment)", "Total Budget"],
-    index=0
-)
-
-if cost_input_type == "CPL (Cost per Lead)":
-    cost_value = st.sidebar.number_input(
-        "Cost per Lead ($)", min_value=0, max_value=1000, value=150, step=10
-    )
-    cost_type = "CPL"
-elif cost_input_type == "CPA (Cost per Appointment)":
-    cost_value = st.sidebar.number_input(
-        "Cost per Appointment ($)", min_value=0, max_value=5000, value=500, step=50
-    )
-    cost_type = "CPA"
-else:
-    cost_value = st.sidebar.number_input(
-        "Monthly Marketing Budget ($)", min_value=0, max_value=1000000, value=100000, step=5000
-    )
-    cost_type = "Total Budget"
-
-# Lead volume (can be input or calculated)
-if cost_type != "Total Budget":
-    daily_leads = st.sidebar.number_input(
-        "Daily Lead Volume", min_value=0, max_value=2000, value=155, step=5
-    )
-else:
-    # Calculate leads from budget
-    estimated_cpl = 150  # Default assumption
-    daily_leads = (cost_value / estimated_cpl) / 30
-
-monthly_leads = daily_leads * 30
-
-# SECTION 4: DEFAULT RATES (Used only if no channels configured)
-st.sidebar.header("📊 4. Channel Configuration")
-st.sidebar.info("🚀 Configure channels in the main view for granular control")
-st.sidebar.markdown("**Default rates (fallback):**")
-
-# Default conversion rates (used only when no channels are configured)
-contact_rate = 0.60  # Default 60%
-meeting_rate = 0.35  # Default 35%
-show_up_rate = 0.75  # Default 75%
-close_rate = 0.25    # Default 25%
-onboard_rate = 0.95  # Default 95%
-
-# Display defaults for reference
-st.sidebar.text(f"• Contact: {contact_rate*100:.0f}%")
-st.sidebar.text(f"• Meeting: {meeting_rate*100:.0f}%")
-st.sidebar.text(f"• Show-up: {show_up_rate*100:.0f}%")
-st.sidebar.text(f"• Close: {close_rate*100:.0f}%")
-
-# Post-sale metrics (still needed for all channels)
-st.sidebar.markdown("""<div style="background: #121212; color: white; padding: 10px; border-radius: 5px; margin-bottom: 10px;"><h5 style="margin: 0; color: #64B5F6;">🔄 Retention Metrics</h5></div>""", unsafe_allow_html=True)
-grr_rate = st.sidebar.number_input(
-    "GRR @ 18m (%)", min_value=0, max_value=100, value=90, step=5
-) / 100
-
-# SECTION 5: DEAL ECONOMICS - Insurance Model (Allianz)
-st.sidebar.header("💰 5. Deal Economics")
-
-st.sidebar.markdown("**Insurance Contract Model**")
-avg_pm = st.sidebar.number_input(
-    "Monthly Premium (MXN)",
-    min_value=1000, max_value=10000, value=3000, step=100,
-    help="Monthly premium paid by client (e.g., $3,000 MXN)"
-)
-
-contract_years = st.sidebar.number_input(
-    "Contract Length (years)",
-    min_value=1, max_value=30, value=25, step=1,
-    help="Insurance contract duration (e.g., 25 years)"
-)
-
-# Allianz/Insurance carrier compensation model
-carrier_rate = st.sidebar.slider(
-    "Carrier Compensation Rate (%)",
-    min_value=1.0, max_value=5.0, value=2.7, step=0.1,
-    help="% of total premium that carrier pays as compensation"
-) / 100
-
-# Calculate total compensation based on insurance model
-contract_months = contract_years * 12
-total_contract_value = avg_pm * contract_months
-total_comp = total_contract_value * carrier_rate  # What corporation receives
-
-# Payment split (70/30 structure)
-immediate_pct = st.sidebar.slider(
-    "Upfront Payment (%)",
-    min_value=50, max_value=100, value=70, step=5,
-    help="% paid immediately upon closing"
-) / 100
-deferred_pct = 1 - immediate_pct
-
-comp_immediate = total_comp * immediate_pct  # Paid upfront
-comp_deferred = total_comp * deferred_pct    # Paid at month 18
-
-# Display deal economics summary
-st.sidebar.markdown("---")
-st.sidebar.markdown("**📊 Deal Summary**")
-st.sidebar.info(f"""
-• Contract Value: ${total_contract_value:,.0f} MXN
-• Total Comp (2.7%): ${total_comp:,.0f} MXN
-• Upfront (70%): ${comp_immediate:,.0f} MXN
-• Month 18 (30%): ${comp_deferred:,.0f} MXN
-""")
-
-st.sidebar.success(f"""
-**Per Sale Value:**
-• Total: ${total_comp:,.0f}
-• Immediate (70%): ${comp_immediate:,.0f}
-• Deferred (30%): ${comp_deferred:,.0f}
-""")
-
-# Shared compensation state (used across tabs and calculations)
 default_roles_comp = {
     'closer': {'count': num_closers, 'base': 32000, 'variable': 48000, 'ote': 80000},
     'setter': {'count': num_setters, 'base': 16000, 'variable': 24000, 'ote': 40000},
@@ -465,7 +280,7 @@ default_roles_comp = {
 comp_inputs_state = st.session_state.get('team_compensation_inputs')
 if not comp_inputs_state:
     comp_inputs_state = {
-        'comp_mode': "Simple (% split)",
+        'comp_mode': 'Simple (% split)',
         'roles_comp': default_roles_comp,
         'closer_comm_pct': 0.20,
         'setter_comm_pct': 0.03
@@ -483,31 +298,16 @@ st.session_state.setdefault('team_compensation_structure', {
     'setter_comm_pct': setter_comm_pct
 })
 
-# SECTION 7: OPERATING COSTS
-st.sidebar.header("💵 7. Operating Costs")
+office_rent = st.session_state.get('rent_value', 20000)
+software_costs = st.session_state.get('software_value', 10000)
+other_opex = st.session_state.get('opex_value', 5000)
+gov_fee_pct = st.session_state.get('gov_fee_pct_value', 0.10)
 
-office_rent = st.sidebar.number_input("Office Rent", value=20000, step=5000)
-software_costs = st.sidebar.number_input("Software/Tools", value=10000, step=1000)
-other_opex = st.sidebar.number_input("Other OpEx", value=5000, step=1000)
+projection_months = st.session_state.get('projection_months_value', 18)
+sales_cycle_days = st.session_state.get('sales_cycle_value', 20)
 
-# Government fees
-gov_fee_pct = st.sidebar.number_input(
-    "Gov Fees %", min_value=0, max_value=30, value=10, step=1
-) / 100
-
-# SECTION 8: PROJECTION
-st.sidebar.header("📅 8. Projection Settings")
-
-projection_months = st.sidebar.selectbox(
-    "Projection Horizon",
-    [6, 12, 18, 24, 36],
-    index=2
-)
-
-sales_cycle_days = st.sidebar.number_input(
-    "Sales Cycle (days)", min_value=7, max_value=180, value=20, step=1
-)
-
+# ============= CALCULATIONS =============
+# ============= CALCULATIONS =============
 # ============= CALCULATIONS =============
 
 # Initialize with zeros - will be calculated from channels
