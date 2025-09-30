@@ -870,6 +870,9 @@ with tabs[0]:
             else:  # Daily
                 revenue_input_main = st.number_input("Daily Target ($)", value=192308, step=5000, key="rev_daily_main")
                 monthly_revenue_target_main = revenue_input_main * 21.67
+            
+            # Store in session state for sidebar
+            st.session_state['monthly_revenue_target_main'] = monthly_revenue_target_main
         
         with rev_col2:
             st.markdown("**📊 Revenue Breakdown**")
