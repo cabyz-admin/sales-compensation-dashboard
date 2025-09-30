@@ -651,55 +651,75 @@ def create_business_performance_dashboard(
         st.markdown("## ⚡ Operational Excellence Dashboard")
         
         # Operational efficiency metrics
-        st.markdown("### 📈 Efficiency Metrics")
+        st.markdown("### 📈 Sales Activity & Efficiency Metrics")
         
         ops_metrics = st.columns(6)
         
         with ops_metrics[0]:
             # Calculate actual leads per sale
             leads_per_sale = operational_metrics.get('monthly_leads', 3000) / operational_metrics.get('monthly_sales', 60) if operational_metrics.get('monthly_sales', 60) > 0 else 50
-            st.metric(
-                "Leads per Sale",
-                f"{leads_per_sale:.0f}",
-                "Efficiency" if leads_per_sale < 60 else "Review"
-            )
+            lps_color = "#34d399" if leads_per_sale < 60 else "#fbbf24" if leads_per_sale < 80 else "#f87171"
+            st.markdown(f"""
+            <div style="background: #0f172a; border: 1px solid rgba(148, 163, 184, 0.16);
+                        padding: 20px; border-radius: 16px; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.28); text-align: left;">
+                <div style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #94a3b8; font-weight: 600;">Leads per Sale</div>
+                <div style="font-size: 32px; font-weight: 700; color: {lps_color}; margin: 14px 0 6px;">{leads_per_sale:.0f}</div>
+                <div style="font-size: 13px; color: #e2e8f0;">{"Efficient" if leads_per_sale < 60 else "Review process"}</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         with ops_metrics[1]:
             cycle_time = 18  # Days
-            st.metric(
-                "Sales Cycle",
-                f"{cycle_time} days",
-                "Fast" if cycle_time < 20 else "Slow"
-            )
+            cycle_color = "#34d399" if cycle_time < 20 else "#fbbf24" if cycle_time < 30 else "#f87171"
+            st.markdown(f"""
+            <div style="background: #0f172a; border: 1px solid rgba(148, 163, 184, 0.16);
+                        padding: 20px; border-radius: 16px; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.28); text-align: left;">
+                <div style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #94a3b8; font-weight: 600;">Sales Cycle</div>
+                <div style="font-size: 32px; font-weight: 700; color: {cycle_color}; margin: 14px 0 6px;">{cycle_time}d</div>
+                <div style="font-size: 13px; color: #e2e8f0;">{"Fast velocity" if cycle_time < 20 else "Slow velocity"}</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         with ops_metrics[2]:
             productivity = revenue / team_metrics.get('total_team', 20)
-            st.metric(
-                "Revenue per Employee",
-                f"${productivity:,.0f}",
-                "High" if productivity > 200000 else "Low"
-            )
+            prod_color = "#34d399" if productivity > 200000 else "#fbbf24" if productivity > 150000 else "#f87171"
+            st.markdown(f"""
+            <div style="background: #0f172a; border: 1px solid rgba(148, 163, 184, 0.16);
+                        padding: 20px; border-radius: 16px; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.28); text-align: left;">
+                <div style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #94a3b8; font-weight: 600;">Revenue per Employee</div>
+                <div style="font-size: 32px; font-weight: 700; color: {prod_color}; margin: 14px 0 6px;">${productivity/1000:.0f}k</div>
+                <div style="font-size: 13px; color: #e2e8f0;">{"High productivity" if productivity > 200000 else "Below target"}</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         with ops_metrics[3]:
             # Calculate actual team utilization from meetings vs capacity
             meetings = operational_metrics.get('monthly_meetings', 500)
             capacity = team_metrics.get('num_closers', 8) * 80  # 80 meetings per closer capacity
             utilization = min(1.0, meetings / capacity) if capacity > 0 else 0.78
-            st.metric(
-                "Team Utilization",
-                f"{utilization*100:.0f}%",
-                "Optimal" if utilization > 0.75 else "Low"
-            )
+            util_color = "#34d399" if 0.75 <= utilization <= 0.85 else "#fbbf24" if utilization < 0.75 or utilization <= 0.9 else "#f87171"
+            st.markdown(f"""
+            <div style="background: #0f172a; border: 1px solid rgba(148, 163, 184, 0.16);
+                        padding: 20px; border-radius: 16px; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.28); text-align: left;">
+                <div style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #94a3b8; font-weight: 600;">Team Utilization</div>
+                <div style="font-size: 32px; font-weight: 700; color: {util_color}; margin: 14px 0 6px;">{utilization*100:.0f}%</div>
+                <div style="font-size: 13px; color: #e2e8f0;">{"Optimal range" if 0.75 <= utilization <= 0.85 else "Outside optimal"}</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         with ops_metrics[4]:
             # Calculate quality score based on close rate and other factors
             close_rate = operational_metrics.get('close_rate', 0.25)
             quality_score = min(1.0, close_rate * 3.5)  # Scale close rate to quality
-            st.metric(
-                "Quality Score",
-                f"{quality_score*100:.0f}%",
-                "Excellent" if quality_score > 0.9 else "Improve"
-            )
+            qual_color = "#34d399" if quality_score > 0.9 else "#fbbf24" if quality_score > 0.7 else "#f87171"
+            st.markdown(f"""
+            <div style="background: #0f172a; border: 1px solid rgba(148, 163, 184, 0.16);
+                        padding: 20px; border-radius: 16px; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.28); text-align: left;">
+                <div style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #94a3b8; font-weight: 600;">Quality Score</div>
+                <div style="font-size: 32px; font-weight: 700; color: {qual_color}; margin: 14px 0 6px;">{quality_score*100:.0f}%</div>
+                <div style="font-size: 13px; color: #e2e8f0;">{"Excellent quality" if quality_score > 0.9 else "Needs improvement"}</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         with ops_metrics[5]:
             # Calculate automation rate based on lead processing efficiency
@@ -708,11 +728,15 @@ def create_business_performance_dashboard(
             # Assume manual capacity is 500 leads per setter
             manual_capacity = team_size * 500
             automation_rate = max(0, min(1.0, 1 - (manual_capacity / leads))) if leads > 0 else 0.65
-            st.metric(
-                "Automation Rate",
-                f"{automation_rate*100:.0f}%",
-                "Target: >60%" if automation_rate < 0.6 else "✅ Good"
-            )
+            auto_color = "#34d399" if automation_rate >= 0.6 else "#fbbf24" if automation_rate >= 0.4 else "#f87171"
+            st.markdown(f"""
+            <div style="background: #0f172a; border: 1px solid rgba(148, 163, 184, 0.16);
+                        padding: 20px; border-radius: 16px; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.28); text-align: left;">
+                <div style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #94a3b8; font-weight: 600;">Automation Rate</div>
+                <div style="font-size: 32px; font-weight: 700; color: {auto_color}; margin: 14px 0 6px;">{automation_rate*100:.0f}%</div>
+                <div style="font-size: 13px; color: #e2e8f0;">{"Target achieved" if automation_rate >= 0.6 else "Target: >60%"}</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         # Process optimization heatmap
         st.markdown("### 🔥 Process Efficiency Heatmap")
