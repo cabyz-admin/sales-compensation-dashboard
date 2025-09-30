@@ -584,66 +584,7 @@ if show_up_rate < 0.7:
 # Sort alerts by severity (critical first)
 alerts.sort(key=lambda x: 0 if x['type'] == 'critical' else 1)
 
-# Display alerts in a dropdown for cleaner UI
-if alerts:
-    # Count critical vs warning alerts
-    critical_count = sum(1 for alert in alerts if alert['type'] == 'critical')
-    warning_count = len(alerts) - critical_count
-    
-    # Create expander with count in title
-    alert_title = f"🚨 **Business Alerts & Recommendations** ({critical_count} critical, {warning_count} warnings)"
-    with st.expander(alert_title, expanded=False):
-        for i, alert in enumerate(alerts):
-            alert_class = 'alert-critical' if alert['type'] == 'critical' else 'alert-warning'
-            alert_icon = '🔴' if alert['type'] == 'critical' else '⚠️'
-            
-            # Enhanced alert with dramatic visual impact
-            st.markdown(
-                f'''
-                <div class="alert-box {alert_class}">
-                    <div class="alert-title">
-                        {alert_icon} Alert #{i+1}: {alert['type'].upper()} Issue Detected
-                    </div>
-                    <div class="alert-message">
-                        {alert["message"]}
-                    </div>
-                    <div class="alert-action">
-                        🎯 RECOMMENDED ACTION: {alert["action"]}
-                    </div>
-                </div>
-                ''',
-                unsafe_allow_html=True
-            )
-            
-            # Add spacing between alerts
-            st.markdown('<div style="margin: 15px 0;"></div>', unsafe_allow_html=True)
-else:
-    # Show success state when no alerts
-    st.markdown(
-        f'''
-        <div class="alert-box alert-success">
-            <div class="alert-title">🎉 ALL SYSTEMS HEALTHY</div>
-            <div class="alert-message">
-                No critical issues detected. Your sales model is performing within healthy parameters.
-            </div>
-            <div style="margin-top: 20px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
-                <div style="text-align: center; background: rgba(255,255,255,0.2); padding: 15px; border-radius: 10px;">
-                    <div style="font-size: 28px; font-weight: 900;">{monthly_revenue_total / monthly_revenue_target if monthly_revenue_target > 0 else 0:.0%}</div>
-                    <div style="font-size: 12px; opacity: 0.9;">TARGET ACHIEVEMENT</div>
-                </div>
-                <div style="text-align: center; background: rgba(255,255,255,0.2); padding: 15px; border-radius: 10px;">
-                    <div style="font-size: 28px; font-weight: 900;">{ltv_cac_ratio:.1f}:1</div>
-                    <div style="font-size: 12px; opacity: 0.9;">LTV:CAC RATIO</div>
-                </div>
-                <div style="text-align: center; background: rgba(255,255,255,0.2); padding: 15px; border-radius: 10px;">
-                    <div style="font-size: 28px; font-weight: 900;">{capacity_util:.0%}</div>
-                    <div style="font-size: 12px; opacity: 0.9;">CAPACITY USED</div>
-                </div>
-            </div>
-        </div>
-        ''',
-        unsafe_allow_html=True
-    )
+# Alerts moved to sidebar for better visibility
 
 # ============= HEALTH MONITORING (Moved from Critical Alerts) =============
 
@@ -695,6 +636,43 @@ with st.sidebar:
     st.markdown("### 💵 Financial Health")
     cash_balance_display = st.session_state.get('cash_balance_main', 0)
     st.metric("Cash on Hand", f"${cash_balance_display:,.0f}")
+    
+    st.markdown("---")
+    
+    # Compact Alerts Section
+    st.markdown("### 🚨 Business Alerts")
+    
+    if alerts:
+        critical_count = sum(1 for alert in alerts if alert['type'] == 'critical')
+        warning_count = len(alerts) - critical_count
+        
+        # Status badge
+        if critical_count > 0:
+            st.markdown(f"**<span style='color: #f87171;'>●</span> {critical_count} Critical | <span style='color: #fbbf24;'>●</span> {warning_count} Warning**", unsafe_allow_html=True)
+        elif warning_count > 0:
+            st.markdown(f"**<span style='color: #fbbf24;'>●</span> {warning_count} Warning**", unsafe_allow_html=True)
+        
+        for alert in alerts:
+            icon = "🔴" if alert['type'] == 'critical' else "⚠️"
+            bg_color = "#2d1618" if alert['type'] == 'critical' else "#2d2418"
+            border_color = "#f87171" if alert['type'] == 'critical' else "#fbbf24"
+            
+            st.markdown(
+                f"""
+                <div style="background: {bg_color}; border-left: 3px solid {border_color}; 
+                            padding: 10px; margin: 8px 0; border-radius: 6px; font-size: 12px;">
+                    <div style="font-weight: 600; margin-bottom: 4px;">{icon} {alert['type'].upper()}</div>
+                    <div style="color: #e2e8f0; margin-bottom: 6px; line-height: 1.4;">{alert['message']}</div>
+                    <div style="color: #94a3b8; font-size: 11px; line-height: 1.3;">
+                        <strong>Action:</strong> {alert['action']}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+    else:
+        st.success("✅ All Systems Healthy")
+        st.caption("No issues detected")
     
     st.markdown("---")
     
