@@ -60,13 +60,13 @@ def create_business_performance_dashboard(
         kpi_cols = st.columns(5)
         
         with kpi_cols[0]:
-            color = "green" if achievement_rate >= 100 else "orange" if achievement_rate >= 80 else "red"
+            value_color = "#34d399" if achievement_rate >= 100 else "#fbbf24" if achievement_rate >= 80 else "#f87171"
             st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                        padding: 20px; border-radius: 15px; text-align: center;">
-                <h4 style="color: white; margin: 0;">Revenue Achievement</h4>
-                <h1 style="color: {color}; margin: 10px 0;">{achievement_rate:.1f}%</h1>
-                <p style="color: white; margin: 0;">${revenue:,.0f} / ${revenue_target:,.0f}</p>
+            <div style="background: #0f172a; border: 1px solid rgba(148, 163, 184, 0.16);
+                        padding: 24px; border-radius: 18px; box-shadow: 0 14px 32px rgba(15, 23, 42, 0.3); text-align: left;">
+                <div style="font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #94a3b8; font-weight: 600;">Revenue Achievement</div>
+                <div style="font-size: 36px; font-weight: 700; color: {value_color}; margin: 16px 0 8px;">{achievement_rate:.1f}%</div>
+                <div style="font-size: 14px; color: #e2e8f0;">${revenue:,.0f} / ${revenue_target:,.0f}</div>
             </div>
             """, unsafe_allow_html=True)
         
@@ -75,24 +75,24 @@ def create_business_performance_dashboard(
             monthly_growth_target = 10.0  # 10% monthly growth target
             # Estimate growth based on current vs target
             growth_rate = ((revenue / revenue_target - 1) * 100) if revenue_target > 0 else 0
-            color = "green" if growth_rate > 20 else "orange" if growth_rate > 10 else "red"
+            growth_color = "#34d399" if growth_rate >= monthly_growth_target else "#fbbf24" if growth_rate >= 0 else "#f87171"
             st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-                        padding: 20px; border-radius: 15px; text-align: center;">
-                <h4 style="color: white; margin: 0;">Growth Rate</h4>
-                <h1 style="color: white; margin: 10px 0;">{growth_rate:.1f}%</h1>
-                <p style="color: white; margin: 0;">MoM Growth</p>
+            <div style="background: #0f172a; border: 1px solid rgba(148, 163, 184, 0.16);
+                        padding: 24px; border-radius: 18px; box-shadow: 0 14px 32px rgba(15, 23, 42, 0.3); text-align: left;">
+                <div style="font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #94a3b8; font-weight: 600;">Growth Rate</div>
+                <div style="font-size: 36px; font-weight: 700; color: {growth_color}; margin: 16px 0 8px;">{growth_rate:.1f}%</div>
+                <div style="font-size: 14px; color: #e2e8f0;">Target: {monthly_growth_target:.0f}% MoM</div>
             </div>
             """, unsafe_allow_html=True)
         
         with kpi_cols[2]:
-            color = "green" if ebitda_margin > 20 else "orange" if ebitda_margin > 10 else "red"
+            margin_color = "#34d399" if ebitda_margin >= 20 else "#fbbf24" if ebitda_margin >= 10 else "#f87171"
             st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-                        padding: 20px; border-radius: 15px; text-align: center;">
-                <h4 style="color: white; margin: 0;">EBITDA Margin</h4>
-                <h1 style="color: {color}; margin: 10px 0;">{ebitda_margin:.1f}%</h1>
-                <p style="color: white; margin: 0;">${ebitda:,.0f}</p>
+            <div style="background: #0f172a; border: 1px solid rgba(148, 163, 184, 0.16);
+                        padding: 24px; border-radius: 18px; box-shadow: 0 14px 32px rgba(15, 23, 42, 0.3); text-align: left;">
+                <div style="font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #94a3b8; font-weight: 600;">EBITDA Margin</div>
+                <div style="font-size: 36px; font-weight: 700; color: {margin_color}; margin: 16px 0 8px;">{ebitda_margin:.1f}%</div>
+                <div style="font-size: 14px; color: #e2e8f0;">${ebitda:,.0f} monthly EBITDA</div>
             </div>
             """, unsafe_allow_html=True)
         
@@ -100,13 +100,13 @@ def create_business_performance_dashboard(
             cac = financial_metrics.get('cac', 500)
             ltv = financial_metrics.get('ltv', 2500)
             ltv_cac = ltv / cac if cac > 0 else 0
-            color = "green" if ltv_cac > 3 else "orange" if ltv_cac > 2 else "red"
+            ltv_color = "#34d399" if ltv_cac > 3 else "#fbbf24" if ltv_cac > 2 else "#f87171"
             st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-                        padding: 20px; border-radius: 15px; text-align: center;">
-                <h4 style="color: #333; margin: 0;">LTV:CAC</h4>
-                <h1 style="color: {color}; margin: 10px 0;">{ltv_cac:.1f}x</h1>
-                <p style="color: #333; margin: 0;">Unit Economics</p>
+            <div style="background: #0f172a; border: 1px solid rgba(148, 163, 184, 0.16);
+                        padding: 24px; border-radius: 18px; box-shadow: 0 14px 32px rgba(15, 23, 42, 0.3); text-align: left;">
+                <div style="font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #94a3b8; font-weight: 600;">LTV to CAC</div>
+                <div style="font-size: 36px; font-weight: 700; color: {ltv_color}; margin: 16px 0 8px;">{ltv_cac:.1f}x</div>
+                <div style="font-size: 14px; color: #e2e8f0;">Unit economics performance</div>
             </div>
             """, unsafe_allow_html=True)
         
@@ -115,13 +115,13 @@ def create_business_performance_dashboard(
             # Calculate runway based on actual cash balance and burn
             cash_balance = financial_metrics.get('cash_balance', revenue * 3)  # Default to 3 months revenue
             runway_months = abs(cash_balance / burn_rate) if burn_rate != 0 else 999
-            color = "green" if runway_months > 18 else "orange" if runway_months > 12 else "red"
+            runway_color = "#34d399" if runway_months > 18 else "#fbbf24" if runway_months > 12 else "#f87171"
             st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-                        padding: 20px; border-radius: 15px; text-align: center;">
-                <h4 style="color: #333; margin: 0;">Runway</h4>
-                <h1 style="color: {color}; margin: 10px 0;">{min(runway_months, 99):.0f} mo</h1>
-                <p style="color: #333; margin: 0;">Cash Runway</p>
+            <div style="background: #0f172a; border: 1px solid rgba(148, 163, 184, 0.16);
+                        padding: 24px; border-radius: 18px; box-shadow: 0 14px 32px rgba(15, 23, 42, 0.3); text-align: left;">
+                <div style="font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #94a3b8; font-weight: 600;">Runway</div>
+                <div style="font-size: 36px; font-weight: 700; color: {runway_color}; margin: 16px 0 8px;">{min(runway_months, 99):.0f} mo</div>
+                <div style="font-size: 14px; color: #e2e8f0;">Cash runway at current burn</div>
             </div>
             """, unsafe_allow_html=True)
         
