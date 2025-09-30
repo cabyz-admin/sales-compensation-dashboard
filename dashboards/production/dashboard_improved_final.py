@@ -909,103 +909,39 @@ with tabs[0]:
     gtm_monthly_revenue_immediate = gtm_metrics.get('monthly_revenue_immediate', monthly_revenue_immediate)
     gtm_blended_contact_rate = gtm_metrics.get('blended_contact_rate', contact_rate)
 
-    # POD Structure Configuration (Modular Team Builder)
-    with st.expander("🎯 **POD Structure** (Advanced Team Configuration)", expanded=False):
-        st.info("💡 Build specialized sales PODs with MDR, SDR, AE, CSM, AM roles for scalable growth")
+    # Role Customization (Simple Relabeling)
+    with st.expander("🏷️ **Customize Role Names** (Optional)", expanded=False):
+        st.info("💡 Rename roles to match your organization's terminology. The calculations stay the same.")
         
-        # POD configuration mode
-        pod_mode = st.radio(
-            "Team Structure Mode",
-            ["Simple (Closers/Setters)", "POD-Based (Specialized Roles)"],
-            horizontal=True,
-            key="pod_mode"
-        )
+        label_col1, label_col2 = st.columns(2)
         
-        if pod_mode == "POD-Based (Specialized Roles)":
-            # Initialize PODs in session state
-            if 'sales_pods' not in st.session_state:
-                st.session_state.sales_pods = [{
-                    'id': 'pod_1',
-                    'name': 'POD 1 - Standard',
-                    'roles': {
-                        'MDR': {'count': 1, 'capacity': 30, 'unit': 'leads/day'},
-                        'SDR': {'count': 1, 'capacity': 40, 'unit': 'outreach/day'},
-                        'AE': {'count': 2, 'capacity': 3, 'unit': 'meetings/day'},
-                        'CSM': {'count': 1, 'capacity': 50, 'unit': 'accounts'},
-                    }
-                }]
+        with label_col1:
+            closer_label = st.text_input(
+                "What do you call 'Closers'?",
+                value=st.session_state.get('closer_label', 'Closers'),
+                placeholder="e.g., AEs, Account Executives, Sales Reps",
+                key="closer_label_input",
+                help="Examples: Account Executives (AE), Sales Reps, Closers, Consultants"
+            )
+            st.session_state['closer_label'] = closer_label
             
-            # POD management buttons
-            pod_mgmt_cols = st.columns([1, 1, 3])
-            with pod_mgmt_cols[0]:
-                if st.button("➕ Add POD"):
-                    new_pod_id = f"pod_{len(st.session_state.sales_pods) + 1}"
-                    st.session_state.sales_pods.append({
-                        'id': new_pod_id,
-                        'name': f'POD {len(st.session_state.sales_pods) + 1}',
-                        'roles': {'AE': {'count': 2, 'capacity': 3, 'unit': 'meetings/day'}}
-                    })
-                    st.rerun()
-            
-            with pod_mgmt_cols[1]:
-                if len(st.session_state.sales_pods) > 1:
-                    if st.button("🗑️ Remove Last POD"):
-                        st.session_state.sales_pods.pop()
-                        st.rerun()
-            
-            # Display each POD
-            for idx, pod in enumerate(st.session_state.sales_pods):
-                with st.expander(f"📦 {pod['name']}", expanded=(idx == 0)):
-                    pod_cols = st.columns([2, 3])
-                    
-                    with pod_cols[0]:
-                        pod['name'] = st.text_input("POD Name", value=pod['name'], key=f"{pod['id']}_name")
-                        
-                        # Role selector
-                        available_roles = ['MDR', 'SDR', 'AE', 'CSM', 'AM', 'ADR', 'ONB']
-                        selected_role = st.selectbox("Add Role", available_roles, key=f"{pod['id']}_role_select")
-                        
-                        if st.button("➕ Add Role to POD", key=f"{pod['id']}_add_role"):
-                            if selected_role not in pod['roles']:
-                                pod['roles'][selected_role] = {'count': 1, 'capacity': 40, 'unit': 'tasks/day'}
-                                st.rerun()
-                    
-                    with pod_cols[1]:
-                        st.markdown("**Roles in POD:**")
-                        for role_name, role_config in list(pod['roles'].items()):
-                            role_col1, role_col2, role_col3, role_col4 = st.columns([2, 1, 2, 1])
-                            with role_col1:
-                                st.markdown(f"**{role_name}**")
-                            with role_col2:
-                                role_config['count'] = st.number_input(
-                                    "Count", 
-                                    min_value=0, 
-                                    max_value=20, 
-                                    value=role_config.get('count', 1),
-                                    key=f"{pod['id']}_{role_name}_count"
-                                )
-                            with role_col3:
-                                role_config['capacity'] = st.number_input(
-                                    "Capacity",
-                                    min_value=1,
-                                    max_value=200,
-                                    value=role_config.get('capacity', 40),
-                                    key=f"{pod['id']}_{role_name}_capacity"
-                                )
-                            with role_col4:
-                                if st.button("🗑️", key=f"{pod['id']}_{role_name}_remove"):
-                                    del pod['roles'][role_name]
-                                    st.rerun()
-            
-            st.markdown("---")
-            st.markdown("**💡 POD Structure Benefits:**")
-            st.markdown("- **Scalable**: Each POD is a self-contained revenue unit")
-            st.markdown("- **Specialized**: Roles focus on their area of expertise")
-            st.markdown("- **Measurable**: Track efficiency ratio (OTE / Annual Revenue < 40%)")
-            st.markdown("- **Agile**: Deploy PODs to specific markets, regions, or segments")
+            setter_label = st.text_input(
+                "What do you call 'Setters'?",
+                value=st.session_state.get('setter_label', 'Setters'),
+                placeholder="e.g., SDRs, BDRs, Appointment Setters",
+                key="setter_label_input",
+                help="Examples: Sales Development Reps (SDR), BDRs, Lead Qualifiers"
+            )
+            st.session_state['setter_label'] = setter_label
         
-        else:
-            st.info("Using simple Closer/Setter model - switch to POD-Based for advanced configuration")
+        with label_col2:
+            st.markdown("**Common Role Names:**")
+            st.markdown("- **AE** (Account Executive) = Closers")
+            st.markdown("- **SDR** (Sales Development Rep) = Setters")
+            st.markdown("- **BDR** (Business Development Rep) = Setters")
+            st.markdown("- **AM** (Account Manager) = Managers")
+            st.markdown("")
+            st.caption("💡 **Note**: Changing labels doesn't affect calculations. All revenue, capacity, and EBITDA metrics remain based on the proven Closer/Setter model.")
     
     # Team Structure Configuration
     # Initialize expander state if not exists
