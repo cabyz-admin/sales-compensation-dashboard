@@ -909,12 +909,110 @@ with tabs[0]:
     gtm_monthly_revenue_immediate = gtm_metrics.get('monthly_revenue_immediate', monthly_revenue_immediate)
     gtm_blended_contact_rate = gtm_metrics.get('blended_contact_rate', contact_rate)
 
+    # POD Structure Configuration (Modular Team Builder)
+    with st.expander("🎯 **POD Structure** (Advanced Team Configuration)", expanded=False):
+        st.info("💡 Build specialized sales PODs with MDR, SDR, AE, CSM, AM roles for scalable growth")
+        
+        # POD configuration mode
+        pod_mode = st.radio(
+            "Team Structure Mode",
+            ["Simple (Closers/Setters)", "POD-Based (Specialized Roles)"],
+            horizontal=True,
+            key="pod_mode"
+        )
+        
+        if pod_mode == "POD-Based (Specialized Roles)":
+            # Initialize PODs in session state
+            if 'sales_pods' not in st.session_state:
+                st.session_state.sales_pods = [{
+                    'id': 'pod_1',
+                    'name': 'POD 1 - Standard',
+                    'roles': {
+                        'MDR': {'count': 1, 'capacity': 30, 'unit': 'leads/day'},
+                        'SDR': {'count': 1, 'capacity': 40, 'unit': 'outreach/day'},
+                        'AE': {'count': 2, 'capacity': 3, 'unit': 'meetings/day'},
+                        'CSM': {'count': 1, 'capacity': 50, 'unit': 'accounts'},
+                    }
+                }]
+            
+            # POD management buttons
+            pod_mgmt_cols = st.columns([1, 1, 3])
+            with pod_mgmt_cols[0]:
+                if st.button("➕ Add POD"):
+                    new_pod_id = f"pod_{len(st.session_state.sales_pods) + 1}"
+                    st.session_state.sales_pods.append({
+                        'id': new_pod_id,
+                        'name': f'POD {len(st.session_state.sales_pods) + 1}',
+                        'roles': {'AE': {'count': 2, 'capacity': 3, 'unit': 'meetings/day'}}
+                    })
+                    st.rerun()
+            
+            with pod_mgmt_cols[1]:
+                if len(st.session_state.sales_pods) > 1:
+                    if st.button("🗑️ Remove Last POD"):
+                        st.session_state.sales_pods.pop()
+                        st.rerun()
+            
+            # Display each POD
+            for idx, pod in enumerate(st.session_state.sales_pods):
+                with st.expander(f"📦 {pod['name']}", expanded=(idx == 0)):
+                    pod_cols = st.columns([2, 3])
+                    
+                    with pod_cols[0]:
+                        pod['name'] = st.text_input("POD Name", value=pod['name'], key=f"{pod['id']}_name")
+                        
+                        # Role selector
+                        available_roles = ['MDR', 'SDR', 'AE', 'CSM', 'AM', 'ADR', 'ONB']
+                        selected_role = st.selectbox("Add Role", available_roles, key=f"{pod['id']}_role_select")
+                        
+                        if st.button("➕ Add Role to POD", key=f"{pod['id']}_add_role"):
+                            if selected_role not in pod['roles']:
+                                pod['roles'][selected_role] = {'count': 1, 'capacity': 40, 'unit': 'tasks/day'}
+                                st.rerun()
+                    
+                    with pod_cols[1]:
+                        st.markdown("**Roles in POD:**")
+                        for role_name, role_config in list(pod['roles'].items()):
+                            role_col1, role_col2, role_col3, role_col4 = st.columns([2, 1, 2, 1])
+                            with role_col1:
+                                st.markdown(f"**{role_name}**")
+                            with role_col2:
+                                role_config['count'] = st.number_input(
+                                    "Count", 
+                                    min_value=0, 
+                                    max_value=20, 
+                                    value=role_config.get('count', 1),
+                                    key=f"{pod['id']}_{role_name}_count"
+                                )
+                            with role_col3:
+                                role_config['capacity'] = st.number_input(
+                                    "Capacity",
+                                    min_value=1,
+                                    max_value=200,
+                                    value=role_config.get('capacity', 40),
+                                    key=f"{pod['id']}_{role_name}_capacity"
+                                )
+                            with role_col4:
+                                if st.button("🗑️", key=f"{pod['id']}_{role_name}_remove"):
+                                    del pod['roles'][role_name]
+                                    st.rerun()
+            
+            st.markdown("---")
+            st.markdown("**💡 POD Structure Benefits:**")
+            st.markdown("- **Scalable**: Each POD is a self-contained revenue unit")
+            st.markdown("- **Specialized**: Roles focus on their area of expertise")
+            st.markdown("- **Measurable**: Track efficiency ratio (OTE / Annual Revenue < 40%)")
+            st.markdown("- **Agile**: Deploy PODs to specific markets, regions, or segments")
+        
+        else:
+            st.info("Using simple Closer/Setter model - switch to POD-Based for advanced configuration")
+    
     # Team Structure Configuration
     # Initialize expander state if not exists
     if 'team_structure_expanded' not in st.session_state:
         st.session_state.team_structure_expanded = True
     
-    with st.expander("👥 **Team Structure**", expanded=st.session_state.team_structure_expanded):
+    with st.expander("👥 **Team Structure** (Simple Mode)", expanded=st.session_state.team_structure_expanded):
         team_col1, team_col2, team_col3 = st.columns(3)
         
         with team_col1:
@@ -957,21 +1055,59 @@ with tabs[0]:
             st.metric("S:C Ratio", f"{setter_closer_ratio_main:.1f}:1")
         
         with team_col3:
-            st.markdown("**Capacity & Compensation**")
+            st.markdown("**Capacity Analysis**")
             monthly_closer_capacity = num_closers_main * meetings_per_closer * working_days
             capacity_util_main = gtm_monthly_meetings / monthly_closer_capacity if monthly_closer_capacity > 0 else 0
-            st.metric("Closer Capacity", f"{monthly_closer_capacity:,.0f} meetings/mo")
             monthly_setter_capacity = num_setters_main * meetings_per_setter * working_days
             setter_util = gtm_monthly_meetings_scheduled / monthly_setter_capacity if monthly_setter_capacity > 0 else 0
-            st.metric("Setter Booking Capacity", f"{monthly_setter_capacity:,.0f} meetings/mo")
-            st.metric("Utilization", f"{capacity_util_main:.0%}")
-            st.metric("Setter Utilization", f"{setter_util:.0%}")
-            if capacity_util_main > 0.9:
-                st.warning("⚠️ Overloaded!")
-            elif capacity_util_main > 0.75:
-                st.info("🟡 Near capacity")
-            else:
-                st.success("✅ Healthy capacity")
+            
+            # Capacity waterfall visualization
+            import plotly.graph_objects as go
+            
+            # Calculate target meetings (for goal)
+            target_meetings = monthly_revenue_target_main / comp_immediate * (1 / close_rate) if comp_immediate > 0 and close_rate > 0 else gtm_monthly_meetings
+            
+            fig_capacity = go.Figure()
+            
+            # Closer capacity waterfall
+            fig_capacity.add_trace(go.Waterfall(
+                name="Closers",
+                orientation="v",
+                measure=["absolute", "relative", "relative", "total"],
+                x=["Capacity", "Current Load", "Headroom", "Status"],
+                y=[monthly_closer_capacity, -gtm_monthly_meetings, 0, 0],
+                text=[f"{monthly_closer_capacity:.0f}", f"-{gtm_monthly_meetings:.0f}", 
+                      f"{monthly_closer_capacity - gtm_monthly_meetings:.0f}", 
+                      f"{capacity_util_main:.0%}"],
+                textposition="outside",
+                connector={"line": {"color": "rgba(148, 163, 184, 0.3)"}},
+                increasing={"marker": {"color": "#22c55e"}},
+                decreasing={"marker": {"color": "#ef4444"}},
+                totals={"marker": {"color": "#3b82f6" if capacity_util_main < 0.85 else "#f59e0b"}}
+            ))
+            
+            fig_capacity.update_layout(
+                title="Closer Capacity vs Load",
+                height=280,
+                margin=dict(t=40, b=20, l=20, r=20),
+                showlegend=False,
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                font=dict(size=11, color='#e2e8f0')
+            )
+            
+            st.plotly_chart(fig_capacity, use_container_width=True, key="capacity_waterfall")
+            
+            # Metrics in compact grid
+            cap_cols = st.columns(2)
+            with cap_cols[0]:
+                st.metric("Closer Utilization", f"{capacity_util_main:.0%}", 
+                         "🔴 Overload" if capacity_util_main > 0.9 else "🟡 High" if capacity_util_main > 0.75 else "✅ Healthy")
+                st.metric("Closer Capacity", f"{monthly_closer_capacity:,.0f}/mo")
+            with cap_cols[1]:
+                st.metric("Setter Utilization", f"{setter_util:.0%}",
+                         "🔴 Overload" if setter_util > 1.0 else "🟡 High" if setter_util > 0.85 else "✅ Healthy")
+                st.metric("Setter Capacity", f"{monthly_setter_capacity:,.0f}/mo")
 
             st.session_state['team_capacity_settings'] = {
                 'meetings_per_closer': meetings_per_closer,
