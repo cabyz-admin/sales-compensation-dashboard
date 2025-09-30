@@ -12,6 +12,8 @@ import plotly.express as px
 from datetime import datetime, timedelta
 import sys
 import os
+import json
+import base64
 
 # Import enhanced modules
 try:
@@ -241,11 +243,11 @@ if st.session_state.theme_light:
         unsafe_allow_html=True
     )
 
-# Hide the sidebar since everything is now in the main view
+# Sidebar is now visible and used for model summary
 st.markdown("""
 <style>
     section[data-testid="stSidebar"] {
-        display: none;
+        display: block;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -646,6 +648,170 @@ else:
 
 # This section shows health metrics and recommendations in a calmer way
 # Actual critical alerts logic is preserved but displayed differently in the main tab
+
+# ============= SIDEBAR: MODEL SUMMARY & SAVE/LOAD =============
+with st.sidebar:
+    st.markdown("## 📋 Model Summary")
+    st.markdown("---")
+    
+    # Revenue Target Section
+    st.markdown("### 🎯 Revenue Target")
+    monthly_target_display = st.session_state.get('monthly_revenue_target_main', monthly_revenue_target)
+    st.metric("Monthly", f"${monthly_target_display:,.0f}")
+    st.metric("Annual", f"${monthly_target_display*12:,.0f}")
+    
+    st.markdown("---")
+    
+    # Team Configuration
+    st.markdown("### 👥 Sales Team")
+    closers_display = st.session_state.get('num_closers_main', num_closers)
+    setters_display = st.session_state.get('num_setters_main', num_setters)
+    managers_display = st.session_state.get('num_managers_main', num_managers)
+    bench_display = st.session_state.get('num_bench_main', num_bench)
+    
+    st.text(f"Closers: {closers_display}")
+    st.text(f"Setters: {setters_display}")
+    st.text(f"Managers: {managers_display}")
+    st.text(f"Bench: {bench_display}")
+    st.metric("Total Team", f"{closers_display + setters_display + managers_display + bench_display}")
+    
+    st.markdown("---")
+    
+    # Compensation Model
+    st.markdown("### 💰 Compensation")
+    comp_mode_display = st.session_state.get('comp_model_selection', '⚖️ Balanced (40/60)')
+    st.text(f"Model: {comp_mode_display.split(' ')[0]}")
+    
+    # Deal Economics
+    avg_pm_display = st.session_state.get('avg_pm_main', avg_pm)
+    contract_years_display = st.session_state.get('contract_years_main', contract_years)
+    st.metric("Avg Premium", f"${avg_pm_display:,.0f} MXN/mo")
+    st.metric("Contract", f"{contract_years_display} years")
+    
+    st.markdown("---")
+    
+    # Financial Health
+    st.markdown("### 💵 Financial Health")
+    cash_balance_display = st.session_state.get('cash_balance_main', 0)
+    st.metric("Cash on Hand", f"${cash_balance_display:,.0f}")
+    
+    st.markdown("---")
+    
+    # Save/Load Configuration
+    st.markdown("### 💾 Save/Load Model")
+    
+    # Collect current configuration
+    current_config = {
+        "revenue": {
+            "monthly_target": monthly_target_display,
+            "annual_target": monthly_target_display * 12
+        },
+        "team": {
+            "closers": closers_display,
+            "setters": setters_display,
+            "managers": managers_display,
+            "bench": bench_display
+        },
+        "compensation": {
+            "model": comp_mode_display,
+            "avg_premium_mxn": avg_pm_display,
+            "contract_years": contract_years_display
+        },
+        "financial": {
+            "cash_balance": cash_balance_display
+        },
+        "timestamp": datetime.now().isoformat()
+    }
+    
+    # Export as JSON
+    config_json = json.dumps(current_config, indent=2)
+    
+    # Download button
+    st.download_button(
+        label="📥 Download Config",
+        data=config_json,
+        file_name=f"model_config_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+        mime="application/json",
+        help="Download current model configuration as JSON file"
+    )
+    
+    # Copy to clipboard
+    if st.button("📋 Copy Config", help="Copy configuration to clipboard"):
+        st.code(config_json, language="json")
+        st.success("✅ Configuration displayed above - copy from code block")
+    
+    # Load configuration
+    st.markdown("**Load Config**")
+    uploaded_file = st.file_uploader(
+        "Upload JSON config",
+        type=['json'],
+        help="Upload a previously saved configuration file",
+        label_visibility="collapsed"
+    )
+    
+    if uploaded_file is not None:
+        try:
+            loaded_config = json.load(uploaded_file)
+            
+            # Apply loaded configuration to session state
+            if st.button("✅ Apply Loaded Config"):
+                if 'revenue' in loaded_config:
+                    st.session_state['monthly_revenue_target_main'] = loaded_config['revenue'].get('monthly_target', monthly_revenue_target)
+                
+                if 'team' in loaded_config:
+                    st.session_state['num_closers_main'] = loaded_config['team'].get('closers', num_closers)
+                    st.session_state['num_setters_main'] = loaded_config['team'].get('setters', num_setters)
+                    st.session_state['num_managers_main'] = loaded_config['team'].get('managers', num_managers)
+                    st.session_state['num_bench_main'] = loaded_config['team'].get('bench', num_bench)
+                
+                if 'compensation' in loaded_config:
+                    st.session_state['avg_pm_main'] = loaded_config['compensation'].get('avg_premium_mxn', avg_pm)
+                    st.session_state['contract_years_main'] = loaded_config['compensation'].get('contract_years', contract_years)
+                
+                if 'financial' in loaded_config:
+                    st.session_state['cash_balance_main'] = loaded_config['financial'].get('cash_balance', 0)
+                
+                st.success("✅ Configuration loaded! Refresh to see changes.")
+                st.rerun()
+        
+        except Exception as e:
+            st.error(f"❌ Error loading config: {str(e)}")
+    
+    # Paste JSON config
+    with st.expander("📝 Or Paste JSON Config"):
+        pasted_config = st.text_area(
+            "Paste configuration JSON",
+            height=150,
+            placeholder='{"revenue": {"monthly_target": 4166667}, ...}',
+            label_visibility="collapsed"
+        )
+        
+        if st.button("✅ Apply Pasted Config") and pasted_config:
+            try:
+                loaded_config = json.loads(pasted_config)
+                
+                # Apply configuration
+                if 'revenue' in loaded_config:
+                    st.session_state['monthly_revenue_target_main'] = loaded_config['revenue'].get('monthly_target', monthly_revenue_target)
+                
+                if 'team' in loaded_config:
+                    st.session_state['num_closers_main'] = loaded_config['team'].get('closers', num_closers)
+                    st.session_state['num_setters_main'] = loaded_config['team'].get('setters', num_setters)
+                    st.session_state['num_managers_main'] = loaded_config['team'].get('managers', num_managers)
+                    st.session_state['num_bench_main'] = loaded_config['team'].get('bench', num_bench)
+                
+                if 'compensation' in loaded_config:
+                    st.session_state['avg_pm_main'] = loaded_config['compensation'].get('avg_premium_mxn', avg_pm)
+                    st.session_state['contract_years_main'] = loaded_config['compensation'].get('contract_years', contract_years)
+                
+                if 'financial' in loaded_config:
+                    st.session_state['cash_balance_main'] = loaded_config['financial'].get('cash_balance', 0)
+                
+                st.success("✅ Configuration applied! Refresh to see changes.")
+                st.rerun()
+            
+            except Exception as e:
+                st.error(f"❌ Error parsing JSON: {str(e)}")
 
 # ============= MAIN TABS =============
 
