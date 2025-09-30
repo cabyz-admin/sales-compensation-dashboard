@@ -1280,12 +1280,25 @@ with tabs[0]:
         
         # ENHANCED BUSINESS PERFORMANCE DASHBOARD V2
         if create_business_performance_dashboard:
+            # Get actual revenue for calculations
+            actual_revenue_for_dash = gtm_metrics.get('monthly_revenue_immediate', monthly_revenue_immediate)
+            
+            # Calculate monthly compensation safely
+            if comp_structure and isinstance(comp_structure, dict) and 'monthly_base' in comp_structure:
+                monthly_base_comp = comp_structure['monthly_base']
+            else:
+                monthly_base_comp = (num_closers * 32000 + num_setters * 16000 + num_managers * 72000 + num_bench * 12500) / 12
+            
+            # Get commission rates safely
+            closer_comm_safe = closer_comm_pct if 'closer_comm_pct' in locals() else 0.20
+            setter_comm_safe = setter_comm_pct if 'setter_comm_pct' in locals() else 0.03
+            
             # Prepare metrics for the enhanced dashboard
             financial_metrics = {
                 'monthly_revenue_target': monthly_revenue_target,
                 'monthly_marketing': cost_breakdown.get('total_marketing_spend', monthly_marketing) if 'cost_breakdown' in locals() else monthly_marketing,
                 'monthly_opex': monthly_opex,
-                'monthly_compensation': comp_structure['monthly_base'] + (actual_revenue * (closer_comm_pct + setter_comm_pct)) if 'comp_structure' in locals() and comp_structure else 250000,
+                'monthly_compensation': monthly_base_comp + (actual_revenue_for_dash * (closer_comm_safe + setter_comm_safe)),
                 'cac': cac,
                 'ltv': ltv,
                 'payback_months': payback_months,
@@ -2179,11 +2192,18 @@ with tabs[2]:
         'total_projected': revenue_timeline['cumulative_total'].iloc[-1] if len(revenue_timeline) > 0 else 0
     }
     
+    # Handle case where comp_structure might be None or from different sources
+    if comp_structure and isinstance(comp_structure, dict) and 'monthly_base' in comp_structure:
+        monthly_base_salaries = comp_structure['monthly_base']
+    else:
+        # Fallback calculation if comp_structure is not available
+        monthly_base_salaries = (num_closers * 32000 + num_setters * 16000 + num_managers * 72000 + num_bench * 12500) / 12
+    
     costs_dict = {
         'cogs': 0,
         'marketing_costs': monthly_marketing,
         'commissions': monthly_commissions,
-        'sales_base_salaries': comp_structure['monthly_base'],
+        'sales_base_salaries': monthly_base_salaries,
         'office_rent': office_rent,
         'software': software_costs,
         'other_opex': other_opex,
