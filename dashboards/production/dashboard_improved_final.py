@@ -169,14 +169,27 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Initialize session state for dynamic values
-if 'cost_input_type' not in st.session_state:
-    st.session_state.cost_input_type = 'CPL'
-if 'compensation_mode' not in st.session_state:
-    st.session_state.compensation_mode = 'simple'
-if 'reverse_target' not in st.session_state:
-    st.session_state.reverse_target = None
-if 'theme_light' not in st.session_state:
-    st.session_state.theme_light = False
+st.session_state.setdefault('cost_input_type', 'CPL')
+st.session_state.setdefault('compensation_mode', 'simple')
+st.session_state.setdefault('reverse_target', None)
+st.session_state.setdefault('theme_light', False)
+st.session_state.setdefault('gtm_channels', [
+    {
+        'id': 'channel_1',
+        'name': 'Primary Channel',
+        'segment': 'SMB',
+        'lead_source': 'Inbound Marketing',
+        'monthly_leads': 1000,
+        'cpl': 50,
+        'contact_rate': 0.65,
+        'meeting_rate': 0.4,
+        'show_up_rate': 0.7,
+        'close_rate': 0.3,
+        'avg_deal_value': 15000,
+        'sales_cycle_days': 21,
+        'icon': '🏢'
+    }
+])
 
 # ============= HEADER =============
 header_cols = st.columns([0.8, 0.2])
@@ -1254,9 +1267,6 @@ with tabs[0]:
             total_comp = total_comp_main
             comp_immediate = comp_immediate_val
             comp_deferred = comp_deferred_val
-        else:
-            comp_immediate = comp_immediate_val
-            comp_deferred = comp_deferred_val
     if 'office_rent_main' in locals():
         office_rent = office_rent_main
         software_costs = software_costs_main
@@ -1310,7 +1320,7 @@ with tabs[0]:
     # Configure channels in expandable sections
     channels = []
     for idx, channel_config in enumerate(st.session_state.gtm_channels):
-        with st.expander(f"{channel_config['icon']} **{channel_config.get('name', f'Channel {idx+1}')}**", expanded=(idx == 0)):
+        with st.expander(f"{channel_config.get('icon', '📊')} **{channel_config.get('name', f'Channel {idx+1}')}**", expanded=(idx == 0)):
             # Quick configuration in columns
             cfg_col1, cfg_col2, cfg_col3 = st.columns(3)
             
@@ -3046,12 +3056,26 @@ Keeping it commented for reference only.
     channels = []
     
     # Display channels dynamically
-    if st.session_state.gtm_channels:
+    gtm_channels = st.session_state.get('gtm_channels', [])
+    if not gtm_channels:
+        gtm_channels = st.session_state['gtm_channels'] = [
+            {
+                'id': 'channel_1',
+                'name': 'Primary Channel',
+                'segment': 'SMB',
+                'lead_source': 'Inbound Marketing',
+                'icon': '🏢'
+            }
+        ]
+    
+    if gtm_channels:
         st.markdown("### 📊 Channel Configuration")
         
         # Create expandable sections for each channel
-        for idx, channel_config in enumerate(st.session_state.gtm_channels):
-            with st.expander(f"{channel_config['icon']} **{channel_config['name']}**", expanded=(idx == 0)):
+        for idx, channel_config in enumerate(gtm_channels):
+            icon_display = channel_config.get('icon', '📊')
+            display_name = channel_config.get('name', f"Channel {idx+1}")
+            with st.expander(f"{icon_display} **{display_name}**", expanded=(idx == 0)):
                 # Channel settings in columns
                 col1, col2 = st.columns(2)
                 
@@ -3059,7 +3083,7 @@ Keeping it commented for reference only.
                     # Basic settings
                     channel_name = st.text_input(
                         "Channel Name",
-                        value=channel_config['name'],
+                        value=channel_config.get('name', display_name),
                         key=f"{channel_config['id']}_name"
                     )
                     
@@ -3070,33 +3094,24 @@ Keeping it commented for reference only.
                         key=f"{channel_config['id']}_segment"
                     )
                     
-                    # Update icon based on segment
-                    icon_map = {
-                        'SMB': '🏢',
-                        'MID': '🏛️',
-                        'ENT': '🏰',
-                        'Custom': '🎯'
-                    }
-                    channel_config['icon'] = icon_map.get(segment, '🎯')
-                    
                     lead_source = st.selectbox(
                         "Lead Source",
                         options=['Inbound Marketing', 'Outbound SDR', 'Account-Based Marketing', 'Partner Channel', 'Events', 'Content Marketing'],
-                        index=0,
+                        index=['Inbound Marketing', 'Outbound SDR', 'Account-Based Marketing', 'Partner Channel', 'Events', 'Content Marketing'].index(channel_config.get('lead_source', 'Inbound Marketing')),
                         key=f"{channel_config['id']}_source"
                     )
                     
                     # Volume and cost
                     monthly_leads = st.number_input(
                         "Monthly Leads",
-                        value=1000 if segment == 'SMB' else 300 if segment == 'MID' else 50,
+                        value=channel_config.get('monthly_leads', 1000 if segment == 'SMB' else 300 if segment == 'MID' else 50),
                         step=50,
                         key=f"{channel_config['id']}_leads"
                     )
                     
                     cpl = st.number_input(
                         "Cost Per Lead ($)",
-                        value=50 if segment == 'SMB' else 200 if segment == 'MID' else 1000,
+                        value=channel_config.get('cpl', 50 if segment == 'SMB' else 200 if segment == 'MID' else 1000),
                         step=10,
                         key=f"{channel_config['id']}_cpl"
                     )
@@ -3106,38 +3121,38 @@ Keeping it commented for reference only.
                     contact_rate = st.slider(
                         "Contact Rate %",
                         0, 100, 
-                        65 if segment == 'SMB' else 55 if segment == 'MID' else 45,
+                        int(channel_config.get('contact_rate', 0.65 if segment == 'SMB' else 0.55 if segment == 'MID' else 0.45) * 100),
                         5,
                         key=f"{channel_config['id']}_contact"
-                    ) / 100
+                    ) / 100.0
                     
                     meeting_rate = st.slider(
                         "Meeting Rate %",
                         0, 100,
-                        40 if segment == 'SMB' else 35 if segment == 'MID' else 30,
+                        int(channel_config.get('meeting_rate', 0.40 if segment == 'SMB' else 0.35 if segment == 'MID' else 0.30) * 100),
                         5,
                         key=f"{channel_config['id']}_meeting"
-                    ) / 100
+                    ) / 100.0
                     
                     show_up_rate = st.slider(
                         "Show-up Rate %",
                         0, 100,
-                        70 if segment == 'SMB' else 75 if segment == 'MID' else 85,
+                        int(channel_config.get('show_up_rate', 0.70 if segment == 'SMB' else 0.75 if segment == 'MID' else 0.85) * 100),
                         5,
                         key=f"{channel_config['id']}_showup"
-                    ) / 100
+                    ) / 100.0
                     
                     close_rate = st.slider(
                         "Close Rate %",
                         0, 100,
-                        30 if segment == 'SMB' else 25 if segment == 'MID' else 20,
+                        int(channel_config.get('close_rate', 0.30 if segment == 'SMB' else 0.25 if segment == 'MID' else 0.20) * 100),
                         5,
                         key=f"{channel_config['id']}_close"
-                    ) / 100
+                    ) / 100.0
                     
                     avg_deal_value = st.number_input(
                         "Avg Deal Value ($)",
-                        value=15000 if segment == 'SMB' else 50000 if segment == 'MID' else 250000,
+                        value=channel_config.get('avg_deal_value', 15000 if segment == 'SMB' else 50000 if segment == 'MID' else 250000),
                         step=1000,
                         key=f"{channel_config['id']}_deal"
                     )
@@ -3146,11 +3161,32 @@ Keeping it commented for reference only.
                 sales_cycle = st.slider(
                     "Sales Cycle (days)",
                     7, 180,
-                    21 if segment == 'SMB' else 45 if segment == 'MID' else 90,
+                    channel_config.get('sales_cycle_days', 21 if segment == 'SMB' else 45 if segment == 'MID' else 90),
                     7,
                     key=f"{channel_config['id']}_cycle"
                 )
                 
+                # Persist updates back to session state
+                channel_config.update({
+                    'name': channel_name,
+                    'segment': segment,
+                    'lead_source': lead_source,
+                    'monthly_leads': monthly_leads,
+                    'cpl': cpl,
+                    'contact_rate': contact_rate,
+                    'meeting_rate': meeting_rate,
+                    'show_up_rate': show_up_rate,
+                    'close_rate': close_rate,
+                    'avg_deal_value': avg_deal_value,
+                    'sales_cycle_days': sales_cycle,
+                    'icon': {
+                        'SMB': '🏢',
+                        'MID': '🏛️',
+                        'ENT': '🏰',
+                        'Custom': '🎯'
+                    }.get(segment, '🎯')
+                })
+
                 # Create channel object
                 channel = MultiChannelGTM.define_channel(
                     name=channel_name,
