@@ -916,8 +916,13 @@ with tabs[0]:
         
         with rev_col3:
             st.markdown("**🎯 Impact Metrics**")
-            sales_needed = monthly_revenue_target_main / comp_immediate if comp_immediate > 0 else 0
-            st.metric("Sales Needed", f"{sales_needed:.0f}/mo")
+            effective_revenue_per_sale = comp_immediate + (comp_deferred * grr_rate)
+            sales_needed = monthly_revenue_target_main / effective_revenue_per_sale if effective_revenue_per_sale > 0 else 0
+            st.metric(
+                "Sales Needed",
+                f"{sales_needed:.0f}/mo",
+                help="Monthly deals required based on actual per-sale cash (immediate + retained month-18)."
+            )
             st.metric("Revenue/Sale", f"${comp_immediate:,.0f}")
             st.metric("Target vs Current", f"{(monthly_revenue_total/monthly_revenue_target_main*100):.0f}%")
     
@@ -1537,7 +1542,7 @@ with tabs[0]:
             st.metric("⏱️ Meeting to Close", f"{sales_cycle_days - 5} days")
         with timing_metrics[2]:
             velocity = monthly_sales / sales_cycle_days * 30 if sales_cycle_days > 0 else 0
-            st.metric("🚀 Sales Velocity", f"{velocity:.1f} deals/mo")
+            st.metric("🚀 Sales Velocity", f"{velocity:.1f} deals/mo", help="Projection of monthly deal throughput based on current closes and sales cycle length.")
         with timing_metrics[3]:
             st.metric("🎯 Win Rate", f"{blended_close_rate:.1%}")
         
@@ -1971,7 +1976,7 @@ with tabs[0]:
         st.metric("Meeting to Close", f"{sales_cycle_days - 5} days")
     with timing_cols[3]:
         velocity = monthly_sales / sales_cycle_days * 30 if sales_cycle_days > 0 else 0
-        st.metric("Sales Velocity", f"{velocity:.1f} deals/mo")
+        st.metric("Sales Velocity", f"{velocity:.1f} deals/mo", help="Deals per month implied by current closes and sales cycle duration.")
     
     # Daily Activities integrated into Team Structure expandable section
     # This section is now properly organized within Team Structure configuration
