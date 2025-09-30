@@ -248,6 +248,8 @@ num_setters = st.session_state.get('setters_value', 4)
 num_bench = st.session_state.get('bench_value', 2)
 num_managers = st.session_state.get('managers_value', 2)
 
+team_total = num_closers + num_setters + num_bench + num_managers
+
 cost_type = st.session_state.get('lead_cost_type', 'CPL')
 cost_value = st.session_state.get('lead_cost_value', 150)
 daily_leads = st.session_state.get('lead_volume_daily', 155)
