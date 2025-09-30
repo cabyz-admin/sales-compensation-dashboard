@@ -640,6 +640,27 @@ current_state = {
 # Top metrics moved to consolidated Business Performance Dashboard section
 # All metrics are now displayed in the aggregated section below
 
+
+def get_capacity_metrics(default_closers, default_setters, fallback_working_days=20, fallback_closer_meetings=3.0, fallback_setter_meetings=2.0):
+    """Return capacity configuration and derived totals based on stored settings."""
+    settings = st.session_state.get('team_capacity_settings', {})
+    working_days = settings.get('working_days', fallback_working_days)
+    meetings_per_closer = settings.get('meetings_per_closer', fallback_closer_meetings)
+    meetings_per_setter = settings.get('meetings_per_setter', fallback_setter_meetings)
+    per_closer_monthly_capacity = meetings_per_closer * working_days
+    per_setter_monthly_capacity = meetings_per_setter * working_days
+    monthly_closer_capacity = settings.get('monthly_closer_capacity', default_closers * per_closer_monthly_capacity)
+    monthly_setter_capacity = settings.get('monthly_setter_capacity', default_setters * per_setter_monthly_capacity)
+    return {
+        'working_days': working_days,
+        'meetings_per_closer': meetings_per_closer,
+        'meetings_per_setter': meetings_per_setter,
+        'per_closer_monthly_capacity': per_closer_monthly_capacity,
+        'per_setter_monthly_capacity': per_setter_monthly_capacity,
+        'monthly_closer_capacity': monthly_closer_capacity,
+        'monthly_setter_capacity': monthly_setter_capacity
+    }
+
 # ============= ALERTS AND SUGGESTIONS (Improved) =============
 
 # Dynamic alerts based on current state
@@ -670,21 +691,34 @@ if revenue_gap > 0:
         'action': f'URGENT: Increase sales by {required_sales:.0f} units/month OR improve close rate to {required_close_rate:.1%}'
     })
 
-# Calculate capacity utilization
-capacity_util = monthly_meetings / (num_closers * 60) if num_closers > 0 else 0
+cap_settings_global = get_capacity_metrics(num_closers, num_setters)
+working_days_effective = max(cap_settings_global['working_days'], 1)
+monthly_closer_capacity_global = cap_settings_global['monthly_closer_capacity']
+monthly_setter_capacity_global = cap_settings_global['monthly_setter_capacity']
+per_closer_capacity = max(cap_settings_global['per_closer_monthly_capacity'], 1)
+per_setter_capacity = max(cap_settings_global['per_setter_monthly_capacity'], 1)
+capacity_util = monthly_meetings / monthly_closer_capacity_global if monthly_closer_capacity_global > 0 else 0
+setter_util_global = monthly_meetings_scheduled / monthly_setter_capacity_global if monthly_setter_capacity_global > 0 else 0
 
 # Check team capacity with multiple thresholds
 if capacity_util > 0.95:
+    high_capacity_target = per_closer_capacity * num_closers * 0.8
+    excess_meetings_high = monthly_meetings - high_capacity_target
+    additional_closers_high = np.ceil(max(excess_meetings_high, 0) / per_closer_capacity) if per_closer_capacity > 0 else 0
+    meeting_reduction_high = (max(excess_meetings_high, 0) / monthly_meetings * 100) if monthly_meetings > 0 else 0
     alerts.append({
         'type': 'critical',
         'message': f'🚨 TEAM OVERLOAD: {capacity_util:.0%} capacity - Quality degradation imminent, burnout risk HIGH',
-        'action': f'IMMEDIATE: Hire {np.ceil((monthly_meetings - num_closers*60*0.8)/60):.0f} closers OR reduce leads by {(monthly_meetings - num_closers*60*0.8)/monthly_meetings*100:.0f}%'
+        'action': f'IMMEDIATE: Hire {additional_closers_high:.0f} closers OR cut meetings by {meeting_reduction_high:.0f}%'
     })
 elif capacity_util > 0.85:
+    warn_capacity_target = per_closer_capacity * num_closers * 0.75
+    excess_meetings_warn = monthly_meetings - warn_capacity_target
+    additional_closers_warn = np.ceil(max(excess_meetings_warn, 0) / per_closer_capacity) if per_closer_capacity > 0 else 0
     alerts.append({
         'type': 'warning',
         'message': f'⚠️ HIGH UTILIZATION: {capacity_util:.0%} capacity - Approaching danger zone',
-        'action': f'Plan hiring: Need {np.ceil((monthly_meetings - num_closers*60*0.75)/60):.0f} closers within 30 days to maintain quality'
+        'action': f'Plan hiring: Need {additional_closers_warn:.0f} closers within 30 days to maintain quality'
     })
 
 # Check LTV:CAC with severity levels
@@ -957,6 +991,14 @@ with tabs[0]:
                 st.info("🟡 Near capacity")
             else:
                 st.success("✅ Healthy capacity")
+
+            st.session_state['team_capacity_settings'] = {
+                'meetings_per_closer': meetings_per_closer,
+                'meetings_per_setter': meetings_per_setter,
+                'working_days': working_days,
+                'monthly_closer_capacity': monthly_closer_capacity,
+                'monthly_setter_capacity': monthly_setter_capacity
+            }
         
         # Daily Activities Section within Team Structure
         st.markdown("**Daily Activity Requirements**")
@@ -1004,6 +1046,16 @@ with tabs[0]:
             for metric, value in team_metrics.items():
                 st.write(f"🔹 {metric}: {value}")
     
+    if 'team_capacity_settings' in st.session_state:
+        capacity_settings = st.session_state['team_capacity_settings']
+        meetings_per_closer_setting = capacity_settings.get('meetings_per_closer', meetings_per_closer)
+        meetings_per_setter_setting = capacity_settings.get('meetings_per_setter', meetings_per_setter)
+        working_days_setting = capacity_settings.get('working_days', working_days)
+    else:
+        meetings_per_closer_setting = meetings_per_closer
+        meetings_per_setter_setting = meetings_per_setter
+        working_days_setting = working_days
+
     # Multi-Channel GTM is now the primary funnel configuration
     # Legacy conversion funnel removed - all configuration happens through channels
     
@@ -1102,9 +1154,13 @@ with tabs[0]:
                 new_ebitda = monthly_ebitda + cost_savings
                 st.metric("EBITDA Improvement", f"${cost_savings:,.0f}", f"{cost_change}% saved")
             
-            # Team expansion impact
+            # Team expansion impact (uses current capacity settings)
             if team_change != 0:
-                capacity_increase = team_change * 60
+                cap_settings = get_capacity_metrics(num_closers_main if 'num_closers_main' in locals() else num_closers,
+                                                   num_setters_main if 'num_setters_main' in locals() else num_setters)
+                meetings_per_closer_change = cap_settings['meetings_per_closer']
+                working_days_change = cap_settings['working_days']
+                capacity_increase = team_change * meetings_per_closer_change * working_days_change
                 potential_sales = capacity_increase * close_rate
                 potential_revenue = potential_sales * comp_immediate
                 st.metric("Sales Potential", f"+{potential_sales:.0f} sales", f"${potential_revenue:,.0f}")
@@ -1340,7 +1396,12 @@ with tabs[0]:
     # Aggregate all channels and show comprehensive funnel breakdown
     if channels:
         aggregated = MultiChannelGTM.aggregate_channels(channels)
-        
+
+        cap_settings = get_capacity_metrics(num_closers, num_setters)
+        working_days_effective = max(cap_settings['working_days'], 1)
+        monthly_closer_capacity = cap_settings['monthly_closer_capacity']
+        monthly_setter_capacity = cap_settings['monthly_setter_capacity']
+
         # Update global metrics from channels (use aggregated values)
         monthly_leads = aggregated.get('total_leads', monthly_leads)
         monthly_sales = aggregated.get('total_sales', monthly_sales)
@@ -1404,7 +1465,9 @@ with tabs[0]:
         with primary_cols[3]:
             st.metric("🚀 ROAS", f"{roas:.1f}x", f"Target: >4x")
         with primary_cols[4]:
-            capacity_util = monthly_meetings / (num_closers * 60) if num_closers > 0 and monthly_meetings > 0 else 0
+            cap_settings = get_capacity_metrics()
+            monthly_closer_capacity = cap_settings['monthly_closer_capacity']
+            capacity_util = monthly_meetings / monthly_closer_capacity if monthly_closer_capacity > 0 else 0
             st.metric("📅 Capacity Used", f"{capacity_util:.0%}", "OK" if capacity_util < 0.9 else "Overloaded")
         with primary_cols[5]:
             if monthly_meetings > 0 and blended_close_rate > 0:
@@ -1421,9 +1484,11 @@ with tabs[0]:
         with activity_cols[0]:
             st.metric("👥 Leads", f"{monthly_leads:,.0f}/mo", f"{daily_leads:.0f}/day")
         with activity_cols[1]:
-            st.metric("🤝 Meetings", f"{monthly_meetings:,.0f}/mo", f"{monthly_meetings/20:.0f}/day")
+            st.metric("🤝 Meetings", f"{monthly_meetings:,.0f}/mo", f"{monthly_meetings/working_days_effective:.0f}/day")
         with activity_cols[2]:
-            st.metric("✅ Monthly Sales", f"{monthly_sales:.0f}", f"{monthly_sales/num_closers:.1f} per closer" if num_closers > 0 else "N/A")
+            per_closer_daily_capacity = per_closer_capacity / working_days_effective if working_days_effective > 0 else 0
+            st.metric("✅ Monthly Sales", f"{monthly_sales:.0f}",
+                    f"{monthly_sales/num_closers:.1f} per closer" if num_closers > 0 else "N/A")
         with activity_cols[3]:
             st.metric("📈 Close Rate", f"{blended_close_rate:.0%}", f"Show-up: {blended_showup_rate:.0%}")
         with activity_cols[4]:
@@ -1635,13 +1700,15 @@ with tabs[0]:
     
         
         # Check capacity utilization
-        capacity_util = monthly_meetings / (num_closers * 60) if num_closers > 0 else 0
+        health_capacity_settings = get_capacity_metrics(num_closers, num_setters)
+        capacity_util = monthly_meetings / health_capacity_settings['monthly_closer_capacity'] if health_capacity_settings['monthly_closer_capacity'] > 0 else 0
+        setter_utilization = monthly_meetings_scheduled / health_capacity_settings['monthly_setter_capacity'] if health_capacity_settings['monthly_setter_capacity'] > 0 else 0
         if capacity_util > 0.9:
             health_issues.append({
                 'severity': 'high',
                 'category': 'Capacity',
                 'issue': f'Team at {capacity_util:.0%} capacity',
-                'recommendation': f'Hire {np.ceil((monthly_meetings - num_closers*60*0.8)/60):.0f} closers to reduce load'
+                'recommendation': f'Hire {np.ceil(max(monthly_meetings - health_capacity_settings["per_closer_monthly_capacity"] * num_closers * 0.8, 0) / health_capacity_settings["per_closer_monthly_capacity"]):.0f} closers to reduce load'
             })
         
         # Check LTV:CAC ratio
@@ -1730,7 +1797,10 @@ with tabs[0]:
     # Bottleneck identification
     bottlenecks = BottleneckAnalyzer.find_bottlenecks(
         {'contact_rate': contact_rate, 'meeting_rate': meeting_rate, 'close_rate': close_rate},
-        {'closer_utilization': capacity_util, 'setter_utilization': monthly_contacts / (num_setters * 600) if num_setters > 0 else 0},
+        {
+            'closer_utilization': capacity_util,
+            'setter_utilization': setter_util_global
+        },
         {'ltv_cac_ratio': ltv_cac_ratio, 'ebitda_margin': ebitda_margin}
     )
     
@@ -2451,7 +2521,7 @@ with tabs[5]:  # Reverse Engineering tab
                     • <b>{sales_needed:.0f} sales</b> ({sales_needed - monthly_sales:+.0f})<br>
                     • <b>{meetings_needed:.0f} meetings</b> ({meetings_needed - monthly_meetings:+.0f})<br>
                     • <b>{leads_needed:.0f} leads</b> ({leads_needed - monthly_leads:+.0f})<br>
-                    • <b>{np.ceil(meetings_needed/60):.0f} closers needed</b>
+                    • <b>{np.ceil(meetings_needed/per_closer_capacity):.0f} closers needed</b>
                 </div>
             </div>
             """, unsafe_allow_html=True)
