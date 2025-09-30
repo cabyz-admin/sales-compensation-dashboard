@@ -858,17 +858,24 @@ with tabs[0]:
                 key="target_period_main"
             )
             
+            # Get current monthly target from session state or use default
+            current_monthly_target = st.session_state.get('monthly_revenue_target_main', 4166667)
+            
             if target_period_main == "Annual":
-                revenue_input_main = st.number_input("Annual Target ($)", value=50000000, step=1000000, key="rev_annual_main")
+                default_annual = st.session_state.get('rev_annual_main', current_monthly_target * 12)
+                revenue_input_main = st.number_input("Annual Target ($)", value=int(default_annual), step=1000000, key="rev_annual_main")
                 monthly_revenue_target_main = revenue_input_main / 12
             elif target_period_main == "Monthly":
-                revenue_input_main = st.number_input("Monthly Target ($)", value=4166667, step=100000, key="rev_monthly_main")
+                default_monthly = st.session_state.get('rev_monthly_main', current_monthly_target)
+                revenue_input_main = st.number_input("Monthly Target ($)", value=int(default_monthly), step=100000, key="rev_monthly_main")
                 monthly_revenue_target_main = revenue_input_main
             elif target_period_main == "Weekly":
-                revenue_input_main = st.number_input("Weekly Target ($)", value=961538, step=25000, key="rev_weekly_main")
+                default_weekly = st.session_state.get('rev_weekly_main', current_monthly_target / 4.33)
+                revenue_input_main = st.number_input("Weekly Target ($)", value=int(default_weekly), step=25000, key="rev_weekly_main")
                 monthly_revenue_target_main = revenue_input_main * 4.33
             else:  # Daily
-                revenue_input_main = st.number_input("Daily Target ($)", value=192308, step=5000, key="rev_daily_main")
+                default_daily = st.session_state.get('rev_daily_main', current_monthly_target / 21.67)
+                revenue_input_main = st.number_input("Daily Target ($)", value=int(default_daily), step=5000, key="rev_daily_main")
                 monthly_revenue_target_main = revenue_input_main * 21.67
             
             # Store in session state for sidebar
@@ -920,7 +927,7 @@ with tabs[0]:
             meetings_per_closer = st.number_input(
                 "Meetings/Closer/Day",
                 min_value=0.0,
-                value=3.0,
+                value=st.session_state.get('meetings_per_closer', 3.0),
                 step=0.1,
                 help="Average meetings each closer can run per working day"
             )
@@ -928,14 +935,14 @@ with tabs[0]:
                 "Working Days/Month",
                 min_value=10,
                 max_value=26,
-                value=20,
+                value=st.session_state.get('working_days', 20),
                 step=1,
                 help="Number of active selling days per month"
             )
             meetings_per_setter = st.number_input(
                 "Meetings Booked/Setter/Day",
                 min_value=0.0,
-                value=2.0,
+                value=st.session_state.get('meetings_per_setter', 2.0),
                 step=0.1,
                 help="Average meetings each setter confirms and books per day"
             )
@@ -1087,7 +1094,7 @@ with tabs[0]:
             st.markdown("**Insurance Contract Structure**")
             avg_pm_main = st.number_input("Monthly Premium (MXN)", value=avg_pm, step=100, key="avg_pm_main")
             contract_years_main = st.number_input("Contract Years", value=contract_years, min_value=1, max_value=30, key="contract_years_main")
-            carrier_rate_main = st.slider("Carrier Rate %", 1.0, 5.0, carrier_rate*100, 0.1, key="carrier_rate_main") / 100
+            carrier_rate_main = st.slider("Carrier Rate %", 1.0, 5.0, st.session_state.get('carrier_rate_main', carrier_rate*100), 0.1, key="carrier_rate_main") / 100
             
             # Recalculate based on insurance model
             total_contract_main = avg_pm_main * contract_years_main * 12
@@ -1160,10 +1167,10 @@ with tabs[0]:
         
         with whatif_col1:
             st.markdown("**Adjust Variables**")
-            close_change = st.number_input("Close Rate Change (%)", min_value=-50, max_value=50, value=0, step=5, key="close_change_main")
-            deal_change = st.number_input("Deal Size Change (%)", min_value=-50, max_value=50, value=0, step=5, key="deal_change_main")
-            cost_change = st.number_input("Cost Reduction (%)", min_value=0, max_value=50, value=0, step=5, key="cost_change_main")
-            team_change = st.number_input("Add Closers", min_value=0, max_value=10, value=0, step=1, key="team_change_main")
+            close_change = st.number_input("Close Rate Change (%)", min_value=-50, max_value=50, value=st.session_state.get('close_change_main', 0), step=5, key="close_change_main")
+            deal_change = st.number_input("Deal Size Change (%)", min_value=-50, max_value=50, value=st.session_state.get('deal_change_main', 0), step=5, key="deal_change_main")
+            cost_change = st.number_input("Cost Reduction (%)", min_value=0, max_value=50, value=st.session_state.get('cost_change_main', 0), step=5, key="cost_change_main")
+            team_change = st.number_input("Add Closers", min_value=0, max_value=10, value=st.session_state.get('team_change_main', 0), step=1, key="team_change_main")
         
         with whatif_col2:
             st.markdown("**Impact Results**")
@@ -1291,41 +1298,41 @@ with tabs[0]:
                 # Dynamic quantity input based on cost point
                 # Input the quantity that matches the cost point
                 if cost_point == "Cost per Lead":
-                    cpl = st.number_input("Cost per Lead ($)", value=50, step=10, key=f"main_{channel_config['id']}_cpl_direct")
-                    leads = st.number_input("Monthly Leads", value=1000, step=100, key=f"main_{channel_config['id']}_leads")
+                    cpl = st.number_input("Cost per Lead ($)", value=channel_config.get('cpl', 50), step=10, key=f"main_{channel_config['id']}_cpl_direct")
+                    leads = st.number_input("Monthly Leads", value=channel_config.get('monthly_leads', 1000), step=100, key=f"main_{channel_config['id']}_leads")
                     
                 elif cost_point == "Cost per Contact":
-                    cost_per_contact = st.number_input("Cost per Contact ($)", value=75, step=10, key=f"main_{channel_config['id']}_cpc")
-                    contacts_target = st.number_input("Monthly Contacts Target", value=650, step=50, key=f"main_{channel_config['id']}_contacts")
+                    cost_per_contact = st.number_input("Cost per Contact ($)", value=channel_config.get('cost_per_contact', 75), step=10, key=f"main_{channel_config['id']}_cpc")
+                    contacts_target = st.number_input("Monthly Contacts Target", value=channel_config.get('contacts_target', 650), step=50, key=f"main_{channel_config['id']}_contacts")
                     # Leads will be calculated after we get contact rate
                     leads = contacts_target  # Temporary, will recalculate with actual rate
                     cpl = cost_per_contact  # Temporary
                     
                 elif cost_point == "Cost per Meeting":
-                    cost_per_meeting = st.number_input("Cost per Meeting ($)", value=200, step=25, key=f"main_{channel_config['id']}_cpm")
-                    meetings_target = st.number_input("Monthly Meetings Target", value=20, step=5, key=f"main_{channel_config['id']}_meetings")
+                    cost_per_meeting = st.number_input("Cost per Meeting ($)", value=channel_config.get('cost_per_meeting', 200), step=25, key=f"main_{channel_config['id']}_cpm")
+                    meetings_target = st.number_input("Monthly Meetings Target", value=channel_config.get('meetings_target', 20), step=5, key=f"main_{channel_config['id']}_meetings")
                     # Leads will be calculated after we get conversion rates
                     leads = meetings_target * 5  # Rough estimate
                     cpl = cost_per_meeting / 5  # Temporary
                     
                 elif cost_point == "Cost per Sale":
-                    cost_per_sale = st.number_input("Cost per Sale ($)", value=500, step=50, key=f"main_{channel_config['id']}_cps")
-                    sales_target = st.number_input("Monthly Sales Target", value=5, step=1, key=f"main_{channel_config['id']}_sales")
+                    cost_per_sale = st.number_input("Cost per Sale ($)", value=channel_config.get('cost_per_sale', 500), step=50, key=f"main_{channel_config['id']}_cps")
+                    sales_target = st.number_input("Monthly Sales Target", value=channel_config.get('sales_target', 5), step=1, key=f"main_{channel_config['id']}_sales")
                     # Leads will be calculated after we get conversion rates
                     leads = sales_target * 20  # Rough estimate
                     cpl = cost_per_sale / 20  # Temporary
                     
                 else:  # Total Budget
-                    total_budget = st.number_input("Total Budget ($)", value=10000, step=1000, key=f"main_{channel_config['id']}_budget")
+                    total_budget = st.number_input("Total Budget ($)", value=channel_config.get('total_budget', 10000), step=1000, key=f"main_{channel_config['id']}_budget")
                     # For budget, still ask for estimated leads
-                    leads = st.number_input("Estimated Monthly Leads", value=1000, step=100, key=f"main_{channel_config['id']}_leads_budget")
+                    leads = st.number_input("Estimated Monthly Leads", value=channel_config.get('monthly_leads', 1000), step=100, key=f"main_{channel_config['id']}_leads_budget")
                     cpl = total_budget / leads if leads > 0 else 0
             
             with cfg_col2:
-                contact_rt = st.slider("Contact %", 0, 100, 65, 5, key=f"main_{channel_config['id']}_contact") / 100
-                meeting_rt = st.slider("Meeting %", 0, 100, 40, 5, key=f"main_{channel_config['id']}_meeting") / 100
-                showup_rt = st.slider("Show-up %", 0, 100, 70, 5, key=f"main_{channel_config['id']}_showup") / 100
-                close_rt = st.slider("Close %", 0, 100, 25, 5, key=f"main_{channel_config['id']}_close") / 100
+                contact_rt = st.slider("Contact %", 0, 100, int(channel_config.get('contact_rate', 0.65) * 100), 5, key=f"main_{channel_config['id']}_contact") / 100
+                meeting_rt = st.slider("Meeting %", 0, 100, int(channel_config.get('meeting_rate', 0.40) * 100), 5, key=f"main_{channel_config['id']}_meeting") / 100
+                showup_rt = st.slider("Show-up %", 0, 100, int(channel_config.get('show_up_rate', 0.70) * 100), 5, key=f"main_{channel_config['id']}_showup") / 100
+                close_rt = st.slider("Close %", 0, 100, int(channel_config.get('close_rate', 0.25) * 100), 5, key=f"main_{channel_config['id']}_close") / 100
                 
                 # Now calculate actual leads needed based on target quantities and rates
                 if cost_point == "Cost per Contact":
