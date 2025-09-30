@@ -941,28 +941,26 @@ with tabs[0]:
             num_bench_main = st.number_input("🏋 Bench", min_value=0, max_value=20, value=num_bench, step=1, key="bench_main")
             num_managers_main = st.number_input("👔 Managers", min_value=0, max_value=10, value=num_managers, step=1, key="managers_main")
             st.markdown("**Capacity Settings**")
-            meetings_per_closer = st.slider(
+            meetings_per_closer = st.number_input(
                 "Meetings/Closer/Day",
-                min_value=1.0,
-                max_value=8.0,
+                min_value=0.0,
                 value=3.0,
-                step=0.5,
+                step=0.1,
                 help="Average meetings each closer can run per working day"
             )
-            working_days = st.slider(
+            working_days = st.number_input(
                 "Working Days/Month",
-                min_value=15,
+                min_value=10,
                 max_value=26,
                 value=20,
                 step=1,
                 help="Number of active selling days per month"
             )
-            meetings_per_setter = st.slider(
+            meetings_per_setter = st.number_input(
                 "Meetings Booked/Setter/Day",
-                min_value=0.5,
-                max_value=5.0,
+                min_value=0.0,
                 value=2.0,
-                step=0.5,
+                step=0.1,
                 help="Average meetings each setter confirms and books per day"
             )
         
