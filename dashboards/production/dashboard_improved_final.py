@@ -776,7 +776,9 @@ with tabs[0]:
                 'monthly_setter_capacity': monthly_setter_capacity
             }
 
-        st.markdown("**Compensation Structure**")
+        # ENHANCED COMPENSATION STRUCTURE
+        st.markdown("### 💰 **Compensation Structure & Decision Tool**")
+        st.info("📊 Real-time compensation modeling based on actual GTM performance")
         comp_col_config, comp_col_results = st.columns([1, 1])
 
         with comp_col_config:
