@@ -125,6 +125,80 @@ def create_business_performance_dashboard(
             </div>
             """, unsafe_allow_html=True)
         
+        # Quick P&L Waterfall for Executive Summary
+        st.markdown("### 💰 Quick P&L Overview")
+        
+        # Calculate P&L components
+        total_revenue_exec = revenue
+        marketing_cost = financial_metrics.get('monthly_marketing', 100000)
+        commission_cost = revenue * 0.23
+        cogs_total = marketing_cost + commission_cost
+        gross_profit_exec = total_revenue_exec - cogs_total
+        opex_total = financial_metrics.get('monthly_opex', 35000) + financial_metrics.get('monthly_compensation', 200000)
+        net_profit_exec = gross_profit_exec - opex_total
+        
+        # Create compact waterfall
+        fig_exec_waterfall = go.Figure(go.Waterfall(
+            name="P&L",
+            orientation="v",
+            measure=["absolute", "relative", "total", "relative", "total"],
+            x=["Revenue", "COGS", "Gross Profit", "OpEx", "EBITDA"],
+            y=[total_revenue_exec, -cogs_total, 0, -opex_total, 0],
+            text=[f"${total_revenue_exec:,.0f}", f"-${cogs_total:,.0f}", f"${gross_profit_exec:,.0f}", 
+                  f"-${opex_total:,.0f}", f"${net_profit_exec:,.0f}"],
+            textposition="outside",
+            connector={"line": {"color": "rgba(148, 163, 184, 0.3)"}},
+            increasing={"marker": {"color": "#22c55e"}},
+            decreasing={"marker": {"color": "#ef4444"}},
+            totals={"marker": {"color": "#3b82f6"}}
+        ))
+        
+        fig_exec_waterfall.update_layout(
+            height=350,
+            margin=dict(t=20, b=20, l=40, r=40),
+            showlegend=False,
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(size=12, color='#e2e8f0')
+        )
+        
+        col_waterfall, col_metrics = st.columns([2, 1])
+        
+        with col_waterfall:
+            st.plotly_chart(fig_exec_waterfall, use_container_width=True, key="exec_waterfall")
+        
+        with col_metrics:
+            st.markdown("**💵 Unit Economics**")
+            
+            # Per-sale breakdown
+            sales_count = operational_metrics.get('monthly_sales', 60)
+            if sales_count > 0:
+                revenue_per_sale = total_revenue_exec / sales_count
+                cogs_per_sale = cogs_total / sales_count
+                gross_profit_per_sale = gross_profit_exec / sales_count
+                opex_per_sale = opex_total / sales_count
+                net_per_sale = net_profit_exec / sales_count
+                
+                st.markdown(f"""
+                <div style="background: #0f172a; padding: 16px; border-radius: 12px; border: 1px solid rgba(148, 163, 184, 0.16);">
+                    <div style="color: #94a3b8; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">Per Sale</div>
+                    <div style="color: #22c55e; font-size: 16px; font-weight: 600; margin: 4px 0;">Revenue: ${revenue_per_sale:,.0f}</div>
+                    <div style="color: #ef4444; font-size: 14px; margin: 4px 0;">COGS: -${cogs_per_sale:,.0f}</div>
+                    <div style="color: #3b82f6; font-size: 14px; font-weight: 600; margin: 4px 0;">Gross: ${gross_profit_per_sale:,.0f}</div>
+                    <div style="color: #ef4444; font-size: 14px; margin: 4px 0;">OpEx: -${opex_per_sale:,.0f}</div>
+                    <div style="color: {"#22c55e" if net_per_sale > 0 else "#ef4444"}; font-size: 16px; font-weight: 700; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(148, 163, 184, 0.2);">Net: ${net_per_sale:,.0f}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                st.markdown(f"""
+                <div style="background: #0f172a; padding: 16px; border-radius: 12px; border: 1px solid rgba(148, 163, 184, 0.16); margin-top: 12px;">
+                    <div style="color: #94a3b8; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">Margins</div>
+                    <div style="color: #e2e8f0; font-size: 13px; margin: 4px 0;">Gross: {(gross_profit_exec/total_revenue_exec*100) if total_revenue_exec > 0 else 0:.1f}%</div>
+                    <div style="color: #e2e8f0; font-size: 13px; margin: 4px 0;">EBITDA: {(net_profit_exec/total_revenue_exec*100) if total_revenue_exec > 0 else 0:.1f}%</div>
+                    <div style="color: #e2e8f0; font-size: 13px; margin: 4px 0;">Sales: {sales_count:.0f}/mo</div>
+                </div>
+                """, unsafe_allow_html=True)
+        
         # Business Health Score, Insights & Actions removed - now in sidebar for better visibility
     
     with perf_tabs[1]:  # Performance Metrics
