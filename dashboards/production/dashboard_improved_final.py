@@ -1046,16 +1046,6 @@ with tabs[0]:
             for metric, value in team_metrics.items():
                 st.write(f"🔹 {metric}: {value}")
     
-    if 'team_capacity_settings' in st.session_state:
-        capacity_settings = st.session_state['team_capacity_settings']
-        meetings_per_closer_setting = capacity_settings.get('meetings_per_closer', meetings_per_closer)
-        meetings_per_setter_setting = capacity_settings.get('meetings_per_setter', meetings_per_setter)
-        working_days_setting = capacity_settings.get('working_days', working_days)
-    else:
-        meetings_per_closer_setting = meetings_per_closer
-        meetings_per_setter_setting = meetings_per_setter
-        working_days_setting = working_days
-
     # Multi-Channel GTM is now the primary funnel configuration
     # Legacy conversion funnel removed - all configuration happens through channels
     
@@ -1465,7 +1455,7 @@ with tabs[0]:
         with primary_cols[3]:
             st.metric("🚀 ROAS", f"{roas:.1f}x", f"Target: >4x")
         with primary_cols[4]:
-            cap_settings = get_capacity_metrics()
+            cap_settings = get_capacity_metrics(num_closers, num_setters)
             monthly_closer_capacity = cap_settings['monthly_closer_capacity']
             capacity_util = monthly_meetings / monthly_closer_capacity if monthly_closer_capacity > 0 else 0
             st.metric("📅 Capacity Used", f"{capacity_util:.0%}", "OK" if capacity_util < 0.9 else "Overloaded")
