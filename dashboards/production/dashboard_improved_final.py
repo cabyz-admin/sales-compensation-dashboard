@@ -1061,53 +1061,136 @@ with tabs[0]:
             monthly_setter_capacity = num_setters_main * meetings_per_setter * working_days
             setter_util = gtm_monthly_meetings_scheduled / monthly_setter_capacity if monthly_setter_capacity > 0 else 0
             
-            # Capacity waterfall visualization
+            # Simple capacity comparison visualization
             import plotly.graph_objects as go
             
-            # Calculate target meetings (for goal)
+            # Calculate target meetings needed for revenue goal
             target_meetings = monthly_revenue_target_main / comp_immediate * (1 / close_rate) if comp_immediate > 0 and close_rate > 0 else gtm_monthly_meetings
+            
+            # Calculate gaps
+            closer_headroom = monthly_closer_capacity - gtm_monthly_meetings
+            setter_headroom = monthly_setter_capacity - gtm_monthly_meetings_scheduled
+            
+            # Determine status colors
+            closer_status_color = "#22c55e" if capacity_util_main < 0.75 else "#f59e0b" if capacity_util_main < 0.9 else "#ef4444"
+            setter_status_color = "#22c55e" if setter_util < 0.75 else "#f59e0b" if setter_util < 1.0 else "#ef4444"
             
             fig_capacity = go.Figure()
             
-            # Closer capacity waterfall
-            fig_capacity.add_trace(go.Waterfall(
-                name="Closers",
-                orientation="v",
-                measure=["absolute", "relative", "relative", "total"],
-                x=["Capacity", "Current Load", "Headroom", "Status"],
-                y=[monthly_closer_capacity, -gtm_monthly_meetings, 0, 0],
-                text=[f"{monthly_closer_capacity:.0f}", f"-{gtm_monthly_meetings:.0f}", 
-                      f"{monthly_closer_capacity - gtm_monthly_meetings:.0f}", 
-                      f"{capacity_util_main:.0%}"],
-                textposition="outside",
-                connector={"line": {"color": "rgba(148, 163, 184, 0.3)"}},
-                increasing={"marker": {"color": "#22c55e"}},
-                decreasing={"marker": {"color": "#ef4444"}},
-                totals={"marker": {"color": "#3b82f6" if capacity_util_main < 0.85 else "#f59e0b"}}
+            # Closers - Stacked bar
+            fig_capacity.add_trace(go.Bar(
+                name='Used',
+                x=['Closers'],
+                y=[gtm_monthly_meetings],
+                text=[f"{gtm_monthly_meetings:.0f}"],
+                textposition='inside',
+                marker_color='#3b82f6',
+                hovertemplate='<b>Current Load</b><br>%{y:.0f} meetings<extra></extra>'
+            ))
+            
+            fig_capacity.add_trace(go.Bar(
+                name='Available',
+                x=['Closers'],
+                y=[closer_headroom if closer_headroom > 0 else 0],
+                text=[f"{closer_headroom:.0f}" if closer_headroom > 0 else "OVERLOAD"],
+                textposition='inside',
+                marker_color=closer_status_color,
+                hovertemplate='<b>Headroom</b><br>%{y:.0f} meetings<extra></extra>'
+            ))
+            
+            # Setters - Stacked bar
+            fig_capacity.add_trace(go.Bar(
+                name='Used',
+                x=['Setters'],
+                y=[gtm_monthly_meetings_scheduled],
+                text=[f"{gtm_monthly_meetings_scheduled:.0f}"],
+                textposition='inside',
+                marker_color='#3b82f6',
+                showlegend=False,
+                hovertemplate='<b>Current Load</b><br>%{y:.0f} bookings<extra></extra>'
+            ))
+            
+            fig_capacity.add_trace(go.Bar(
+                name='Available',
+                x=['Setters'],
+                y=[setter_headroom if setter_headroom > 0 else 0],
+                text=[f"{setter_headroom:.0f}" if setter_headroom > 0 else "OVERLOAD"],
+                textposition='inside',
+                marker_color=setter_status_color,
+                showlegend=False,
+                hovertemplate='<b>Headroom</b><br>%{y:.0f} bookings<extra></extra>'
+            ))
+            
+            # Add target line
+            fig_capacity.add_trace(go.Scatter(
+                x=['Closers', 'Setters'],
+                y=[target_meetings, target_meetings / (show_up_rate if show_up_rate > 0 else 0.7)],
+                mode='markers+text',
+                name='Target',
+                marker=dict(size=12, symbol='diamond', color='#fbbf24'),
+                text=['Target', ''],
+                textposition='top center',
+                hovertemplate='<b>Target Needed</b><br>%{y:.0f}<extra></extra>'
             ))
             
             fig_capacity.update_layout(
-                title="Closer Capacity vs Load",
-                height=280,
-                margin=dict(t=40, b=20, l=20, r=20),
-                showlegend=False,
+                barmode='stack',
+                title={
+                    'text': 'Team Capacity Analysis',
+                    'font': {'size': 14, 'color': '#e2e8f0'}
+                },
+                height=320,
+                margin=dict(t=50, b=30, l=20, r=20),
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(0,0,0,0)',
-                font=dict(size=11, color='#e2e8f0')
+                font=dict(size=11, color='#e2e8f0'),
+                xaxis=dict(
+                    showgrid=False,
+                    title='',
+                    tickfont=dict(size=13, color='#e2e8f0')
+                ),
+                yaxis=dict(
+                    showgrid=True,
+                    gridcolor='rgba(148, 163, 184, 0.1)',
+                    title='Meetings/Month',
+                    tickfont=dict(size=11, color='#94a3b8')
+                ),
+                legend=dict(
+                    orientation='h',
+                    yanchor='bottom',
+                    y=1.02,
+                    xanchor='right',
+                    x=1,
+                    font=dict(size=10)
+                )
             )
             
-            st.plotly_chart(fig_capacity, use_container_width=True, key="capacity_waterfall")
+            st.plotly_chart(fig_capacity, use_container_width=True, key="capacity_comparison")
             
-            # Metrics in compact grid
-            cap_cols = st.columns(2)
-            with cap_cols[0]:
-                st.metric("Closer Utilization", f"{capacity_util_main:.0%}", 
-                         "🔴 Overload" if capacity_util_main > 0.9 else "🟡 High" if capacity_util_main > 0.75 else "✅ Healthy")
-                st.metric("Closer Capacity", f"{monthly_closer_capacity:,.0f}/mo")
-            with cap_cols[1]:
-                st.metric("Setter Utilization", f"{setter_util:.0%}",
-                         "🔴 Overload" if setter_util > 1.0 else "🟡 High" if setter_util > 0.85 else "✅ Healthy")
-                st.metric("Setter Capacity", f"{monthly_setter_capacity:,.0f}/mo")
+            # Decision-focused recommendations
+            st.markdown("---")
+            st.markdown("**⚡ Actions Needed:**")
+            
+            # Closer recommendations
+            if capacity_util_main > 0.9:
+                additional_closers_needed = np.ceil((gtm_monthly_meetings - monthly_closer_capacity * 0.85) / (meetings_per_closer * working_days))
+                st.error(f"🔴 **URGENT**: Closers at {capacity_util_main:.0%} - Hire **{additional_closers_needed:.0f} more closers** immediately")
+            elif capacity_util_main > 0.75:
+                additional_closers_needed = np.ceil((gtm_monthly_meetings - monthly_closer_capacity * 0.75) / (meetings_per_closer * working_days))
+                st.warning(f"🟡 **PLAN**: Closers at {capacity_util_main:.0%} - Prepare to hire **{additional_closers_needed:.0f} closers** within 30 days")
+            else:
+                st.success(f"✅ Closers healthy at {capacity_util_main:.0%} - Headroom: **{closer_headroom:.0f} meetings/mo**")
+            
+            # Setter recommendations
+            if setter_util > 1.0:
+                overload = gtm_monthly_meetings_scheduled - monthly_setter_capacity
+                additional_setters_needed = np.ceil(overload / (meetings_per_setter * working_days))
+                st.error(f"🔴 **CRITICAL**: Setters at {setter_util:.0%} ({overload:.0f} over capacity) - Hire **{additional_setters_needed:.0f} setters** NOW")
+            elif setter_util > 0.85:
+                additional_setters_needed = np.ceil((gtm_monthly_meetings_scheduled - monthly_setter_capacity * 0.85) / (meetings_per_setter * working_days))
+                st.warning(f"🟡 **PLAN**: Setters at {setter_util:.0%} - Prepare to hire **{additional_setters_needed:.0f} setters** soon")
+            else:
+                st.success(f"✅ Setters healthy at {setter_util:.0%} - Headroom: **{setter_headroom:.0f} bookings/mo**")
 
             st.session_state['team_capacity_settings'] = {
                 'meetings_per_closer': meetings_per_closer,
