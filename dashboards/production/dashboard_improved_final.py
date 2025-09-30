@@ -900,7 +900,11 @@ with tabs[0]:
     gtm_blended_contact_rate = gtm_metrics.get('blended_contact_rate', contact_rate)
 
     # Team Structure Configuration
-    with st.expander("👥 **Team Structure**", expanded=False):
+    # Initialize expander state if not exists
+    if 'team_structure_expanded' not in st.session_state:
+        st.session_state.team_structure_expanded = True
+    
+    with st.expander("👥 **Team Structure**", expanded=st.session_state.team_structure_expanded):
         team_col1, team_col2, team_col3 = st.columns(3)
         
         with team_col1:
