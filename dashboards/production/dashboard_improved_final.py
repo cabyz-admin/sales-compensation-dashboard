@@ -2022,57 +2022,7 @@ with tabs[0]:
         
         st.plotly_chart(fig_waterfall, use_container_width=True, key="retention_waterfall")
     
-    # Visual Timeline moved to Charts section
-    with st.expander("📖 **Sales Process Timeline**", expanded=True):
-        # Create a visual timeline of the sales process
-        timeline_data = [
-            {"stage": "Lead Generated", "day": 0, "icon": "👥", "count": monthly_leads},
-            {"stage": "First Contact", "day": 1, "icon": "📞", "count": monthly_contacts},
-            {"stage": "Meeting Scheduled", "day": 3, "icon": "📅", "count": monthly_meetings_scheduled},
-            {"stage": "Meeting Held", "day": 5, "icon": "🤝", "count": monthly_meetings},
-            {"stage": "Proposal Sent", "day": 7, "icon": "📝", "count": monthly_meetings * 0.8},
-            {"stage": "Deal Closed", "day": sales_cycle_days, "icon": "✅", "count": monthly_sales},
-            {"stage": "Revenue Received", "day": sales_cycle_days + 30, "icon": "💰", "count": monthly_sales}
-        ]
-    
-    # Create timeline visualization
-    timeline_cols = st.columns(len(timeline_data))
-    
-    for idx, stage_data in enumerate(timeline_data):
-        with timeline_cols[idx]:
-            # Calculate conversion rate from previous stage
-            if idx > 0:
-                prev_count = timeline_data[idx-1]['count']
-                conversion = (stage_data['count'] / prev_count * 100) if prev_count > 0 else 0
-                color = "#4CAF50" if conversion >= 70 else "#FF9800" if conversion >= 50 else "#F44336"
-            else:
-                conversion = 100
-                color = "#2196F3"
-            
-            st.markdown(f"""
-            <div style="text-align: center; padding: 10px; background: {color}; border-radius: 10px; color: white;">
-                <div style="font-size: 28px;">{stage_data['icon']}</div>
-                <div style="font-weight: bold; margin-top: 5px;">{stage_data['stage']}</div>
-                <div style="font-size: 20px; margin-top: 5px;">{stage_data['count']:.0f}</div>
-                <div style="font-size: 12px; margin-top: 5px;">Day {stage_data['day']}</div>
-                {f'<div style="font-size: 11px; margin-top: 3px;">{conversion:.1f}% conv</div>' if idx > 0 else ''}
-            </div>
-            """, unsafe_allow_html=True)
-    
-    # Timing metrics
-    timing_cols = st.columns(4)
-    with timing_cols[0]:
-        st.metric("Avg Sales Cycle", f"{sales_cycle_days} days")
-    with timing_cols[1]:
-        st.metric("Lead to Meeting", "5 days")
-    with timing_cols[2]:
-        st.metric("Meeting to Close", f"{sales_cycle_days - 5} days")
-    with timing_cols[3]:
-        velocity = monthly_sales / sales_cycle_days * 30 if sales_cycle_days > 0 else 0
-        st.metric("Sales Velocity", f"{velocity:.1f} deals/mo", help="Deals per month implied by current closes and sales cycle duration.")
-    
-    # Daily Activities integrated into Team Structure expandable section
-    # This section is now properly organized within Team Structure configuration
+    # Sales Process Timeline removed - data available in other metrics
 
 # TAB 2: UNIT COSTS (10x Better One-Pager Design)
 with tabs[1]:
