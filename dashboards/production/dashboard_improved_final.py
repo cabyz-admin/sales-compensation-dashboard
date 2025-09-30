@@ -584,6 +584,27 @@ if show_up_rate < 0.7:
 # Sort alerts by severity (critical first)
 alerts.sort(key=lambda x: 0 if x['type'] == 'critical' else 1)
 
+# Build recommended actions based on metrics
+recommended_actions = []
+achievement_rate_calc = (monthly_revenue_total / monthly_revenue_target * 100) if monthly_revenue_target > 0 else 0
+if achievement_rate_calc < 80:
+    recommended_actions.append("📈 Increase lead generation by 25%")
+    recommended_actions.append("🎯 Review and optimize close rates")
+
+if ebitda_margin < 15:
+    recommended_actions.append("💰 Reduce operational costs by 10%")
+    recommended_actions.append("📊 Optimize marketing spend efficiency")
+
+if ltv_cac_ratio < 3:
+    recommended_actions.append("🔄 Focus on customer retention")
+    recommended_actions.append("💵 Consider pricing optimization")
+
+if capacity_util > 0.85:
+    recommended_actions.append("👥 Plan team expansion to prevent burnout")
+
+if close_rate < 0.2:
+    recommended_actions.append("📚 Invest in sales training programs")
+
 # Alerts moved to sidebar for better visibility
 
 # ============= HEALTH MONITORING (Moved from Critical Alerts) =============
@@ -673,6 +694,20 @@ with st.sidebar:
     else:
         st.success("✅ All Systems Healthy")
         st.caption("No issues detected")
+    
+    # Recommended Actions Section
+    if recommended_actions:
+        st.markdown("**🎯 Recommended Actions**")
+        for action in recommended_actions[:5]:  # Show top 5
+            st.markdown(
+                f"""
+                <div style="background: #1e293b; border-left: 3px solid #3b82f6; 
+                            padding: 8px; margin: 6px 0; border-radius: 4px; font-size: 12px;">
+                    <div style="color: #e2e8f0; line-height: 1.4;">{action}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
     
     st.markdown("---")
     

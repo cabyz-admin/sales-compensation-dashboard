@@ -426,10 +426,12 @@ def create_business_performance_dashboard(
         fin_metric_cols = st.columns(5)
         
         with fin_metric_cols[0]:
-            st.metric("Gross Margin", f"{(gross_profit/total_revenue*100):.1f}%")
+            gross_margin_pct = (gross_profit/total_revenue*100) if total_revenue > 0 else 0
+            st.metric("Gross Margin", f"{gross_margin_pct:.1f}%")
         
         with fin_metric_cols[1]:
-            st.metric("Operating Margin", f"{(operating_profit/total_revenue*100):.1f}%")
+            operating_margin_pct = (operating_profit/total_revenue*100) if total_revenue > 0 else 0
+            st.metric("Operating Margin", f"{operating_margin_pct:.1f}%")
         
         with fin_metric_cols[2]:
             st.metric("Burn Rate", f"${abs(min(0, operating_profit)):,.0f}/mo")
