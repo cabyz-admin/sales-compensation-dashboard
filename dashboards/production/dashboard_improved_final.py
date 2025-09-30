@@ -1302,7 +1302,7 @@ with tabs[0]:
                 'cac': cac,
                 'ltv': ltv,
                 'payback_months': payback_months,
-                'cash_balance': 1000000,  # Example value - would come from actual financials
+                'cash_balance': monthly_revenue_immediate * 3,  # Default to 3 months of revenue as cash buffer
                 'gov_fee_pct': gov_fee_pct
             }
             
