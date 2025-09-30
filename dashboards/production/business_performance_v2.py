@@ -71,9 +71,10 @@ def create_business_performance_dashboard(
             """, unsafe_allow_html=True)
         
         with kpi_cols[1]:
-            # Calculate actual growth rate from previous period
-            prev_revenue = revenue * 0.85  # Assuming 15% growth from last month
-            growth_rate = ((revenue - prev_revenue) / prev_revenue * 100) if prev_revenue > 0 else 0
+            # Show growth target instead of fake historical comparison
+            monthly_growth_target = 10.0  # 10% monthly growth target
+            # Estimate growth based on current vs target
+            growth_rate = ((revenue / revenue_target - 1) * 100) if revenue_target > 0 else 0
             color = "green" if growth_rate > 20 else "orange" if growth_rate > 10 else "red"
             st.markdown(f"""
             <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
@@ -315,39 +316,50 @@ def create_business_performance_dashboard(
         scorecard_cols = st.columns(4)
         
         with scorecard_cols[0]:
-            avg_growth = 15.2
-            st.metric(
-                "Avg Growth Rate",
-                f"{avg_growth:.1f}%",
-                f"{avg_growth - 12:.1f}% vs benchmark",
-                delta_color="normal"
-            )
+            # Calculate actual growth from the trend data
+            if len(performance_data) > 1:
+                recent_growth = ((performance_data['Revenue'].iloc[-1] - performance_data['Revenue'].iloc[-2]) / 
+                                performance_data['Revenue'].iloc[-2] * 100)
+                st.metric(
+                    "Period Growth",
+                    f"{recent_growth:.1f}%",
+                    "Target: 10%" if recent_growth < 10 else "Above target"
+                )
+            else:
+                st.metric("Growth Rate", "N/A", "No historical data")
         
         with scorecard_cols[1]:
-            conversion_rate = (sales / 1000 * 100) if sales > 0 else 0  # Assuming 1000 leads
+            # Calculate actual conversion rate from operational metrics
+            actual_leads = operational_metrics.get('monthly_leads', 0)
+            actual_sales = operational_metrics.get('monthly_sales', 0)
+            conversion_rate = (actual_sales / actual_leads * 100) if actual_leads > 0 else 0
+            target_conversion = 2.5  # Industry benchmark
             st.metric(
                 "Conversion Rate",
                 f"{conversion_rate:.2f}%",
-                f"{conversion_rate - 2.5:.2f}% vs last period",
-                delta_color="normal"
+                "🎯 Target: 2.5%" if conversion_rate < target_conversion else "✅ Above target"
             )
         
         with scorecard_cols[2]:
-            velocity = sales / 20  # Sales velocity (deals per day)
+            # Calculate actual velocity from operational data
+            working_days = 20
+            velocity = actual_sales / working_days if working_days > 0 else 0
+            target_velocity = 3.0  # Target deals per day
             st.metric(
                 "Sales Velocity",
                 f"{velocity:.1f}/day",
-                f"{velocity - 5:.1f} vs target",
-                delta_color="normal"
+                f"Target: {target_velocity:.1f}/day"
             )
         
         with scorecard_cols[3]:
+            # Efficiency ratio with benchmark comparison
             efficiency = revenue / total_costs if total_costs > 0 else 0
+            benchmark_efficiency = 1.2  # Industry benchmark
+            status = "🟢" if efficiency > benchmark_efficiency else "🟡" if efficiency > 1.0 else "🔴"
             st.metric(
                 "Efficiency Ratio",
                 f"{efficiency:.2f}x",
-                f"{efficiency - 1.5:.2f}x vs last month",
-                delta_color="normal"
+                f"{status} Benchmark: {benchmark_efficiency:.1f}x"
             )
     
     with perf_tabs[2]:  # Financial Health
@@ -585,7 +597,7 @@ def create_business_performance_dashboard(
             st.metric(
                 "Avg Monthly Revenue",
                 f"${avg_monthly:,.0f}",
-                f"{(avg_monthly/revenue - 1)*100:+.1f}% vs current"
+                f"Current: ${revenue:,.0f}"
             )
         
         with forecast_metric_cols[2]:
@@ -593,7 +605,7 @@ def create_business_performance_dashboard(
             st.metric(
                 "End Period Revenue",
                 f"${end_revenue:,.0f}",
-                f"{(end_revenue/revenue - 1)*100:+.1f}% growth"
+                f"From ${revenue:,.0f} today"
             )
         
         with forecast_metric_cols[3]:
@@ -697,7 +709,7 @@ def create_business_performance_dashboard(
             st.metric(
                 "Automation Rate",
                 f"{automation_rate*100:.0f}%",
-                f"+{automation_rate*100-50:.0f}% vs baseline"
+                "Target: >60%" if automation_rate < 0.6 else "✅ Good"
             )
         
         # Process optimization heatmap
