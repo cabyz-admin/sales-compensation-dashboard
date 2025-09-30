@@ -13,11 +13,16 @@ from datetime import datetime, timedelta
 import sys
 import os
 
-# Import the enhanced compensation module
+# Import enhanced modules
 try:
     from compensation_v2 import create_compensation_structure
 except ImportError:
     create_compensation_structure = None
+
+try:
+    from business_performance_v2 import create_business_performance_dashboard
+except ImportError:
+    create_business_performance_dashboard = None
 
 # Ensure project root and modules directory are on Python path
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -1273,33 +1278,71 @@ with tabs[0]:
         monthly_marketing = total_marketing_costs
         payback_months = cac / (comp_immediate / 12) if comp_immediate > 0 else 999
         
-        # Consolidated Business Metrics Section - Moved to aggregated area
-        st.markdown("### 📊 Business Performance Dashboard")
-        
-        # Primary KPIs - Most Important (First Row)
-        st.markdown("**Primary Business Metrics**")
-        primary_cols = st.columns(6)
-        
-        with primary_cols[0]:
-            st.metric("💵 Monthly Revenue", f"${monthly_revenue_total:,.0f}", f"{(monthly_revenue_total/monthly_revenue_target - 1)*100:.1f}% vs target")
-        with primary_cols[1]:
-            st.metric("💰 EBITDA", f"${monthly_ebitda:,.0f}", f"{ebitda_margin:.1%} margin")
-        with primary_cols[2]:
-            st.metric("🎯 LTV:CAC", f"{ltv_cac_ratio:.1f}:1", "Target: >3:1")
-        with primary_cols[3]:
-            st.metric("🚀 ROAS", f"{roas:.1f}x", f"Target: >4x")
-        with primary_cols[4]:
-            cap_settings = get_capacity_metrics(num_closers, num_setters)
-            monthly_closer_capacity = cap_settings['monthly_closer_capacity']
-            capacity_util = monthly_meetings / monthly_closer_capacity if monthly_closer_capacity > 0 else 0
-            st.metric("📅 Capacity Used", f"{capacity_util:.0%}", "OK" if capacity_util < 0.9 else "Overloaded")
-        with primary_cols[5]:
-            if monthly_meetings > 0 and blended_close_rate > 0:
-                pipeline_value = monthly_meetings * comp_immediate / blended_close_rate
-                pipeline_coverage = pipeline_value / monthly_revenue_target if monthly_revenue_target > 0 else 0
-            else:
-                pipeline_coverage = 0
-            st.metric("📊 Pipeline Coverage", f"{pipeline_coverage:.1f}x", "Good" if pipeline_coverage >= 3 else "Low")
+        # ENHANCED BUSINESS PERFORMANCE DASHBOARD V2
+        if create_business_performance_dashboard:
+            # Prepare metrics for the enhanced dashboard
+            financial_metrics = {
+                'monthly_revenue_target': monthly_revenue_target,
+                'monthly_marketing': cost_breakdown.get('total_marketing_spend', monthly_marketing) if 'cost_breakdown' in locals() else monthly_marketing,
+                'monthly_opex': monthly_opex,
+                'monthly_compensation': comp_structure['monthly_base'] + (actual_revenue * (closer_comm_pct + setter_comm_pct)) if 'comp_structure' in locals() and comp_structure else 250000,
+                'cac': cac,
+                'ltv': ltv,
+                'payback_months': payback_months,
+                'cash_balance': 1000000,  # Example value - would come from actual financials
+                'gov_fee_pct': gov_fee_pct
+            }
+            
+            team_metrics_dash = {
+                'total_team': team_total,
+                'num_closers': num_closers,
+                'num_setters': num_setters
+            }
+            
+            operational_metrics = {
+                'monthly_leads': monthly_leads,
+                'monthly_meetings': monthly_meetings,
+                'monthly_sales': monthly_sales,
+                'close_rate': blended_close_rate,
+                'sales_cycle_days': sales_cycle_days
+            }
+            
+            # Call the enhanced business performance module
+            create_business_performance_dashboard(
+                gtm_metrics=gtm_metrics,
+                financial_metrics=financial_metrics,
+                team_metrics=team_metrics_dash,
+                operational_metrics=operational_metrics
+            )
+        else:
+            # Fallback to standard dashboard if module not available
+            st.markdown("### 📊 Business Performance Dashboard")
+            st.warning("⚠️ Enhanced Business Performance module not available. Using standard dashboard.")
+            
+            # Primary KPIs - Most Important (First Row)
+            st.markdown("**Primary Business Metrics**")
+            primary_cols = st.columns(6)
+            
+            with primary_cols[0]:
+                st.metric("💵 Monthly Revenue", f"${monthly_revenue_total:,.0f}", f"{(monthly_revenue_total/monthly_revenue_target - 1)*100:.1f}% vs target")
+            with primary_cols[1]:
+                st.metric("💰 EBITDA", f"${monthly_ebitda:,.0f}", f"{ebitda_margin:.1%} margin")
+            with primary_cols[2]:
+                st.metric("🎯 LTV:CAC", f"{ltv_cac_ratio:.1f}:1", "Target: >3:1")
+            with primary_cols[3]:
+                st.metric("🚀 ROAS", f"{roas:.1f}x", f"Target: >4x")
+            with primary_cols[4]:
+                cap_settings = get_capacity_metrics(num_closers, num_setters)
+                monthly_closer_capacity = cap_settings['monthly_closer_capacity']
+                capacity_util = monthly_meetings / monthly_closer_capacity if monthly_closer_capacity > 0 else 0
+                st.metric("📅 Capacity Used", f"{capacity_util:.0%}", "OK" if capacity_util < 0.9 else "Overloaded")
+            with primary_cols[5]:
+                if monthly_meetings > 0 and blended_close_rate > 0:
+                    pipeline_value = monthly_meetings * comp_immediate / blended_close_rate
+                    pipeline_coverage = pipeline_value / monthly_revenue_target if monthly_revenue_target > 0 else 0
+                else:
+                    pipeline_coverage = 0
+                st.metric("📊 Pipeline Coverage", f"{pipeline_coverage:.1f}x", "Good" if pipeline_coverage >= 3 else "Low")
         
         # Sales Activity Metrics (Second Row)
         st.markdown("**Sales Activity**")

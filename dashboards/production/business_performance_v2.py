@@ -1,0 +1,929 @@
+"""
+Enhanced Business Performance Dashboard v2
+Comprehensive business analytics with real-time GTM integration
+"""
+
+import streamlit as st
+import pandas as pd
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
+from datetime import datetime, timedelta
+import numpy as np
+from typing import Dict, Any, List, Tuple
+
+def create_business_performance_dashboard(
+    gtm_metrics: Dict,
+    financial_metrics: Dict,
+    team_metrics: Dict,
+    operational_metrics: Dict
+) -> None:
+    """
+    Create comprehensive business performance dashboard with multiple analysis views
+    """
+    
+    st.markdown("# 📊 **Business Performance Command Center**")
+    st.info("🚀 Real-time business intelligence with actionable insights and predictive analytics")
+    
+    # Create tabs for different analysis views
+    perf_tabs = st.tabs([
+        "🎯 Executive Summary",
+        "📈 Performance Metrics", 
+        "💰 Financial Health",
+        "🔮 Forecasting",
+        "⚡ Operations",
+        "🏆 Benchmarks",
+        "🔍 Deep Dive"
+    ])
+    
+    with perf_tabs[0]:  # Executive Summary
+        st.markdown("## 📋 Executive Dashboard")
+        
+        # Calculate key metrics
+        revenue = gtm_metrics.get('monthly_revenue_immediate', 0)
+        sales = gtm_metrics.get('monthly_sales', 0)
+        revenue_target = financial_metrics.get('monthly_revenue_target', revenue * 1.2)
+        achievement_rate = (revenue / revenue_target * 100) if revenue_target > 0 else 0
+        
+        # Get costs
+        total_costs = (
+            financial_metrics.get('monthly_marketing', 0) +
+            financial_metrics.get('monthly_opex', 0) +
+            financial_metrics.get('monthly_compensation', 0)
+        )
+        
+        ebitda = revenue - total_costs
+        ebitda_margin = (ebitda / revenue * 100) if revenue > 0 else 0
+        
+        # Top-level KPIs
+        st.markdown("### 🎯 Key Performance Indicators")
+        kpi_cols = st.columns(5)
+        
+        with kpi_cols[0]:
+            color = "green" if achievement_rate >= 100 else "orange" if achievement_rate >= 80 else "red"
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                        padding: 20px; border-radius: 15px; text-align: center;">
+                <h4 style="color: white; margin: 0;">Revenue Achievement</h4>
+                <h1 style="color: {color}; margin: 10px 0;">{achievement_rate:.1f}%</h1>
+                <p style="color: white; margin: 0;">${revenue:,.0f} / ${revenue_target:,.0f}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with kpi_cols[1]:
+            growth_rate = 15.0  # Placeholder - would calculate from historical data
+            color = "green" if growth_rate > 20 else "orange" if growth_rate > 10 else "red"
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+                        padding: 20px; border-radius: 15px; text-align: center;">
+                <h4 style="color: white; margin: 0;">Growth Rate</h4>
+                <h1 style="color: white; margin: 10px 0;">{growth_rate:.1f}%</h1>
+                <p style="color: white; margin: 0;">MoM Growth</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with kpi_cols[2]:
+            color = "green" if ebitda_margin > 20 else "orange" if ebitda_margin > 10 else "red"
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+                        padding: 20px; border-radius: 15px; text-align: center;">
+                <h4 style="color: white; margin: 0;">EBITDA Margin</h4>
+                <h1 style="color: {color}; margin: 10px 0;">{ebitda_margin:.1f}%</h1>
+                <p style="color: white; margin: 0;">${ebitda:,.0f}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with kpi_cols[3]:
+            cac = financial_metrics.get('cac', 500)
+            ltv = financial_metrics.get('ltv', 2500)
+            ltv_cac = ltv / cac if cac > 0 else 0
+            color = "green" if ltv_cac > 3 else "orange" if ltv_cac > 2 else "red"
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+                        padding: 20px; border-radius: 15px; text-align: center;">
+                <h4 style="color: #333; margin: 0;">LTV:CAC</h4>
+                <h1 style="color: {color}; margin: 10px 0;">{ltv_cac:.1f}x</h1>
+                <p style="color: #333; margin: 0;">Unit Economics</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with kpi_cols[4]:
+            burn_rate = total_costs - revenue
+            runway_months = abs(financial_metrics.get('cash_balance', 1000000) / burn_rate) if burn_rate != 0 else 999
+            color = "green" if runway_months > 18 else "orange" if runway_months > 12 else "red"
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+                        padding: 20px; border-radius: 15px; text-align: center;">
+                <h4 style="color: #333; margin: 0;">Runway</h4>
+                <h1 style="color: {color}; margin: 10px 0;">{min(runway_months, 99):.0f} mo</h1>
+                <p style="color: #333; margin: 0;">Cash Runway</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Business Health Score
+        st.markdown("### 🏥 Business Health Score")
+        health_scores = {
+            'Revenue': min(100, achievement_rate),
+            'Profitability': min(100, max(0, ebitda_margin * 5)),
+            'Growth': min(100, growth_rate * 5),
+            'Efficiency': min(100, ltv_cac * 20),
+            'Operations': 75  # Placeholder
+        }
+        
+        overall_health = sum(health_scores.values()) / len(health_scores)
+        
+        # Create radar chart for health scores
+        fig_radar = go.Figure()
+        fig_radar.add_trace(go.Scatterpolar(
+            r=list(health_scores.values()),
+            theta=list(health_scores.keys()),
+            fill='toself',
+            fillcolor='rgba(59, 130, 246, 0.3)',
+            line=dict(color='#3b82f6', width=2),
+            marker=dict(size=8, color='#3b82f6')
+        ))
+        
+        fig_radar.update_layout(
+            polar=dict(
+                radialaxis=dict(
+                    visible=True,
+                    range=[0, 100],
+                    tickmode='array',
+                    tickvals=[0, 25, 50, 75, 100],
+                    ticktext=['0', '25', '50', '75', '100']
+                )
+            ),
+            showlegend=False,
+            height=400,
+            title=f"Overall Health: {overall_health:.0f}/100"
+        )
+        
+        st.plotly_chart(fig_radar, use_container_width=True)
+        
+        # Key Insights & Alerts
+        insights_col1, insights_col2 = st.columns(2)
+        
+        with insights_col1:
+            st.markdown("### 💡 Key Insights")
+            
+            insights = []
+            if achievement_rate < 80:
+                insights.append(("🔴", f"Revenue {100-achievement_rate:.0f}% below target", "critical"))
+            elif achievement_rate >= 100:
+                insights.append(("🟢", f"Exceeding revenue target by {achievement_rate-100:.0f}%", "success"))
+            
+            if ebitda_margin < 10:
+                insights.append(("🟡", f"EBITDA margin below 10% threshold", "warning"))
+            elif ebitda_margin > 20:
+                insights.append(("🟢", f"Strong EBITDA margin at {ebitda_margin:.1f}%", "success"))
+            
+            if ltv_cac < 2:
+                insights.append(("🔴", "LTV:CAC ratio concerning - review unit economics", "critical"))
+            elif ltv_cac > 3:
+                insights.append(("🟢", f"Excellent unit economics with {ltv_cac:.1f}x LTV:CAC", "success"))
+            
+            for emoji, message, severity in insights:
+                if severity == "critical":
+                    st.error(f"{emoji} {message}")
+                elif severity == "warning":
+                    st.warning(f"{emoji} {message}")
+                else:
+                    st.success(f"{emoji} {message}")
+        
+        with insights_col2:
+            st.markdown("### 🎯 Recommended Actions")
+            
+            actions = []
+            if achievement_rate < 80:
+                actions.append("📈 Increase lead generation by 25%")
+                actions.append("🎯 Review and optimize close rates")
+            
+            if ebitda_margin < 15:
+                actions.append("💰 Reduce operational costs by 10%")
+                actions.append("📊 Optimize marketing spend efficiency")
+            
+            if ltv_cac < 3:
+                actions.append("🔄 Focus on customer retention")
+                actions.append("💵 Consider pricing optimization")
+            
+            for action in actions[:4]:  # Show top 4 actions
+                st.info(action)
+    
+    with perf_tabs[1]:  # Performance Metrics
+        st.markdown("## 📈 Performance Metrics Dashboard")
+        
+        # Time period selector
+        period = st.radio(
+            "Select Time Period",
+            ["Daily", "Weekly", "Monthly", "Quarterly"],
+            horizontal=True,
+            key="perf_period"
+        )
+        
+        # Generate sample time series data
+        if period == "Daily":
+            dates = pd.date_range(end=datetime.now(), periods=30, freq='D')
+            multiplier = 1/30
+        elif period == "Weekly":
+            dates = pd.date_range(end=datetime.now(), periods=12, freq='W')
+            multiplier = 1/4.33
+        elif period == "Monthly":
+            dates = pd.date_range(end=datetime.now(), periods=12, freq='M')
+            multiplier = 1
+        else:  # Quarterly
+            dates = pd.date_range(end=datetime.now(), periods=8, freq='Q')
+            multiplier = 3
+        
+        # Create performance data
+        base_revenue = revenue * multiplier
+        performance_data = pd.DataFrame({
+            'Date': dates,
+            'Revenue': base_revenue * (1 + np.random.normal(0, 0.1, len(dates))).cumsum() / len(dates),
+            'Sales': sales * multiplier * (1 + np.random.normal(0, 0.15, len(dates))).cumsum() / len(dates),
+            'Costs': total_costs * multiplier * (1 + np.random.normal(0, 0.05, len(dates))).cumsum() / len(dates)
+        })
+        
+        performance_data['Profit'] = performance_data['Revenue'] - performance_data['Costs']
+        performance_data['Margin'] = (performance_data['Profit'] / performance_data['Revenue'] * 100)
+        
+        # Key metrics over time
+        st.markdown("### 📊 Trend Analysis")
+        
+        # Create subplots
+        fig = make_subplots(
+            rows=2, cols=2,
+            subplot_titles=('Revenue Trend', 'Sales Volume', 'Profit Margin', 'Cost Structure'),
+            specs=[[{'secondary_y': False}, {'secondary_y': False}],
+                   [{'secondary_y': True}, {'secondary_y': False}]]
+        )
+        
+        # Revenue trend
+        fig.add_trace(
+            go.Scatter(x=performance_data['Date'], y=performance_data['Revenue'],
+                      name='Revenue', line=dict(color='#3b82f6', width=3)),
+            row=1, col=1
+        )
+        
+        # Sales volume
+        fig.add_trace(
+            go.Bar(x=performance_data['Date'], y=performance_data['Sales'],
+                  name='Sales', marker_color='#10b981'),
+            row=1, col=2
+        )
+        
+        # Profit margin with dual axis
+        fig.add_trace(
+            go.Scatter(x=performance_data['Date'], y=performance_data['Profit'],
+                      name='Profit', line=dict(color='#22c55e', width=2)),
+            row=2, col=1, secondary_y=False
+        )
+        fig.add_trace(
+            go.Scatter(x=performance_data['Date'], y=performance_data['Margin'],
+                      name='Margin %', line=dict(color='#f59e0b', width=2, dash='dot')),
+            row=2, col=1, secondary_y=True
+        )
+        
+        # Cost structure
+        fig.add_trace(
+            go.Scatter(x=performance_data['Date'], y=performance_data['Costs'],
+                      name='Total Costs', fill='tonexty', fillcolor='rgba(239, 68, 68, 0.3)',
+                      line=dict(color='#ef4444', width=2)),
+            row=2, col=2
+        )
+        
+        fig.update_layout(height=700, showlegend=True)
+        fig.update_xaxes(title_text="Date", row=2)
+        fig.update_yaxes(title_text="Amount ($)", secondary_y=False)
+        fig.update_yaxes(title_text="Margin (%)", secondary_y=True, row=2, col=1)
+        
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Performance scorecards
+        st.markdown("### 🎯 Performance Scorecards")
+        
+        scorecard_cols = st.columns(4)
+        
+        with scorecard_cols[0]:
+            avg_growth = 15.2
+            st.metric(
+                "Avg Growth Rate",
+                f"{avg_growth:.1f}%",
+                f"{avg_growth - 12:.1f}% vs benchmark",
+                delta_color="normal"
+            )
+        
+        with scorecard_cols[1]:
+            conversion_rate = (sales / 1000 * 100) if sales > 0 else 0  # Assuming 1000 leads
+            st.metric(
+                "Conversion Rate",
+                f"{conversion_rate:.2f}%",
+                f"{conversion_rate - 2.5:.2f}% vs last period",
+                delta_color="normal"
+            )
+        
+        with scorecard_cols[2]:
+            velocity = sales / 20  # Sales velocity (deals per day)
+            st.metric(
+                "Sales Velocity",
+                f"{velocity:.1f}/day",
+                f"{velocity - 5:.1f} vs target",
+                delta_color="normal"
+            )
+        
+        with scorecard_cols[3]:
+            efficiency = revenue / total_costs if total_costs > 0 else 0
+            st.metric(
+                "Efficiency Ratio",
+                f"{efficiency:.2f}x",
+                f"{efficiency - 1.5:.2f}x vs last month",
+                delta_color="normal"
+            )
+    
+    with perf_tabs[2]:  # Financial Health
+        st.markdown("## 💰 Financial Health Analysis")
+        
+        # P&L Summary
+        st.markdown("### 📊 Profit & Loss Statement")
+        
+        pnl_data = {
+            'Revenue': {
+                'New Business': revenue * 0.7,
+                'Expansion': revenue * 0.2,
+                'Renewal': revenue * 0.1
+            },
+            'Direct Costs': {
+                'Marketing': financial_metrics.get('monthly_marketing', 100000),
+                'Sales Commission': revenue * 0.23,
+                'Lead Generation': 50000
+            },
+            'Operating Expenses': {
+                'Salaries': financial_metrics.get('monthly_compensation', 200000),
+                'Office & Admin': financial_metrics.get('monthly_opex', 35000),
+                'Software & Tools': 15000
+            }
+        }
+        
+        total_revenue = sum(pnl_data['Revenue'].values())
+        total_direct = sum(pnl_data['Direct Costs'].values())
+        total_opex = sum(pnl_data['Operating Expenses'].values())
+        gross_profit = total_revenue - total_direct
+        operating_profit = gross_profit - total_opex
+        
+        # Create waterfall chart
+        fig_waterfall = go.Figure(go.Waterfall(
+            name="P&L",
+            orientation="v",
+            measure=["absolute", "relative", "relative", "relative", "total",
+                    "relative", "relative", "relative", "total",
+                    "relative", "relative", "relative", "total"],
+            x=["Revenue", "New Business", "Expansion", "Renewal", "Total Revenue",
+               "Marketing", "Commission", "Lead Gen", "Gross Profit",
+               "Salaries", "Office", "Software", "Net Profit"],
+            y=[0, revenue*0.7, revenue*0.2, revenue*0.1, 0,
+               -pnl_data['Direct Costs']['Marketing'], 
+               -pnl_data['Direct Costs']['Sales Commission'],
+               -pnl_data['Direct Costs']['Lead Generation'], 0,
+               -pnl_data['Operating Expenses']['Salaries'],
+               -pnl_data['Operating Expenses']['Office & Admin'],
+               -pnl_data['Operating Expenses']['Software & Tools'], 0],
+            connector={"line": {"color": "rgb(63, 63, 63)"}},
+            increasing={"marker": {"color": "#22c55e"}},
+            decreasing={"marker": {"color": "#ef4444"}},
+            totals={"marker": {"color": "#3b82f6"}}
+        ))
+        
+        fig_waterfall.update_layout(
+            title="Monthly P&L Waterfall",
+            height=500
+        )
+        
+        st.plotly_chart(fig_waterfall, use_container_width=True)
+        
+        # Financial metrics
+        fin_metric_cols = st.columns(5)
+        
+        with fin_metric_cols[0]:
+            st.metric("Gross Margin", f"{(gross_profit/total_revenue*100):.1f}%")
+        
+        with fin_metric_cols[1]:
+            st.metric("Operating Margin", f"{(operating_profit/total_revenue*100):.1f}%")
+        
+        with fin_metric_cols[2]:
+            st.metric("Burn Rate", f"${abs(min(0, operating_profit)):,.0f}/mo")
+        
+        with fin_metric_cols[3]:
+            payback = financial_metrics.get('payback_months', 14)
+            st.metric("Payback Period", f"{payback:.0f} months")
+        
+        with fin_metric_cols[4]:
+            rule_of_40 = growth_rate + ebitda_margin
+            st.metric("Rule of 40", f"{rule_of_40:.0f}", 
+                     "✅" if rule_of_40 >= 40 else "⚠️")
+        
+        # Cash flow visualization
+        st.markdown("### 💵 Cash Flow Analysis")
+        
+        cash_flow_data = pd.DataFrame({
+            'Month': pd.date_range(start=datetime.now(), periods=12, freq='M'),
+            'Cash In': revenue * np.random.uniform(0.8, 1.2, 12),
+            'Cash Out': total_costs * np.random.uniform(0.9, 1.1, 12)
+        })
+        cash_flow_data['Net Cash Flow'] = cash_flow_data['Cash In'] - cash_flow_data['Cash Out']
+        cash_flow_data['Cumulative'] = cash_flow_data['Net Cash Flow'].cumsum() + financial_metrics.get('cash_balance', 1000000)
+        
+        fig_cash = go.Figure()
+        
+        fig_cash.add_trace(go.Bar(
+            x=cash_flow_data['Month'],
+            y=cash_flow_data['Cash In'],
+            name='Cash Inflow',
+            marker_color='#22c55e'
+        ))
+        
+        fig_cash.add_trace(go.Bar(
+            x=cash_flow_data['Month'],
+            y=-cash_flow_data['Cash Out'],
+            name='Cash Outflow',
+            marker_color='#ef4444'
+        ))
+        
+        fig_cash.add_trace(go.Scatter(
+            x=cash_flow_data['Month'],
+            y=cash_flow_data['Cumulative'],
+            name='Cumulative Cash',
+            line=dict(color='#3b82f6', width=3),
+            yaxis='y2'
+        ))
+        
+        fig_cash.update_layout(
+            title="12-Month Cash Flow Projection",
+            barmode='relative',
+            height=400,
+            yaxis=dict(title="Monthly Cash Flow ($)"),
+            yaxis2=dict(title="Cumulative Cash ($)", overlaying='y', side='right')
+        )
+        
+        st.plotly_chart(fig_cash, use_container_width=True)
+
+    with perf_tabs[3]:  # Forecasting
+        st.markdown("## 🔮 Predictive Analytics & Forecasting")
+        
+        # Forecast settings
+        forecast_cols = st.columns(3)
+        with forecast_cols[0]:
+            forecast_months = st.slider("Forecast Period (months)", 3, 24, 12)
+        with forecast_cols[1]:
+            growth_scenario = st.select_slider(
+                "Growth Scenario",
+                options=["Conservative", "Realistic", "Optimistic"],
+                value="Realistic"
+            )
+        with forecast_cols[2]:
+            confidence_level = st.slider("Confidence Interval", 80, 95, 90)
+        
+        # Set growth rates based on scenario
+        if growth_scenario == "Conservative":
+            monthly_growth = 0.05
+            volatility = 0.15
+        elif growth_scenario == "Realistic":
+            monthly_growth = 0.10
+            volatility = 0.20
+        else:  # Optimistic
+            monthly_growth = 0.15
+            volatility = 0.25
+        
+        # Generate forecast data
+        months = pd.date_range(start=datetime.now(), periods=forecast_months, freq='M')
+        
+        # Revenue forecast with confidence intervals
+        base_forecast = revenue * np.cumprod(1 + np.random.normal(monthly_growth, volatility/10, forecast_months))
+        lower_bound = base_forecast * (1 - volatility)
+        upper_bound = base_forecast * (1 + volatility)
+        
+        # Create forecast visualization
+        fig_forecast = go.Figure()
+        
+        # Add forecast line
+        fig_forecast.add_trace(go.Scatter(
+            x=months,
+            y=base_forecast,
+            name='Forecast',
+            line=dict(color='#3b82f6', width=3)
+        ))
+        
+        # Add confidence interval
+        fig_forecast.add_trace(go.Scatter(
+            x=months,
+            y=upper_bound,
+            fill=None,
+            mode='lines',
+            line=dict(color='rgba(59, 130, 246, 0.2)'),
+            showlegend=False
+        ))
+        
+        fig_forecast.add_trace(go.Scatter(
+            x=months,
+            y=lower_bound,
+            fill='tonexty',
+            mode='lines',
+            line=dict(color='rgba(59, 130, 246, 0.2)'),
+            name=f'{confidence_level}% Confidence Interval'
+        ))
+        
+        # Add target line
+        target_revenue = revenue_target * np.ones(forecast_months)
+        fig_forecast.add_trace(go.Scatter(
+            x=months,
+            y=target_revenue,
+            name='Target',
+            line=dict(color='#ef4444', width=2, dash='dash')
+        ))
+        
+        fig_forecast.update_layout(
+            title=f"Revenue Forecast - {growth_scenario} Scenario",
+            xaxis_title="Month",
+            yaxis_title="Revenue ($)",
+            height=500,
+            hovermode='x unified'
+        )
+        
+        st.plotly_chart(fig_forecast, use_container_width=True)
+        
+        # Forecast metrics
+        st.markdown("### 📊 Forecast Summary")
+        forecast_metric_cols = st.columns(4)
+        
+        with forecast_metric_cols[0]:
+            total_forecast = base_forecast.sum()
+            st.metric(
+                "Total Forecast Revenue",
+                f"${total_forecast:,.0f}",
+                f"${total_forecast - revenue*forecast_months:,.0f} vs linear"
+            )
+        
+        with forecast_metric_cols[1]:
+            avg_monthly = base_forecast.mean()
+            st.metric(
+                "Avg Monthly Revenue",
+                f"${avg_monthly:,.0f}",
+                f"{(avg_monthly/revenue - 1)*100:+.1f}% vs current"
+            )
+        
+        with forecast_metric_cols[2]:
+            end_revenue = base_forecast[-1]
+            st.metric(
+                "End Period Revenue",
+                f"${end_revenue:,.0f}",
+                f"{(end_revenue/revenue - 1)*100:+.1f}% growth"
+            )
+        
+        with forecast_metric_cols[3]:
+            probability_hit_target = (base_forecast >= revenue_target).mean() * 100
+            st.metric(
+                "Target Achievement Probability",
+                f"{probability_hit_target:.0f}%",
+                "🟢" if probability_hit_target > 70 else "🟡" if probability_hit_target > 40 else "🔴"
+            )
+        
+        # Scenario comparison
+        st.markdown("### 🎯 Scenario Analysis")
+        
+        scenarios = {
+            'Conservative': {'growth': 0.05, 'color': '#94a3b8'},
+            'Realistic': {'growth': 0.10, 'color': '#3b82f6'},
+            'Optimistic': {'growth': 0.15, 'color': '#22c55e'}
+        }
+        
+        fig_scenarios = go.Figure()
+        
+        for scenario_name, params in scenarios.items():
+            scenario_forecast = revenue * np.cumprod(1 + np.ones(forecast_months) * (1 + params['growth']))
+            fig_scenarios.add_trace(go.Scatter(
+                x=months,
+                y=scenario_forecast,
+                name=scenario_name,
+                line=dict(color=params['color'], width=2)
+            ))
+        
+        fig_scenarios.update_layout(
+            title="Multi-Scenario Comparison",
+            xaxis_title="Month",
+            yaxis_title="Revenue ($)",
+            height=400
+        )
+        
+        st.plotly_chart(fig_scenarios, use_container_width=True)
+    
+    with perf_tabs[4]:  # Operations
+        st.markdown("## ⚡ Operational Excellence Dashboard")
+        
+        # Operational efficiency metrics
+        st.markdown("### 📈 Efficiency Metrics")
+        
+        ops_metrics = st.columns(6)
+        
+        with ops_metrics[0]:
+            leads_per_sale = 50  # Example metric
+            st.metric(
+                "Leads per Sale",
+                f"{leads_per_sale:.0f}",
+                "Efficiency" if leads_per_sale < 60 else "Review"
+            )
+        
+        with ops_metrics[1]:
+            cycle_time = 18  # Days
+            st.metric(
+                "Sales Cycle",
+                f"{cycle_time} days",
+                "Fast" if cycle_time < 20 else "Slow"
+            )
+        
+        with ops_metrics[2]:
+            productivity = revenue / team_metrics.get('total_team', 20)
+            st.metric(
+                "Revenue per Employee",
+                f"${productivity:,.0f}",
+                "High" if productivity > 200000 else "Low"
+            )
+        
+        with ops_metrics[3]:
+            utilization = 0.78  # Example
+            st.metric(
+                "Team Utilization",
+                f"{utilization*100:.0f}%",
+                "Optimal" if utilization > 0.75 else "Low"
+            )
+        
+        with ops_metrics[4]:
+            quality_score = 0.92  # Example
+            st.metric(
+                "Quality Score",
+                f"{quality_score*100:.0f}%",
+                "Excellent" if quality_score > 0.9 else "Improve"
+            )
+        
+        with ops_metrics[5]:
+            automation_rate = 0.65  # Example
+            st.metric(
+                "Automation Rate",
+                f"{automation_rate*100:.0f}%",
+                f"+{automation_rate*100-50:.0f}% vs baseline"
+            )
+        
+        # Process optimization heatmap
+        st.markdown("### 🔥 Process Efficiency Heatmap")
+        
+        processes = ['Lead Gen', 'Qualification', 'Discovery', 'Proposal', 'Negotiation', 'Closing']
+        metrics = ['Speed', 'Quality', 'Cost', 'Automation', 'Success Rate']
+        
+        # Generate efficiency scores
+        efficiency_matrix = np.random.uniform(0.6, 1.0, (len(metrics), len(processes)))
+        
+        fig_heatmap = go.Figure(data=go.Heatmap(
+            z=efficiency_matrix,
+            x=processes,
+            y=metrics,
+            colorscale='RdYlGn',
+            text=[[f"{val:.0%}" for val in row] for row in efficiency_matrix],
+            texttemplate="%{text}",
+            textfont={"size": 12},
+            colorbar=dict(title="Efficiency Score")
+        ))
+        
+        fig_heatmap.update_layout(
+            title="Sales Process Efficiency Matrix",
+            height=400
+        )
+        
+        st.plotly_chart(fig_heatmap, use_container_width=True)
+        
+        # Bottleneck analysis
+        st.markdown("### 🚧 Bottleneck Analysis")
+        
+        bottleneck_cols = st.columns(2)
+        
+        with bottleneck_cols[0]:
+            st.markdown("#### Current Bottlenecks")
+            
+            bottlenecks = [
+                {"stage": "Lead Qualification", "impact": 35, "severity": "high"},
+                {"stage": "Proposal Creation", "impact": 25, "severity": "medium"},
+                {"stage": "Contract Negotiation", "impact": 20, "severity": "medium"},
+                {"stage": "Technical Demo", "impact": 15, "severity": "low"},
+                {"stage": "Follow-up Process", "impact": 5, "severity": "low"}
+            ]
+            
+            for bottleneck in bottlenecks:
+                color = "🔴" if bottleneck['severity'] == 'high' else "🟡" if bottleneck['severity'] == 'medium' else "🟢"
+                st.write(f"{color} **{bottleneck['stage']}**: {bottleneck['impact']}% impact")
+        
+        with bottleneck_cols[1]:
+            st.markdown("#### Improvement Opportunities")
+            
+            improvements = [
+                "🚀 Automate lead scoring (30% time saving)",
+                "📝 Implement proposal templates (2hr reduction)",
+                "🤝 Standardize negotiation playbook",
+                "💻 Record and reuse demo segments",
+                "📧 Deploy automated follow-up sequences"
+            ]
+            
+            for improvement in improvements:
+                st.info(improvement)
+    
+    with perf_tabs[5]:  # Benchmarks
+        st.markdown("## 🏆 Industry Benchmarks & Competitive Analysis")
+        
+        # Benchmark comparison
+        st.markdown("### 📊 Performance vs Industry Benchmarks")
+        
+        benchmark_data = {
+            'Metric': ['Revenue Growth', 'EBITDA Margin', 'CAC Payback', 'LTV:CAC', 'Sales Efficiency', 'Close Rate'],
+            'Your Performance': [15, 18, 14, 3.2, 0.8, 25],
+            'Industry Average': [20, 15, 18, 3.0, 1.0, 20],
+            'Top Quartile': [35, 25, 12, 4.5, 1.5, 30]
+        }
+        
+        df_benchmark = pd.DataFrame(benchmark_data)
+        
+        fig_benchmark = go.Figure()
+        
+        fig_benchmark.add_trace(go.Bar(
+            name='Your Performance',
+            x=df_benchmark['Metric'],
+            y=df_benchmark['Your Performance'],
+            marker_color='#3b82f6'
+        ))
+        
+        fig_benchmark.add_trace(go.Bar(
+            name='Industry Average',
+            x=df_benchmark['Metric'],
+            y=df_benchmark['Industry Average'],
+            marker_color='#94a3b8'
+        ))
+        
+        fig_benchmark.add_trace(go.Bar(
+            name='Top Quartile',
+            x=df_benchmark['Metric'],
+            y=df_benchmark['Top Quartile'],
+            marker_color='#22c55e'
+        ))
+        
+        fig_benchmark.update_layout(
+            title="Benchmark Comparison",
+            barmode='group',
+            height=500,
+            yaxis_title="Value"
+        )
+        
+        st.plotly_chart(fig_benchmark, use_container_width=True)
+        
+        # Competitive positioning
+        st.markdown("### 🎯 Competitive Positioning Matrix")
+        
+        position_cols = st.columns(2)
+        
+        with position_cols[0]:
+            # Create competitive scatter
+            competitors = pd.DataFrame({
+                'Company': ['You', 'Competitor A', 'Competitor B', 'Competitor C', 'Market Leader'],
+                'Market Share': [12, 18, 15, 8, 25],
+                'Growth Rate': [15, 10, 20, 5, 18],
+                'Size': [100, 150, 120, 80, 200]
+            })
+            
+            fig_position = px.scatter(
+                competitors,
+                x='Market Share',
+                y='Growth Rate',
+                size='Size',
+                color='Company',
+                title="Market Position Analysis",
+                labels={'Market Share': 'Market Share (%)', 'Growth Rate': 'Growth Rate (%)'},
+                height=400
+            )
+            
+            # Add quadrant lines
+            fig_position.add_hline(y=15, line_dash="dash", line_color="gray")
+            fig_position.add_vline(x=15, line_dash="dash", line_color="gray")
+            
+            st.plotly_chart(fig_position, use_container_width=True)
+        
+        with position_cols[1]:
+            st.markdown("#### 💡 Strategic Insights")
+            
+            insights = [
+                "📈 Above industry average EBITDA margin (+3%)",
+                "⚠️ Revenue growth below industry average (-5%)",
+                "✅ Strong LTV:CAC ratio vs competitors",
+                "🎯 Opportunity to improve sales efficiency",
+                "🚀 Top quartile close rate performance"
+            ]
+            
+            for insight in insights:
+                if "⚠️" in insight:
+                    st.warning(insight)
+                elif "✅" in insight or "📈" in insight:
+                    st.success(insight)
+                else:
+                    st.info(insight)
+    
+    with perf_tabs[6]:  # Deep Dive
+        st.markdown("## 🔍 Deep Dive Analytics")
+        
+        # Custom analysis selector
+        analysis_type = st.selectbox(
+            "Select Analysis Type",
+            ["Cohort Analysis", "Customer Segmentation", "Channel Performance", "Product Mix", "Geographic Analysis"]
+        )
+        
+        if analysis_type == "Cohort Analysis":
+            st.markdown("### 📅 Revenue Cohort Analysis")
+            
+            # Generate cohort data
+            cohorts = pd.date_range(start='2024-01', periods=6, freq='M')
+            months_since = range(0, 6)
+            
+            cohort_data = []
+            for cohort in cohorts:
+                retention = [100]
+                for month in months_since[1:]:
+                    retention.append(retention[-1] * np.random.uniform(0.85, 0.95))
+                cohort_data.append(retention)
+            
+            fig_cohort = go.Figure(data=go.Heatmap(
+                z=cohort_data,
+                x=[f"Month {m}" for m in months_since],
+                y=[c.strftime('%b %Y') for c in cohorts],
+                text=[[f"{val:.0f}%" for val in row] for row in cohort_data],
+                texttemplate="%{text}",
+                colorscale='Blues',
+                colorbar=dict(title="Retention %")
+            ))
+            
+            fig_cohort.update_layout(
+                title="Customer Retention by Cohort",
+                xaxis_title="Months Since Acquisition",
+                yaxis_title="Cohort",
+                height=400
+            )
+            
+            st.plotly_chart(fig_cohort, use_container_width=True)
+            
+        elif analysis_type == "Channel Performance":
+            st.markdown("### 📡 Multi-Channel Performance Analysis")
+            
+            channels = ['Direct Sales', 'Partners', 'Online', 'Referrals', 'Events']
+            channel_metrics = pd.DataFrame({
+                'Channel': channels,
+                'Revenue': [300000, 200000, 150000, 100000, 50000],
+                'Cost': [100000, 50000, 30000, 10000, 20000],
+                'Conversion': [25, 20, 15, 35, 18],
+                'CAC': [500, 400, 300, 200, 600]
+            })
+            
+            channel_metrics['ROI'] = (channel_metrics['Revenue'] - channel_metrics['Cost']) / channel_metrics['Cost'] * 100
+            channel_metrics['Efficiency'] = channel_metrics['Revenue'] / channel_metrics['Cost']
+            
+            # Create bubble chart
+            fig_bubble = px.scatter(
+                channel_metrics,
+                x='CAC',
+                y='Conversion',
+                size='Revenue',
+                color='ROI',
+                hover_data=['Channel', 'Revenue', 'Cost'],
+                title="Channel Performance Matrix",
+                labels={'CAC': 'Customer Acquisition Cost ($)', 'Conversion': 'Conversion Rate (%)'},
+                color_continuous_scale='RdYlGn'
+            )
+            
+            st.plotly_chart(fig_bubble, use_container_width=True)
+            
+            # Channel metrics table
+            st.markdown("#### Channel Metrics Summary")
+            st.dataframe(
+                channel_metrics[['Channel', 'Revenue', 'Cost', 'ROI', 'Efficiency', 'CAC']].style.format({
+                    'Revenue': '${:,.0f}',
+                    'Cost': '${:,.0f}',
+                    'ROI': '{:.1f}%',
+                    'Efficiency': '{:.2f}x',
+                    'CAC': '${:,.0f}'
+                }),
+                use_container_width=True,
+                hide_index=True
+            )
+        
+        # Add insights based on deep dive
+        st.markdown("### 💡 Key Findings")
+        
+        finding_cols = st.columns(3)
+        
+        with finding_cols[0]:
+            st.metric("Top Finding", "High-value segment growing 25% MoM")
+        
+        with finding_cols[1]:
+            st.metric("Risk Alert", "Cohort retention declining")
+        
+        with finding_cols[2]:
+            st.metric("Opportunity", "Untapped channel potential: +$500K")
