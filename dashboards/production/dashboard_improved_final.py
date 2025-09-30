@@ -952,6 +952,20 @@ with tabs[0]:
                 st.warning("🟡 High OpEx ratio")
             else:
                 st.success("✅ Healthy OpEx")
+
+            st.markdown("**Liquidity**")
+            default_cash_balance = st.session_state.get(
+                "cash_balance_main",
+                float(total_opex_main * 3)
+            )
+            cash_balance_main = st.number_input(
+                "Cash on Hand ($)",
+                min_value=0.0,
+                value=float(default_cash_balance),
+                step=50000.0,
+                key="cash_balance_input"
+            )
+            st.session_state["cash_balance_main"] = cash_balance_main
     
     # What-If Analysis Configuration
     with st.expander("🔮 **What-If Scenario Analysis**", expanded=False):
@@ -1294,6 +1308,8 @@ with tabs[0]:
             setter_comm_safe = setter_comm_pct if 'setter_comm_pct' in locals() else 0.03
             
             # Prepare metrics for the enhanced dashboard
+            cash_balance_value = st.session_state.get("cash_balance_main", float(monthly_opex * 3))
+
             financial_metrics = {
                 'monthly_revenue_target': monthly_revenue_target,
                 'monthly_marketing': cost_breakdown.get('total_marketing_spend', monthly_marketing) if 'cost_breakdown' in locals() else monthly_marketing,
@@ -1302,7 +1318,7 @@ with tabs[0]:
                 'cac': cac,
                 'ltv': ltv,
                 'payback_months': payback_months,
-                'cash_balance': monthly_revenue_immediate * 3,  # Default to 3 months of revenue as cash buffer
+                'cash_balance': cash_balance_value,
                 'gov_fee_pct': gov_fee_pct
             }
             

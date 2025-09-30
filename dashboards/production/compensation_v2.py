@@ -65,13 +65,52 @@ def create_compensation_structure(
                 closer_comm = 0.15
                 setter_comm = 0.02
             else:  # Custom
-                base_pct = st.slider("Base/Variable Split", 20, 80, 40, 5, key="custom_base_split") / 100
-                closer_ote = st.number_input("Closer OTE ($)", 50000, 150000, 80000, 5000, key="custom_closer_ote")
-                setter_ote = st.number_input("Setter OTE ($)", 30000, 70000, 40000, 2500, key="custom_setter_ote")
-                closer_comm = st.slider("Closer Commission Pool %", 10, 35, 20, 1, key="custom_closer_pool") / 100
-                setter_comm = st.slider("Setter Commission Pool %", 0, 10, 3, 1, key="custom_setter_pool") / 100
+                base_pct = st.number_input(
+                    "Base % of OTE",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=40.0,
+                    step=1.0,
+                    key="custom_base_split"
+                ) / 100
+                closer_ote = st.number_input(
+                    "Closer OTE ($)",
+                    min_value=0.0,
+                    value=80000.0,
+                    step=5000.0,
+                    key="custom_closer_ote"
+                )
+                setter_ote = st.number_input(
+                    "Setter OTE ($)",
+                    min_value=0.0,
+                    value=40000.0,
+                    step=2500.0,
+                    key="custom_setter_ote"
+                )
+                closer_comm = st.number_input(
+                    "Closer Commission Pool %",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=20.0,
+                    step=0.5,
+                    key="custom_closer_pool"
+                ) / 100
+                setter_comm = st.number_input(
+                    "Setter Commission Pool %",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=3.0,
+                    step=0.5,
+                    key="custom_setter_pool"
+                ) / 100
             
-            manager_ote = st.number_input("Manager OTE ($)", 80000, 200000, 120000, 10000, key="manager_ote_config")
+            manager_ote = st.number_input(
+                "Manager OTE ($)",
+                min_value=0.0,
+                value=120000.0,
+                step=5000.0,
+                key="manager_ote_config"
+            )
             
             # Show base/variable breakdown
             st.markdown("##### **Structure Breakdown**")
