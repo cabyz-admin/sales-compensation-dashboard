@@ -404,112 +404,34 @@ st.sidebar.success(f"""
 • Deferred (30%): ${comp_deferred:,.0f}
 """)
 
-# SECTION 6: COMPENSATION (Improved modular)
-st.sidebar.header("💸 6. Compensation Structure")
+# Shared compensation state (used across tabs and calculations)
+default_roles_comp = {
+    'closer': {'count': num_closers, 'base': 32000, 'variable': 48000, 'ote': 80000},
+    'setter': {'count': num_setters, 'base': 16000, 'variable': 24000, 'ote': 40000},
+    'manager': {'count': num_managers, 'base': 72000, 'variable': 48000, 'ote': 120000},
+    'bench': {'count': num_bench, 'base': 12500, 'variable': 12500, 'ote': 25000}
+}
 
-comp_mode = st.sidebar.radio(
-    "Configuration Mode",
-    ["Simple (% split)", "Custom per Role"],
-    index=0
-)
+comp_inputs_state = st.session_state.get('team_compensation_inputs')
+if not comp_inputs_state:
+    comp_inputs_state = {
+        'comp_mode': "Simple (% split)",
+        'roles_comp': default_roles_comp,
+        'closer_comm_pct': 0.20,
+        'setter_comm_pct': 0.03
+    }
+    st.session_state['team_compensation_inputs'] = comp_inputs_state
 
-if comp_mode == "Simple (% split)":
-    # Simple mode with single base %
-    base_pct = st.sidebar.slider(
-        "Base Salary %", min_value=20, max_value=60, value=40, step=5
-    ) / 100
-    
-    # OTE inputs
-    closer_ote = st.sidebar.number_input("Closer OTE ($)", value=80000, step=5000)
-    setter_ote = st.sidebar.number_input("Setter OTE ($)", value=40000, step=2500)
-    manager_ote = st.sidebar.number_input("Manager OTE ($)", value=120000, step=10000)
-    
-    # Calculate compensation
-    roles_comp = {
-        'closer': {
-            'count': num_closers,
-            'base': closer_ote * base_pct,
-            'variable': closer_ote * (1 - base_pct),
-            'ote': closer_ote
-        },
-        'setter': {
-            'count': num_setters,
-            'base': setter_ote * base_pct,
-            'variable': setter_ote * (1 - base_pct),
-            'ote': setter_ote
-        },
-        'manager': {
-            'count': num_managers,
-            'base': manager_ote * 0.6,  # Managers typically 60% base
-            'variable': manager_ote * 0.4,
-            'ote': manager_ote
-        },
-        'bench': {
-            'count': num_bench,
-            'base': 25000 * 0.5,  # Bench at 50% of reduced OTE
-            'variable': 25000 * 0.5,
-            'ote': 25000
-        }
-    }
-    
-else:
-    # Custom mode - individual inputs
-    st.sidebar.markdown("""<div style="background: #121212; color: white; padding: 10px; border-radius: 5px; margin-bottom: 10px;"><h5 style="margin: 0; color: #BA68C8;">💰 Custom Base/Variable per Role</h5></div>""", unsafe_allow_html=True)
-    
-    roles_comp = {}
-    
-    # Closer compensation
-    st.sidebar.markdown("""<div style="background: #1E1E1E; color: white; padding: 8px; border-radius: 5px; margin: 5px 0; border-left: 3px solid #FFA726;"><b>💼 Closers</b></div>""", unsafe_allow_html=True)
-    col1, col2 = st.sidebar.columns(2)
-    with col1:
-        closer_base = st.sidebar.number_input("Base ($)", value=32000, step=2500, key="c_base")
-    with col2:
-        closer_var = st.sidebar.number_input("Variable ($)", value=48000, step=2500, key="c_var")
-    roles_comp['closer'] = {
-        'count': num_closers, 'base': closer_base, 
-        'variable': closer_var, 'ote': closer_base + closer_var
-    }
-    
-    # Setter compensation
-    st.sidebar.markdown("""<div style="background: #1E1E1E; color: white; padding: 8px; border-radius: 5px; margin: 5px 0; border-left: 3px solid #42A5F5;"><b>📞 Setters</b></div>""", unsafe_allow_html=True)
-    col1, col2 = st.sidebar.columns(2)
-    with col1:
-        setter_base = st.sidebar.number_input("Base ($)", value=16000, step=1000, key="s_base")
-    with col2:
-        setter_var = st.sidebar.number_input("Variable ($)", value=24000, step=1000, key="s_var")
-    roles_comp['setter'] = {
-        'count': num_setters, 'base': setter_base,
-        'variable': setter_var, 'ote': setter_base + setter_var
-    }
-    
-    # Manager compensation
-    st.sidebar.markdown("""<div style="background: #1E1E1E; color: white; padding: 8px; border-radius: 5px; margin: 5px 0; border-left: 3px solid #EC407A;"><b>👔 Managers</b></div>""", unsafe_allow_html=True)
-    col1, col2 = st.sidebar.columns(2)
-    with col1:
-        manager_base = st.sidebar.number_input("Base ($)", value=72000, step=5000, key="m_base")
-    with col2:
-        manager_var = st.sidebar.number_input("Variable ($)", value=48000, step=5000, key="m_var")
-    roles_comp['manager'] = {
-        'count': num_managers, 'base': manager_base,
-        'variable': manager_var, 'ote': manager_base + manager_var
-    }
-    
-    # Bench
-    roles_comp['bench'] = {
-        'count': num_bench, 'base': 12500, 'variable': 12500, 'ote': 25000
-    }
-
-# Calculate total compensation
+roles_comp = comp_inputs_state['roles_comp']
+closer_comm_pct = comp_inputs_state['closer_comm_pct']
+setter_comm_pct = comp_inputs_state['setter_comm_pct']
 comp_structure = ImprovedCompensationCalculator.calculate_custom_compensation(roles_comp)
 
-# Commission structure
-st.sidebar.markdown("""<div style="background: #121212; color: white; padding: 10px; border-radius: 5px; margin-bottom: 10px;"><h5 style="margin: 0; color: #FFD54F;">💵 Commission Splits</h5></div>""", unsafe_allow_html=True)
-closer_comm_pct = st.sidebar.number_input(
-    "Closer Pool %", min_value=10, max_value=30, value=20, step=1
-) / 100
-setter_comm_pct = st.sidebar.number_input(
-    "Setter Pool %", min_value=0, max_value=10, value=3, step=1
-) / 100
+st.session_state.setdefault('team_compensation_structure', {
+    'comp_structure': comp_structure,
+    'closer_comm_pct': closer_comm_pct,
+    'setter_comm_pct': setter_comm_pct
+})
 
 # SECTION 7: OPERATING COSTS
 st.sidebar.header("💵 7. Operating Costs")
@@ -867,7 +789,6 @@ else:
 tabs = st.tabs([
     "🎯 GTM Command Center",
     "💰 Costos Unit",
-    "💵 Compensación",
     "📊 P&L Detallado",
     "🚀 Simulador",
     "🔄 Ingeniería Inversa"
@@ -979,7 +900,7 @@ with tabs[0]:
             st.metric("S:C Ratio", f"{setter_closer_ratio_main:.1f}:1")
         
         with team_col3:
-            st.markdown("**Capacity Analysis**")
+            st.markdown("**Capacity & Compensation**")
             monthly_closer_capacity = num_closers_main * meetings_per_closer * working_days
             capacity_util_main = gtm_monthly_meetings / monthly_closer_capacity if monthly_closer_capacity > 0 else 0
             st.metric("Closer Capacity", f"{monthly_closer_capacity:,.0f} meetings/mo")
@@ -1002,6 +923,122 @@ with tabs[0]:
                 'monthly_closer_capacity': monthly_closer_capacity,
                 'monthly_setter_capacity': monthly_setter_capacity
             }
+
+        st.markdown("**Compensation Structure**")
+        comp_col_config, comp_col_results = st.columns([1, 1])
+
+        with comp_col_config:
+            st.markdown("**Configuration**")
+            st.markdown("**Configuration Mode**")
+            comp_mode = st.radio(
+                "Select compensation mode",
+                ["Simple (% split)", "Custom per Role"],
+                index=0,
+                key="team_comp_mode"
+            )
+
+            if comp_mode == "Simple (% split)":
+                base_pct = st.number_input("Base Salary %", min_value=20, max_value=60, value=40, step=5, key="team_base_pct") / 100
+                closer_ote = st.number_input("Closer OTE ($)", value=80000, step=5000, key="team_closer_ote")
+                setter_ote = st.number_input("Setter OTE ($)", value=40000, step=2500, key="team_setter_ote")
+                manager_ote = st.number_input("Manager OTE ($)", value=120000, step=10000, key="team_manager_ote")
+
+                roles_comp = {
+                    'closer': {'count': num_closers_main, 'base': closer_ote * base_pct, 'variable': closer_ote * (1 - base_pct), 'ote': closer_ote},
+                    'setter': {'count': num_setters_main, 'base': setter_ote * base_pct, 'variable': setter_ote * (1 - base_pct), 'ote': setter_ote},
+                    'manager': {'count': num_managers_main, 'base': manager_ote * 0.6, 'variable': manager_ote * 0.4, 'ote': manager_ote},
+                    'bench': {'count': num_bench_main, 'base': 25000 * 0.5, 'variable': 25000 * 0.5, 'ote': 25000}
+                }
+            else:
+                st.markdown("**Custom Base/Variable per Role**")
+                roles_comp = {}
+
+                c_base = st.number_input("Closer Base ($)", value=32000, step=2500, key="team_c_base")
+                c_var = st.number_input("Closer Variable ($)", value=48000, step=2500, key="team_c_var")
+                roles_comp['closer'] = {'count': num_closers_main, 'base': c_base, 'variable': c_var, 'ote': c_base + c_var}
+
+                s_base = st.number_input("Setter Base ($)", value=16000, step=1000, key="team_s_base")
+                s_var = st.number_input("Setter Variable ($)", value=24000, step=1000, key="team_s_var")
+                roles_comp['setter'] = {'count': num_setters_main, 'base': s_base, 'variable': s_var, 'ote': s_base + s_var}
+
+                m_base = st.number_input("Manager Base ($)", value=72000, step=5000, key="team_m_base")
+                m_var = st.number_input("Manager Variable ($)", value=48000, step=5000, key="team_m_var")
+                roles_comp['manager'] = {'count': num_managers_main, 'base': m_base, 'variable': m_var, 'ote': m_base + m_var}
+
+                roles_comp['bench'] = {'count': num_bench_main, 'base': 12500, 'variable': 12500, 'ote': 25000}
+
+            st.markdown("**Commission Pools**")
+            closer_comm_pct = st.number_input("Closer Pool %", min_value=10, max_value=30, value=20, step=1, key="team_closer_pool") / 100
+            setter_comm_pct = st.number_input("Setter Pool %", min_value=0, max_value=10, value=3, step=1, key="team_setter_pool") / 100
+
+            st.session_state['team_compensation_inputs'] = {
+                'comp_mode': comp_mode,
+                'roles_comp': roles_comp,
+                'closer_comm_pct': closer_comm_pct,
+                'setter_comm_pct': setter_comm_pct
+            }
+            st.session_state['team_compensation_structure'] = {
+                'comp_structure': ImprovedCompensationCalculator.calculate_custom_compensation(roles_comp),
+                'closer_comm_pct': closer_comm_pct,
+                'setter_comm_pct': setter_comm_pct
+            }
+
+        with comp_col_results:
+            st.markdown("**Results**")
+            comp_inputs = st.session_state.get('team_compensation_inputs', {})
+            if comp_inputs:
+                roles_comp = comp_inputs['roles_comp']
+                comp_state = st.session_state.get('team_compensation_structure')
+                if not comp_state or comp_state.get('comp_structure') is None:
+                    comp_state = {
+                        'comp_structure': ImprovedCompensationCalculator.calculate_custom_compensation(roles_comp),
+                        'closer_comm_pct': comp_inputs['closer_comm_pct'],
+                        'setter_comm_pct': comp_inputs['setter_comm_pct']
+                    }
+                    st.session_state['team_compensation_structure'] = comp_state
+
+                comp_structure = comp_state['comp_structure']
+                closer_comm_pct = comp_state['closer_comm_pct']
+                setter_comm_pct = comp_state['setter_comm_pct']
+
+                summary_cols = st.columns(4)
+                summary_cols[0].metric("Total Annual Comp", f"${comp_structure['annual_total']:,.0f}")
+                summary_cols[1].metric("Monthly Base", f"${comp_structure['monthly_base']:,.0f}")
+                summary_cols[2].metric("Monthly Variable", f"${comp_structure['monthly_variable_target']:,.0f}")
+                summary_cols[3].metric("Avg Base %", f"{comp_structure['avg_base_pct']:.0%}")
+
+                comp_rows = []
+                for role, data in comp_structure['by_role'].items():
+                    comp_rows.append({
+                        'Role': role.capitalize(),
+                        'Count': data['count'],
+                        'Base/Person': f"${data['base_per_person']:,.0f}",
+                        'Variable/Person': f"${data['variable_per_person']:,.0f}",
+                        'OTE/Person': f"${data['ote_per_person']:,.0f}",
+                        'Base %': f"{data['base_pct']:.0%}",
+                        'Total Cost': f"${data['total_ote']:,.0f}"
+                    })
+
+                st.dataframe(pd.DataFrame(comp_rows), use_container_width=True, hide_index=True)
+
+                commission_flow = {
+                    'Revenue': monthly_revenue_immediate,
+                    'Closer Pool': monthly_revenue_immediate * closer_comm_pct,
+                    'Setter Pool': monthly_revenue_immediate * setter_comm_pct,
+                    'Per Closer': (monthly_revenue_immediate * closer_comm_pct) / num_closers_main if num_closers_main > 0 else 0,
+                    'Per Setter': (monthly_revenue_immediate * setter_comm_pct) / num_setters_main if num_setters_main > 0 else 0
+                }
+
+                st.dataframe(
+                    pd.DataFrame([
+                        {'Level': k, 'Amount': f"${v:,.0f}", 'Per Sale': f"${v/monthly_sales if monthly_sales > 0 else 0:,.0f}"}
+                        for k, v in commission_flow.items()
+                    ]),
+                    use_container_width=True,
+                    hide_index=True
+                )
+            else:
+                st.info("Configure compensation to see results.")
         
         # Daily Activities Section within Team Structure
         st.markdown("**Daily Activity Requirements**")
@@ -2283,59 +2320,8 @@ with tabs[1]:
         </div>
         """, unsafe_allow_html=True)
 
-# TAB 3: COMPENSATION (Improved modular)
+# TAB 3: P&L (Deep analysis)
 with tabs[2]:
-    st.header("💵 Estructura de Compensación Modular")
-    
-    # Show current structure
-    st.subheader("💼 OTE Structure by Role")
-    
-    comp_data = []
-    for role, data in comp_structure['by_role'].items():
-        comp_data.append({
-            'Role': role.capitalize(),
-            'Count': data['count'],
-            'Base/Person': f"${data['base_per_person']:,.0f}",
-            'Variable/Person': f"${data['variable_per_person']:,.0f}",
-            'OTE/Person': f"${data['ote_per_person']:,.0f}",
-            'Base %': f"{data['base_pct']:.0%}",
-            'Total Cost': f"${data['total_ote']:,.0f}"
-        })
-    
-    comp_df = pd.DataFrame(comp_data)
-    st.dataframe(comp_df, use_container_width=True, hide_index=True)
-    
-    # Summary metrics
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Total Annual Comp", f"${comp_structure['annual_total']:,.0f}")
-    with col2:
-        st.metric("Monthly Base", f"${comp_structure['monthly_base']:,.0f}")
-    with col3:
-        st.metric("Monthly Variable", f"${comp_structure['monthly_variable_target']:,.0f}")
-    with col4:
-        st.metric("Avg Base %", f"{comp_structure['avg_base_pct']:.0%}")
-    
-    # Commission waterfall
-    st.subheader("💸 Commission Flow")
-    
-    commission_flow = {
-        'Revenue': monthly_revenue_immediate,
-        'Closer Pool': monthly_revenue_immediate * closer_comm_pct,
-        'Setter Pool': monthly_revenue_immediate * setter_comm_pct,
-        'Per Closer': (monthly_revenue_immediate * closer_comm_pct) / num_closers if num_closers > 0 else 0,
-        'Per Setter': (monthly_revenue_immediate * setter_comm_pct) / num_setters if num_setters > 0 else 0
-    }
-    
-    flow_df = pd.DataFrame([
-        {'Level': k, 'Amount': f"${v:,.0f}", 'Per Sale': f"${v/monthly_sales if monthly_sales > 0 else 0:,.0f}"}
-        for k, v in commission_flow.items()
-    ])
-    
-    st.dataframe(flow_df, use_container_width=True, hide_index=True)
-
-# TAB 4: P&L (Deep analysis)
-with tabs[3]:
     st.header("📊 P&L Detallado - Análisis Profundo")
     
     # Prepare P&L data
@@ -2384,8 +2370,8 @@ with tabs[3]:
     
     st.dataframe(final_pnl, use_container_width=True, height=600, hide_index=True)
 
-# TAB 5: SIMULATOR (was TAB 6)
-with tabs[4]:  # Simulator tab
+# TAB 4: SIMULATOR (was TAB 6)
+with tabs[3]:  # Simulator tab
     st.header("📅 Revenue Timeline - Proyección Detallada")
     
     # Key milestone dates
@@ -2480,8 +2466,8 @@ with tabs[4]:  # Simulator tab
     
     st.plotly_chart(fig_timeline, use_container_width=True)
 
-# TAB 6: REVERSE ENGINEERING (was TAB 7)
-with tabs[5]:  # Reverse Engineering tab
+# TAB 5: REVERSE ENGINEERING (was TAB 7)
+with tabs[4]:  # Reverse Engineering tab
     st.header("🚀 Simulador Avanzado")
     
     # Optimization target
