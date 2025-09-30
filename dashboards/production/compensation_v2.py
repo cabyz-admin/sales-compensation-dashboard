@@ -280,4 +280,322 @@ def create_compensation_structure(
             )
             st.plotly_chart(fig_bar, use_container_width=True)
     
+    with comp_tabs[2]:  # Earnings Preview Tab
+        st.markdown("#### **📅 Period-Based Earnings Preview**")
+        
+        working_days = 20
+        
+        # Calculate earnings for different periods
+        period_data = []
+        
+        for role_name, role_data in comp_structure.items():
+            if role_data['count'] > 0:
+                base_daily = role_data['base'] / 365
+                base_weekly = role_data['base'] / 52
+                base_monthly = role_data['base'] / 12
+                
+                if role_name == 'closer':
+                    comm_monthly = role_data['actual_commission']
+                elif role_name == 'setter':
+                    comm_monthly = role_data['actual_commission']
+                else:
+                    comm_monthly = 0
+                
+                comm_daily = comm_monthly / working_days
+                comm_weekly = comm_monthly / 4.33
+                comm_annual = comm_monthly * 12
+                
+                period_data.append({
+                    'Role': role_name.capitalize(),
+                    'Daily Base': f"${base_daily:.0f}",
+                    'Daily Comm': f"${comm_daily:.0f}",
+                    'Daily Total': f"${base_daily + comm_daily:.0f}",
+                    'Weekly Total': f"${base_weekly + comm_weekly:.0f}",
+                    'Monthly Total': f"${base_monthly + comm_monthly:.0f}",
+                    'Annual Total': f"${role_data['base'] + comm_annual:.0f}",
+                    'vs OTE': f"{((role_data['base'] + comm_annual)/role_data['ote']-1)*100:+.0f}%" if role_data['ote'] > 0 else "N/A"
+                })
+        
+        if period_data:
+            st.dataframe(pd.DataFrame(period_data), use_container_width=True, hide_index=True)
+        
+        # Performance tracking
+        st.markdown("##### **🎯 Performance Requirements to Hit OTE**")
+        perf_cols = st.columns(2)
+        
+        with perf_cols[0]:
+            st.markdown("**Closer Targets**")
+            if num_closers > 0 and closer_comm > 0:
+                closer_var = comp_structure['closer']['variable']
+                required_rev = (closer_var / closer_comm) * num_closers
+                current_rev = actual_monthly_revenue * 12
+                gap = required_rev - current_rev
+                
+                st.metric("Annual Revenue Needed", f"${required_rev:,.0f}")
+                st.metric("Current Projection", f"${current_rev:,.0f}")
+                
+                if gap > 0:
+                    st.warning(f"📈 Need ${gap:,.0f} more revenue ({(gap/required_rev)*100:.0f}% gap)")
+                else:
+                    st.success(f"✅ Exceeding target by ${-gap:,.0f}!")
+        
+        with perf_cols[1]:
+            st.markdown("**Setter Targets**")
+            if num_setters > 0 and setter_comm > 0:
+                setter_var = comp_structure['setter']['variable']
+                required_rev = (setter_var / setter_comm) * num_setters
+                current_rev = actual_monthly_revenue * 12
+                gap = required_rev - current_rev
+                
+                st.metric("Annual Revenue Needed", f"${required_rev:,.0f}")
+                st.metric("Current Projection", f"${current_rev:,.0f}")
+                
+                if gap > 0:
+                    st.warning(f"📈 Need ${gap:,.0f} more revenue ({(gap/required_rev)*100:.0f}% gap)")
+                else:
+                    st.success(f"✅ Exceeding target by ${-gap:,.0f}!")
+    
+    with comp_tabs[3]:  # Decision Matrix Tab
+        st.markdown("#### **🎯 Compensation Decision Matrix**")
+        
+        # Create scenarios
+        scenarios = {
+            'Current': {
+                'base_pct': base_pct,
+                'closer_comm': closer_comm,
+                'setter_comm': setter_comm,
+                'closer_ote': closer_ote,
+                'setter_ote': setter_ote
+            },
+            'Performance': {
+                'base_pct': 0.30,
+                'closer_comm': 0.25,
+                'setter_comm': 0.04,
+                'closer_ote': 90000,
+                'setter_ote': 45000
+            },
+            'Balanced': {
+                'base_pct': 0.40,
+                'closer_comm': 0.20,
+                'setter_comm': 0.03,
+                'closer_ote': 80000,
+                'setter_ote': 40000
+            },
+            'Stability': {
+                'base_pct': 0.60,
+                'closer_comm': 0.15,
+                'setter_comm': 0.02,
+                'closer_ote': 75000,
+                'setter_ote': 35000
+            }
+        }
+        
+        # Calculate metrics for each scenario
+        scenario_metrics = []
+        
+        for scenario_name, scenario_config in scenarios.items():
+            # Calculate costs
+            scenario_base = (
+                num_closers * scenario_config['closer_ote'] * scenario_config['base_pct'] +
+                num_setters * scenario_config['setter_ote'] * scenario_config['base_pct'] +
+                num_managers * manager_ote * 0.6 +
+                num_bench * 25000 * 0.5
+            )
+            
+            scenario_commission = actual_monthly_revenue * (
+                scenario_config['closer_comm'] + scenario_config['setter_comm']
+            ) * 12
+            
+            scenario_total = scenario_base + scenario_commission
+            
+            scenario_metrics.append({
+                'Scenario': scenario_name,
+                'Base/Variable': f"{scenario_config['base_pct']:.0%}/{1-scenario_config['base_pct']:.0%}",
+                'Annual Base': f"${scenario_base:,.0f}",
+                'Annual Commission': f"${scenario_commission:,.0f}",
+                'Total Cost': f"${scenario_total:,.0f}",
+                'Cost/Revenue': f"{(scenario_total/(actual_monthly_revenue*12))*100:.1f}%" if actual_monthly_revenue > 0 else "N/A",
+                'Risk Level': '🟢 Low' if scenario_config['base_pct'] >= 0.5 else '🟡 Medium' if scenario_config['base_pct'] >= 0.35 else '🔴 High'
+            })
+        
+        # Display comparison table
+        st.dataframe(pd.DataFrame(scenario_metrics), use_container_width=True, hide_index=True)
+        
+        # Scenario comparison chart
+        st.markdown("##### **📊 Scenario Cost Comparison**")
+        
+        fig_comparison = go.Figure()
+        
+        for scenario in scenario_metrics:
+            base_val = float(scenario['Annual Base'].replace('$', '').replace(',', ''))
+            comm_val = float(scenario['Annual Commission'].replace('$', '').replace(',', ''))
+            
+            fig_comparison.add_trace(go.Bar(
+                name=scenario['Scenario'],
+                x=['Base Salary', 'Commission'],
+                y=[base_val, comm_val]
+            ))
+        
+        fig_comparison.update_layout(
+            title="Annual Compensation by Component",
+            barmode='group',
+            height=400,
+            yaxis_title="Annual Cost ($)",
+            showlegend=True
+        )
+        
+        st.plotly_chart(fig_comparison, use_container_width=True)
+        
+        # Decision recommendations
+        st.markdown("##### **💡 Recommendations**")
+        
+        rec_cols = st.columns(3)
+        
+        with rec_cols[0]:
+            st.info(
+                "**🎯 Choose Performance Model if:**\n"
+                "• High-growth phase\n"
+                "• Strong product-market fit\n"
+                "• Experienced sales team\n"
+                "• Cash flow positive"
+            )
+        
+        with rec_cols[1]:
+            st.success(
+                "**⚖️ Choose Balanced Model if:**\n"
+                "• Steady growth\n"
+                "• Mixed team experience\n"
+                "• Moderate risk tolerance\n"
+                "• Standard market"
+            )
+        
+        with rec_cols[2]:
+            st.warning(
+                "**🛡️ Choose Stability Model if:**\n"
+                "• Early stage/uncertain\n"
+                "• New sales team\n"
+                "• Conservative cash flow\n"
+                "• Long sales cycles"
+            )
+    
+    with comp_tabs[4]:  # Impact Analysis Tab
+        st.markdown("#### **📈 Financial Impact Analysis**")
+        
+        # Current EBITDA calculation
+        current_revenue = actual_monthly_revenue * 12
+        current_comp_cost = total_base + total_commission * 12
+        current_opex = deal_economics.get('monthly_opex', 35000) * 12
+        current_marketing = deal_economics.get('monthly_marketing', 100000) * 12
+        current_gov_fees = current_revenue * deal_economics.get('gov_fee_pct', 0.10)
+        
+        current_ebitda = current_revenue - current_comp_cost - current_opex - current_marketing - current_gov_fees
+        current_margin = (current_ebitda / current_revenue) * 100 if current_revenue > 0 else 0
+        
+        # Display current state
+        st.markdown("##### **Current Financial State**")
+        current_cols = st.columns(5)
+        
+        current_cols[0].metric("Annual Revenue", f"${current_revenue:,.0f}")
+        current_cols[1].metric("Comp Cost", f"${current_comp_cost:,.0f}")
+        current_cols[2].metric("EBITDA", f"${current_ebitda:,.0f}")
+        current_cols[3].metric("EBITDA Margin", f"{current_margin:.1f}%")
+        current_cols[4].metric("Comp/Revenue", f"{(current_comp_cost/current_revenue)*100:.1f}%" if current_revenue > 0 else "0%")
+        
+        # What-if analysis
+        st.markdown("##### **🔮 What-If Scenarios**")
+        
+        whatif_cols = st.columns(2)
+        
+        with whatif_cols[0]:
+            st.markdown("**Adjust Variables**")
+            revenue_change = st.slider("Revenue Change %", -30, 50, 0, 5, key="comp_rev_change")
+            comm_change = st.slider("Commission Rate Change (pts)", -5, 5, 0, 1, key="comp_comm_change")
+            team_change = st.slider("Team Size Change %", -30, 30, 0, 5, key="comp_team_change")
+        
+        with whatif_cols[1]:
+            st.markdown("**Impact Results**")
+            
+            # Calculate new values
+            new_revenue = current_revenue * (1 + revenue_change/100)
+            new_comm_rate = (closer_comm + setter_comm) + comm_change/100
+            new_commission = new_revenue * new_comm_rate
+            new_base = total_base * (1 + team_change/100)
+            new_comp_cost = new_base + new_commission
+            
+            new_ebitda = new_revenue - new_comp_cost - current_opex - current_marketing - (new_revenue * deal_economics.get('gov_fee_pct', 0.10))
+            new_margin = (new_ebitda / new_revenue) * 100 if new_revenue > 0 else 0
+            
+            ebitda_change = new_ebitda - current_ebitda
+            margin_change = new_margin - current_margin
+            
+            st.metric("New EBITDA", f"${new_ebitda:,.0f}", f"${ebitda_change:,.0f}")
+            st.metric("New Margin", f"{new_margin:.1f}%", f"{margin_change:+.1f}%")
+            st.metric("New Comp Cost", f"${new_comp_cost:,.0f}", f"${new_comp_cost - current_comp_cost:,.0f}")
+        
+        # Sensitivity analysis
+        st.markdown("##### **📊 Sensitivity Analysis**")
+        
+        # Create heatmap for EBITDA sensitivity
+        revenue_range = range(-20, 30, 5)
+        comm_range = range(-3, 4, 1)
+        
+        ebitda_matrix = []
+        for rev_chg in revenue_range:
+            row = []
+            for comm_chg in comm_range:
+                test_revenue = current_revenue * (1 + rev_chg/100)
+                test_comm = test_revenue * ((closer_comm + setter_comm) + comm_chg/100)
+                test_ebitda = test_revenue - total_base - test_comm - current_opex - current_marketing - (test_revenue * 0.10)
+                row.append(test_ebitda)
+            ebitda_matrix.append(row)
+        
+        fig_heatmap = go.Figure(data=go.Heatmap(
+            z=ebitda_matrix,
+            x=[f"{c:+d}%" for c in comm_range],
+            y=[f"{r:+d}%" for r in revenue_range],
+            colorscale='RdYlGn',
+            text=[[f"${val:,.0f}" for val in row] for row in ebitda_matrix],
+            texttemplate="%{text}",
+            textfont={"size": 10},
+            colorbar=dict(title="EBITDA ($)")
+        ))
+        
+        fig_heatmap.update_layout(
+            title="EBITDA Sensitivity: Revenue vs Commission Changes",
+            xaxis_title="Commission Rate Change",
+            yaxis_title="Revenue Change",
+            height=500
+        )
+        
+        st.plotly_chart(fig_heatmap, use_container_width=True)
+        
+        # Key insights
+        st.markdown("##### **🔍 Key Insights**")
+        
+        insight_cols = st.columns(3)
+        
+        with insight_cols[0]:
+            break_even_commission = current_ebitda / current_revenue if current_revenue > 0 else 0
+            st.metric(
+                "Max Commission for Break-Even",
+                f"{(break_even_commission + (closer_comm + setter_comm))*100:.1f}%",
+                help="Maximum total commission rate before EBITDA turns negative"
+            )
+        
+        with insight_cols[1]:
+            revenue_per_employee = current_revenue / (num_closers + num_setters + num_managers + num_bench) if (num_closers + num_setters + num_managers + num_bench) > 0 else 0
+            st.metric(
+                "Revenue per Employee",
+                f"${revenue_per_employee:,.0f}",
+                help="Annual revenue generated per team member"
+            )
+        
+        with insight_cols[2]:
+            comp_efficiency = current_revenue / current_comp_cost if current_comp_cost > 0 else 0
+            st.metric(
+                "Comp Efficiency Ratio",
+                f"{comp_efficiency:.2f}x",
+                help="Revenue generated per dollar of compensation"
+            )
+    
     return comp_structure, closer_comm, setter_comm

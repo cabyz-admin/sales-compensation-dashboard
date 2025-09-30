@@ -782,60 +782,123 @@ with tabs[0]:
                 'monthly_setter_capacity': monthly_setter_capacity
             }
 
-        # ENHANCED COMPENSATION STRUCTURE V2
-        if create_compensation_structure:
-            # Prepare data for the compensation module
-            team_metrics = {
-                'num_closers': num_closers_main,
-                'num_setters': num_setters_main,
-                'num_managers': num_managers_main,
-                'num_bench': num_bench_main
-            }
-            
-            # Get deal economics values
-            comp_immediate_use = comp_immediate_val if 'comp_immediate_val' in locals() else comp_immediate
-            
-            # Calculate monthly opex
-            if 'office_rent_main' in locals():
-                monthly_opex_calc = office_rent_main + software_costs_main + other_opex_main
-            else:
-                monthly_opex_calc = office_rent + software_costs + other_opex
-            
-            deal_economics = {
-                'comp_immediate': comp_immediate_use,
-                'monthly_opex': monthly_opex_calc,
-                'monthly_marketing': cost_breakdown.get('total_marketing_spend', monthly_marketing) if 'cost_breakdown' in locals() else monthly_marketing,
-                'gov_fee_pct': gov_fee_pct,
-                'close_rate': close_rate
-            }
-            
-            # Use actual GTM revenue if available
-            actual_revenue = gtm_metrics.get('monthly_revenue_immediate', monthly_revenue_immediate)
-            actual_sales = gtm_metrics.get('monthly_sales', monthly_sales)
-            
-            # Call the enhanced compensation module
-            comp_structure_result, closer_comm_pct, setter_comm_pct = create_compensation_structure(
-                team_metrics=team_metrics,
-                gtm_metrics=gtm_metrics,
-                deal_economics=deal_economics,
-                actual_monthly_revenue=actual_revenue,
-                actual_monthly_sales=actual_sales
+        # ENHANCED COMPENSATION STRUCTURE
+        st.markdown("### 💰 **Compensation Structure & Decision Tool**")
+        st.info("📊 Real-time compensation modeling based on actual GTM performance")
+        comp_col_config, comp_col_results = st.columns([1, 1])
+
+        with comp_col_config:
+            st.markdown("**Configuration**")
+            st.markdown("**Configuration Mode**")
+            comp_mode = st.radio(
+                "Select compensation mode",
+                ["Simple (% split)", "Custom per Role"],
+                index=0,
+                key="team_comp_mode"
             )
-            
-            # Store results in session state
-            if comp_structure_result:
-                st.session_state['team_compensation_structure'] = {
-                    'comp_structure': comp_structure_result,
-                    'closer_comm_pct': closer_comm_pct,
-                    'setter_comm_pct': setter_comm_pct
+
+            if comp_mode == "Simple (% split)":
+                base_pct = st.number_input("Base Salary %", min_value=20, max_value=60, value=40, step=5, key="team_base_pct") / 100
+                closer_ote = st.number_input("Closer OTE ($)", value=80000, step=5000, key="team_closer_ote")
+                setter_ote = st.number_input("Setter OTE ($)", value=40000, step=2500, key="team_setter_ote")
+                manager_ote = st.number_input("Manager OTE ($)", value=120000, step=10000, key="team_manager_ote")
+
+                roles_comp = {
+                    'closer': {'count': num_closers_main, 'base': closer_ote * base_pct, 'variable': closer_ote * (1 - base_pct), 'ote': closer_ote},
+                    'setter': {'count': num_setters_main, 'base': setter_ote * base_pct, 'variable': setter_ote * (1 - base_pct), 'ote': setter_ote},
+                    'manager': {'count': num_managers_main, 'base': manager_ote * 0.6, 'variable': manager_ote * 0.4, 'ote': manager_ote},
+                    'bench': {'count': num_bench_main, 'base': 25000 * 0.5, 'variable': 25000 * 0.5, 'ote': 25000}
                 }
-                comp_structure = comp_structure_result
-        else:
-            st.warning("⚠️ Enhanced compensation module not available. Please check installation.")
-            # Use default values
-            closer_comm_pct = 0.20
-            setter_comm_pct = 0.03
-            comp_structure = None
+            else:
+                st.markdown("**Custom Base/Variable per Role**")
+                roles_comp = {}
+
+                c_base = st.number_input("Closer Base ($)", value=32000, step=2500, key="team_c_base")
+                c_var = st.number_input("Closer Variable ($)", value=48000, step=2500, key="team_c_var")
+                roles_comp['closer'] = {'count': num_closers_main, 'base': c_base, 'variable': c_var, 'ote': c_base + c_var}
+
+                s_base = st.number_input("Setter Base ($)", value=16000, step=1000, key="team_s_base")
+                s_var = st.number_input("Setter Variable ($)", value=24000, step=1000, key="team_s_var")
+                roles_comp['setter'] = {'count': num_setters_main, 'base': s_base, 'variable': s_var, 'ote': s_base + s_var}
+
+                m_base = st.number_input("Manager Base ($)", value=72000, step=5000, key="team_m_base")
+                m_var = st.number_input("Manager Variable ($)", value=48000, step=5000, key="team_m_var")
+                roles_comp['manager'] = {'count': num_managers_main, 'base': m_base, 'variable': m_var, 'ote': m_base + m_var}
+
+                roles_comp['bench'] = {'count': num_bench_main, 'base': 12500, 'variable': 12500, 'ote': 25000}
+
+            st.markdown("**Commission Pools**")
+            closer_comm_pct = st.number_input("Closer Pool %", min_value=10, max_value=30, value=20, step=1, key="team_closer_pool") / 100
+            setter_comm_pct = st.number_input("Setter Pool %", min_value=0, max_value=10, value=3, step=1, key="team_setter_pool") / 100
+
+            st.session_state['team_compensation_inputs'] = {
+                'comp_mode': comp_mode,
+                'roles_comp': roles_comp,
+                'closer_comm_pct': closer_comm_pct,
+                'setter_comm_pct': setter_comm_pct
+            }
+            st.session_state['team_compensation_structure'] = {
+                'comp_structure': ImprovedCompensationCalculator.calculate_custom_compensation(roles_comp),
+                'closer_comm_pct': closer_comm_pct,
+                'setter_comm_pct': setter_comm_pct
+            }
+
+        with comp_col_results:
+            st.markdown("**Results**")
+            comp_inputs = st.session_state.get('team_compensation_inputs', {})
+            if comp_inputs:
+                roles_comp = comp_inputs['roles_comp']
+                comp_state = st.session_state.get('team_compensation_structure')
+                if not comp_state or comp_state.get('comp_structure') is None:
+                    comp_state = {
+                        'comp_structure': ImprovedCompensationCalculator.calculate_custom_compensation(roles_comp),
+                        'closer_comm_pct': comp_inputs['closer_comm_pct'],
+                        'setter_comm_pct': comp_inputs['setter_comm_pct']
+                    }
+                    st.session_state['team_compensation_structure'] = comp_state
+
+                comp_structure = comp_state['comp_structure']
+                closer_comm_pct = comp_state['closer_comm_pct']
+                setter_comm_pct = comp_state['setter_comm_pct']
+
+                summary_cols = st.columns(4)
+                summary_cols[0].metric("Total Annual Comp", f"${comp_structure['annual_total']:,.0f}")
+                summary_cols[1].metric("Monthly Base", f"${comp_structure['monthly_base']:,.0f}")
+                summary_cols[2].metric("Monthly Variable", f"${comp_structure['monthly_variable_target']:,.0f}")
+                summary_cols[3].metric("Avg Base %", f"{comp_structure['avg_base_pct']:.0%}")
+
+                comp_rows = []
+                for role, data in comp_structure['by_role'].items():
+                    comp_rows.append({
+                        'Role': role.capitalize(),
+                        'Count': data['count'],
+                        'Base/Person': f"${data['base_per_person']:,.0f}",
+                        'Variable/Person': f"${data['variable_per_person']:,.0f}",
+                        'OTE/Person': f"${data['ote_per_person']:,.0f}",
+                        'Base %': f"{data['base_pct']:.0%}",
+                        'Total Cost': f"${data['total_ote']:,.0f}"
+                    })
+
+                st.dataframe(pd.DataFrame(comp_rows), use_container_width=True, hide_index=True)
+
+                commission_flow = {
+                    'Revenue': monthly_revenue_immediate,
+                    'Closer Pool': monthly_revenue_immediate * closer_comm_pct,
+                    'Setter Pool': monthly_revenue_immediate * setter_comm_pct,
+                    'Per Closer': (monthly_revenue_immediate * closer_comm_pct) / num_closers_main if num_closers_main > 0 else 0,
+                    'Per Setter': (monthly_revenue_immediate * setter_comm_pct) / num_setters_main if num_setters_main > 0 else 0
+                }
+
+                st.dataframe(
+                    pd.DataFrame([
+                        {'Level': k, 'Amount': f"${v:,.0f}", 'Per Sale': f"${v/monthly_sales if monthly_sales > 0 else 0:,.0f}"}
+                        for k, v in commission_flow.items()
+                    ]),
+                    use_container_width=True,
+                    hide_index=True
+                )
+            else:
+                st.info("Configure compensation to see results.")
         
         # Daily Activities Section within Team Structure
         st.markdown("**Daily Activity Requirements**")
