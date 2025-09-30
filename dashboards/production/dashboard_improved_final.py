@@ -909,46 +909,12 @@ with tabs[0]:
     gtm_monthly_revenue_immediate = gtm_metrics.get('monthly_revenue_immediate', monthly_revenue_immediate)
     gtm_blended_contact_rate = gtm_metrics.get('blended_contact_rate', contact_rate)
 
-    # Role Customization (Simple Relabeling)
-    with st.expander("🏷️ **Customize Role Names** (Optional)", expanded=False):
-        st.info("💡 Rename roles to match your organization's terminology. The calculations stay the same.")
-        
-        label_col1, label_col2 = st.columns(2)
-        
-        with label_col1:
-            closer_label = st.text_input(
-                "What do you call 'Closers'?",
-                value=st.session_state.get('closer_label', 'Closers'),
-                placeholder="e.g., AEs, Account Executives, Sales Reps",
-                key="closer_label_input",
-                help="Examples: Account Executives (AE), Sales Reps, Closers, Consultants"
-            )
-            st.session_state['closer_label'] = closer_label
-            
-            setter_label = st.text_input(
-                "What do you call 'Setters'?",
-                value=st.session_state.get('setter_label', 'Setters'),
-                placeholder="e.g., SDRs, BDRs, Appointment Setters",
-                key="setter_label_input",
-                help="Examples: Sales Development Reps (SDR), BDRs, Lead Qualifiers"
-            )
-            st.session_state['setter_label'] = setter_label
-        
-        with label_col2:
-            st.markdown("**Common Role Names:**")
-            st.markdown("- **AE** (Account Executive) = Closers")
-            st.markdown("- **SDR** (Sales Development Rep) = Setters")
-            st.markdown("- **BDR** (Business Development Rep) = Setters")
-            st.markdown("- **AM** (Account Manager) = Managers")
-            st.markdown("")
-            st.caption("💡 **Note**: Changing labels doesn't affect calculations. All revenue, capacity, and EBITDA metrics remain based on the proven Closer/Setter model.")
-    
     # Team Structure Configuration
     # Initialize expander state if not exists
     if 'team_structure_expanded' not in st.session_state:
         st.session_state.team_structure_expanded = True
     
-    with st.expander("👥 **Team Structure** (Simple Mode)", expanded=st.session_state.team_structure_expanded):
+    with st.expander("👥 **Team Structure**", expanded=st.session_state.team_structure_expanded):
         team_col1, team_col2, team_col3 = st.columns(3)
         
         with team_col1:
