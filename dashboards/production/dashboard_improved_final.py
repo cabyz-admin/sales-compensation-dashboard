@@ -175,10 +175,47 @@ if 'compensation_mode' not in st.session_state:
     st.session_state.compensation_mode = 'simple'
 if 'reverse_target' not in st.session_state:
     st.session_state.reverse_target = None
+if 'theme_light' not in st.session_state:
+    st.session_state.theme_light = False
 
 # ============= HEADER =============
-st.title("💎 Sales Compensation Model - Improved Final Version")
-st.markdown("**Complete integration with proper calculations and flexible inputs**")
+header_cols = st.columns([0.8, 0.2])
+with header_cols[0]:
+    st.title("💎 Sales Compensation Model - Improved Final Version")
+    st.markdown("**Complete integration with proper calculations and flexible inputs**")
+with header_cols[1]:
+    light_selected = st.toggle(
+        "Light background",
+        value=st.session_state.theme_light,
+        help="Switch to a lighter UI palette if you prefer higher contrast on cards and tables."
+    )
+    if light_selected != st.session_state.theme_light:
+        st.session_state.theme_light = light_selected
+
+if st.session_state.theme_light:
+    st.markdown(
+        """
+        <style>
+            body, .stApp, .block-container {
+                background-color: #f8fafc !important;
+                color: #0f172a !important;
+            }
+            .stMetric label, .stMetric span, .stMarkdown p, .stMarkdown li, .stMarkdown h1,
+            .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5 {
+                color: #0f172a !important;
+            }
+            .alert-box { color: #0f172a; }
+            div[data-testid="stMetricValue"], div[data-testid="stMetricDelta"] {
+                color: #0f172a !important;
+            }
+            .compensation-grid {
+                background: #ffffff !important;
+                border: 1px solid #e2e8f0;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
 # Hide the sidebar since everything is now in the main view
 st.markdown("""
@@ -1533,9 +1570,19 @@ with tabs[0]:
         with finance_cols[1]:
             st.metric("⏱️ Payback", f"{payback_months:.1f} mo", "Target: <18m")
         with finance_cols[2]:
-            st.metric("📈 Revenue (Imm)", f"${monthly_revenue_immediate:,.0f}", "70% split")
+            st.metric(
+                "📈 Revenue (Imm)",
+                f"${monthly_revenue_immediate:,.0f}",
+                "70% split",
+                help="Cash collected upfront in month 1 from current sales (immediate commission portion)."
+            )
         with finance_cols[3]:
-            st.metric("📅 Revenue (Def)", f"${monthly_revenue_deferred:,.0f}", "30% split")
+            st.metric(
+                "📅 Revenue (Def)",
+                f"${monthly_revenue_deferred:,.0f}",
+                "30% split",
+                help="Deferred revenue scheduled for month 18 based on retained deals (deferred commission portion)."
+            )
         with finance_cols[4]:
             st.metric("🏢 Team", f"{team_total} people", f"Burn: ${monthly_opex:,.0f}/mo")
         
@@ -3161,6 +3208,10 @@ Keeping it commented for reference only.
         channel_data = []
         for ch in channels:
             efficiency = MultiChannelGTM.calculate_channel_efficiency(ch)
+            total_cost = ch.get('total_marketing_cost', 0)
+            daily_cost = total_cost / 30 if total_cost else 0
+            weekly_cost = total_cost / 4 if total_cost else 0
+            annual_cost = total_cost * 12
             channel_data.append({
                 'Channel': ch['name'],
                 'Segment': ch['segment'],
@@ -3169,10 +3220,14 @@ Keeping it commented for reference only.
                 'Sales': f"{ch['sales']:.0f}",
                 'Revenue': f"${ch['revenue']:,.0f}",
                 'CAC': f"${ch['cac']:,.0f}",
+                'Spend/Day': f"${daily_cost:,.0f}",
+                'Spend/Week': f"${weekly_cost:,.0f}",
+                'Spend/Month': f"${total_cost:,.0f}",
+                'Spend/Year': f"${annual_cost:,.0f}",
                 'LTV:CAC': f"{efficiency['ltv_cac_ratio']:.1f}x",
                 'Payback': f"{efficiency['payback_months']:.1f} mo"
             })
-        
+
         channel_df = pd.DataFrame(channel_data)
         st.dataframe(
             channel_df,
@@ -3180,7 +3235,11 @@ Keeping it commented for reference only.
             hide_index=True,
             column_config={
                 "Revenue": st.column_config.TextColumn("Revenue", width="medium"),
-                "LTV:CAC": st.column_config.TextColumn("LTV:CAC", width="small")
+                "LTV:CAC": st.column_config.TextColumn("LTV:CAC", width="small"),
+                "Spend/Day": st.column_config.TextColumn("Spend/Day", width="small"),
+                "Spend/Week": st.column_config.TextColumn("Spend/Week", width="small"),
+                "Spend/Month": st.column_config.TextColumn("Spend/Month", width="small"),
+                "Spend/Year": st.column_config.TextColumn("Spend/Year", width="small")
             }
         )
         
