@@ -5,11 +5,13 @@ import numpy as np
 import pandas as pd
 from typing import Dict, List, Tuple, Optional
 from datetime import datetime, timedelta
+import streamlit as st
 
 class ImprovedCostCalculator:
     """Improved cost calculations with flexibility"""
     
     @staticmethod
+    @st.cache_data(ttl=300)
     def calculate_acquisition_costs(input_type: str,
                                   input_value: float,
                                   volume: Dict[str, float]) -> Dict[str, float]:
@@ -159,6 +161,7 @@ class ImprovedPnLCalculator:
     """Deep P&L analysis with proper categorization"""
     
     @staticmethod
+    @st.cache_data(ttl=300)
     def calculate_detailed_pnl(revenue: Dict[str, float],
                               costs: Dict[str, float],
                               projection_months: int = 18) -> pd.DataFrame:

@@ -428,6 +428,7 @@ current_state = {
 # All metrics are now displayed in the aggregated section below
 
 
+@st.cache_data(ttl=60)
 def get_capacity_metrics(default_closers, default_setters, fallback_working_days=20, fallback_closer_meetings=3.0, fallback_setter_meetings=2.0):
     """Return capacity configuration and derived totals based on stored settings."""
     settings = st.session_state.get('team_capacity_settings', {})

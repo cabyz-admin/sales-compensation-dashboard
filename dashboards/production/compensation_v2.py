@@ -195,7 +195,8 @@ def create_compensation_structure(
             comm_cols = st.columns(2)
             with comm_cols[0]:
                 st.metric("Total Commission", f"${total_commission:,.0f}")
-                st.metric("Commission Rate", f"{(total_commission/actual_monthly_revenue)*100:.1f}%")
+                commission_rate = (total_commission/actual_monthly_revenue)*100 if actual_monthly_revenue > 0 else 0
+                st.metric("Commission Rate", f"{commission_rate:.1f}%")
             with comm_cols[1]:
                 st.metric("Per Sale Commission", f"${total_commission/max(actual_monthly_sales, 1):,.0f}")
                 st.metric("Commission/Employee", f"${total_commission/(num_closers+num_setters):,.0f}" if (num_closers+num_setters) > 0 else "$0")
