@@ -1133,18 +1133,20 @@ with tabs[0]:
             st.session_state['commission_multiplier'] = comm_multiplier
         
         with comm_policy_cols[2]:
-            # Show example calculation
-            example_deal = comp_immediate if 'comp_immediate' in locals() else 50000
-            example_full = example_deal / 0.7 if comm_multiplier == 0.70 else example_deal
-            example_comm_base = example_full * comm_multiplier
+            # Show example calculation using modular upfront percentage
+            upfront_pct_val = st.session_state.get('upfront_payment_pct', 70.0)
+            example_deal_value = st.session_state.get('avg_deal_value', 50000)
+            example_upfront = example_deal_value * (upfront_pct_val / 100)
             
             st.markdown("**💡 Example Calculation:**")
-            if comm_multiplier == 0.70:
-                st.caption(f"Deal: ${example_full:,.0f} → Upfront: ${example_comm_base:,.0f} (70%)")
-                st.caption(f"20% commission = ${example_comm_base * 0.20:,.0f} (paid from upfront cash)")
+            if comm_multiplier < 1.0:
+                # Paying from upfront only
+                st.caption(f"Deal: ${example_deal_value:,.0f} → Upfront: ${example_upfront:,.0f} ({upfront_pct_val:.0f}%)")
+                st.caption(f"20% commission = ${example_upfront * 0.20:,.0f} (from upfront only)")
             else:
-                st.caption(f"Deal: ${example_full:,.0f} → Commission base: ${example_comm_base:,.0f}")
-                st.caption(f"20% commission = ${example_comm_base * 0.20:,.0f} (paid from full deal)")
+                # Paying from full deal
+                st.caption(f"Deal: ${example_deal_value:,.0f} → Commission base: ${example_deal_value:,.0f}")
+                st.caption(f"20% commission = ${example_deal_value * 0.20:,.0f} (from full deal)")
         
         st.markdown("---")
         
@@ -1239,15 +1241,23 @@ with tabs[0]:
                         
                         # Calculate variable comp based on projected revenue
                         actual_revenue = gtm_metrics.get('monthly_revenue_immediate', monthly_revenue_immediate) if 'gtm_metrics' in locals() else monthly_revenue_immediate
-                        comm_multiplier = st.session_state.get('commission_multiplier', 0.70)
+                        comm_multiplier = st.session_state.get('commission_multiplier', 1.0)
+                        upfront_pct_val = st.session_state.get('upfront_payment_pct', 70.0) / 100
                         
-                        # Commission base (either upfront or full)
-                        commission_base_amount = actual_revenue * comm_multiplier
+                        # Commission base (either upfront portion or full deal)
+                        if comm_multiplier < 1.0:
+                            # Using upfront only - revenue already represents upfront (comp_immediate)
+                            commission_base_amount = actual_revenue
+                        else:
+                            # Using full deal value
+                            commission_base_amount = actual_revenue / upfront_pct_val if upfront_pct_val > 0 else actual_revenue
+                        
                         variable_comp = (commission_base_amount * (commission_pct / 100)) / max(1, st.session_state.get(f'num_{role_key}s_main', 1))
                         
                         # Show what this means
+                        upfront_pct_display = st.session_state.get('upfront_payment_pct', 70.0)
                         st.caption(f"💰 Estimated: ${variable_comp:,.0f}/mo per person")
-                        st.caption(f"📊 From {commission_pct}% of {'upfront' if comm_multiplier == 0.70 else 'full'} revenue")
+                        st.caption(f"📊 From {commission_pct}% of {'upfront (' + str(int(upfront_pct_display)) + '%)' if comm_multiplier < 1.0 else 'full (100%)'} revenue")
                         
                         ote = base_salary + variable_comp
                         
@@ -1366,29 +1376,46 @@ with tabs[0]:
             manager_comm_rate = roles_comp.get('manager', {}).get('commission_pct', 5.0) / 100
             
             # Get commission multiplier (upfront vs full)
-            comm_multiplier = st.session_state.get('commission_multiplier', 0.70)
+            comm_multiplier = st.session_state.get('commission_multiplier', 1.0)
+            upfront_pct_val = st.session_state.get('upfront_payment_pct', 70.0) / 100
             
             # Per-deal or monthly
             if "Per Deal" in flow_view:
                 # Unit case - per deal
                 revenue_per_deal = comp_immediate if 'comp_immediate' in locals() else (actual_revenue / actual_sales_count if actual_sales_count > 0 else 50000)
-                # Apply commission multiplier to deal
-                deal_for_commission = revenue_per_deal * (1 / 0.7) * comm_multiplier  # Convert to full deal, then apply multiplier
+                
+                # Apply commission policy
+                if comm_multiplier < 1.0:
+                    # Upfront only - revenue_per_deal already represents upfront
+                    deal_for_commission = revenue_per_deal
+                else:
+                    # Full deal - convert upfront to full deal value
+                    deal_for_commission = revenue_per_deal / upfront_pct_val if upfront_pct_val > 0 else revenue_per_deal
+                
                 closer_pool = deal_for_commission * closer_comm_rate
                 setter_pool = deal_for_commission * setter_comm_rate  
                 manager_pool = deal_for_commission * manager_comm_rate
                 stakeholder_pool = 0  # Stakeholders get EBITDA, not per-deal commission
-                title_text = f"Per Deal: ${revenue_per_deal:,.0f} ({'Upfront' if comm_multiplier == 0.70 else 'Full'}) → Commissions"
+                
+                upfront_pct_display = int(st.session_state.get('upfront_payment_pct', 70.0))
+                title_text = f"Per Deal: ${revenue_per_deal:,.0f} ({'Upfront (' + str(upfront_pct_display) + '%)' if comm_multiplier < 1.0 else 'Full (100%)'}) → Commissions"
             else:
                 # Monthly total
-                # Apply commission multiplier
-                revenue_for_commission = actual_revenue * (1 / 0.7) * comm_multiplier  # Convert to full revenue, then apply multiplier
+                if comm_multiplier < 1.0:
+                    # Upfront only - revenue already represents upfront
+                    revenue_for_commission = actual_revenue
+                else:
+                    # Full deal - convert upfront revenue to full deal value
+                    revenue_for_commission = actual_revenue / upfront_pct_val if upfront_pct_val > 0 else actual_revenue
+                
                 closer_pool = revenue_for_commission * closer_comm_rate
                 setter_pool = revenue_for_commission * setter_comm_rate
                 manager_pool = revenue_for_commission * manager_comm_rate
                 # Calculate stakeholder pool from EBITDA (will calculate below)
                 stakeholder_pool = 0  # Placeholder
-                title_text = f"Revenue → Pools → Per Person ({'Upfront' if comm_multiplier == 0.70 else 'Full'} Base)"
+                
+                upfront_pct_display = int(st.session_state.get('upfront_payment_pct', 70.0))
+                title_text = f"Revenue → Pools → Per Person ({'Upfront (' + str(upfront_pct_display) + '%)' if comm_multiplier < 1.0 else 'Full (100%)'} Base)"
             
             # Create flow diagram
             fig_flow = go.Figure()
@@ -1565,22 +1592,41 @@ with tabs[0]:
                     monthly_rev = gtm_metrics.get('monthly_revenue_immediate', actual_revenue) if 'gtm_metrics' in locals() else actual_revenue
                     # Get commission percentage from role config
                     role_comm_pct = roles_comp.get('closer', {}).get('commission_pct', 20.0) / 100
-                    comm_multiplier = st.session_state.get('commission_multiplier', 0.70)
-                    revenue_for_commission = monthly_rev * (1 / 0.7) * comm_multiplier
+                    comm_multiplier = st.session_state.get('commission_multiplier', 1.0)
+                    upfront_pct_val = st.session_state.get('upfront_payment_pct', 70.0) / 100
+                    
+                    # Apply commission policy
+                    if comm_multiplier < 1.0:
+                        revenue_for_commission = monthly_rev  # Upfront only
+                    else:
+                        revenue_for_commission = monthly_rev / upfront_pct_val if upfront_pct_val > 0 else monthly_rev  # Full deal
+                    
                     comm_pool_monthly = revenue_for_commission * role_comm_pct
                     comm_monthly = comm_pool_monthly / num_closers_calc if num_closers_calc > 0 else 0
                 elif role_key == 'setter':
                     monthly_rev = gtm_metrics.get('monthly_revenue_immediate', actual_revenue) if 'gtm_metrics' in locals() else actual_revenue
                     role_comm_pct = roles_comp.get('setter', {}).get('commission_pct', 3.0) / 100
-                    comm_multiplier = st.session_state.get('commission_multiplier', 0.70)
-                    revenue_for_commission = monthly_rev * (1 / 0.7) * comm_multiplier
+                    comm_multiplier = st.session_state.get('commission_multiplier', 1.0)
+                    upfront_pct_val = st.session_state.get('upfront_payment_pct', 70.0) / 100
+                    
+                    if comm_multiplier < 1.0:
+                        revenue_for_commission = monthly_rev
+                    else:
+                        revenue_for_commission = monthly_rev / upfront_pct_val if upfront_pct_val > 0 else monthly_rev
+                    
                     comm_pool_monthly = revenue_for_commission * role_comm_pct
                     comm_monthly = comm_pool_monthly / num_setters_calc if num_setters_calc > 0 else 0
                 elif role_key == 'manager':
                     monthly_rev = gtm_metrics.get('monthly_revenue_immediate', actual_revenue) if 'gtm_metrics' in locals() else actual_revenue
                     role_comm_pct = roles_comp.get('manager', {}).get('commission_pct', 5.0) / 100
-                    comm_multiplier = st.session_state.get('commission_multiplier', 0.70)
-                    revenue_for_commission = monthly_rev * (1 / 0.7) * comm_multiplier
+                    comm_multiplier = st.session_state.get('commission_multiplier', 1.0)
+                    upfront_pct_val = st.session_state.get('upfront_payment_pct', 70.0) / 100
+                    
+                    if comm_multiplier < 1.0:
+                        revenue_for_commission = monthly_rev
+                    else:
+                        revenue_for_commission = monthly_rev / upfront_pct_val if upfront_pct_val > 0 else monthly_rev
+                    
                     comm_pool_monthly = revenue_for_commission * role_comm_pct
                     comm_monthly = comm_pool_monthly / num_managers_calc if num_managers_calc > 0 else 0
                 else:
@@ -1667,39 +1713,134 @@ with tabs[0]:
         # Save to session state
         st.session_state.roles_comp_custom = roles_comp
     
-    # Deal Economics Configuration
-    with st.expander("💰 **Deal Economics** (Used by All Channels)", expanded=False):
-        st.info("⚠️ These values automatically apply to all channels")
-        deal_col1, deal_col2, deal_col3 = st.columns(3)
+    # Deal Economics Configuration - Modular for Any Business Type
+    with st.expander("💰 **Deal Economics & Payment Terms** (Universal)", expanded=False):
+        st.info("🌐 Configure your deal structure - works for any business: SaaS, Services, Consulting, Insurance, etc.")
         
-        with deal_col1:
-            st.markdown("**Insurance Contract Structure**")
-            avg_pm_main = st.number_input("Monthly Premium (MXN)", value=avg_pm, step=100, key="avg_pm_main")
-            contract_years_main = st.number_input("Contract Years", value=contract_years, min_value=1, max_value=30, key="contract_years_main")
-            carrier_rate_main = st.slider("Carrier Rate %", 1.0, 5.0, st.session_state.get('carrier_rate_main', carrier_rate*100), 0.1, key="carrier_rate_main") / 100
+        # Business Type Selector with Templates
+        biz_type_col1, biz_type_col2 = st.columns([1, 2])
+        
+        with biz_type_col1:
+            business_type = st.selectbox(
+                "Business Type Template",
+                ["Custom", "Insurance", "SaaS/Subscription", "Consulting/Services", "Agency/Retainer", "One-Time Sale"],
+                key="business_type_template"
+            )
+        
+        with biz_type_col2:
+            # Show template description
+            template_descriptions = {
+                "Insurance": "🛡️ Upfront commission (70%) + Deferred at renewal (30%)",
+                "SaaS/Subscription": "💻 Upfront commission (60%) + Monthly residuals (40%)",
+                "Consulting/Services": "📈 Deposit upfront (50%) + Balance on completion (50%)",
+                "Agency/Retainer": "🎯 Monthly retainer (100% upfront) or milestone-based",
+                "One-Time Sale": "💵 Full payment upfront (100%)",
+                "Custom": "⚙️ Define your own payment terms"
+            }
+            st.info(template_descriptions.get(business_type, ""))
+        
+        st.markdown("---")
+        
+        # Universal Deal Structure
+        deal_structure_cols = st.columns(3)
+        
+        with deal_structure_cols[0]:
+            st.markdown("**💰 Deal Value**")
             
-            # Recalculate based on insurance model
-            total_contract_main = avg_pm_main * contract_years_main * 12
-            total_comp_main = total_contract_main * carrier_rate_main
-            comp_immediate_val = total_comp_main * 0.7
-            comp_deferred_val = total_comp_main * 0.3
+            # Average deal value
+            default_deal_value = st.session_state.get('avg_deal_value', 50000)
+            avg_deal_value = st.number_input(
+                "Average Deal Value ($)",
+                min_value=0,
+                value=int(default_deal_value),
+                step=1000,
+                key="avg_deal_value",
+                help="Total value of an average deal/contract"
+            )
+            st.session_state['avg_deal_value'] = avg_deal_value
+            
+            # Contract/engagement length (if applicable)
+            contract_length_months = st.number_input(
+                "Contract Length (months)",
+                min_value=1,
+                max_value=120,
+                value=st.session_state.get('contract_length_months', 12),
+                step=1,
+                key="contract_length_months",
+                help="Duration of contract/engagement (1 for one-time sales)"
+            )
         
-        with deal_col2:
-            st.markdown("**Compensation Breakdown**")
-            st.metric("Contract Value", f"${total_contract_main:,.0f} MXN")
-            st.metric("Total Comp (2.7%)", f"${total_comp_main:,.0f}")
-            st.metric("Upfront (70%)", f"${comp_immediate_val:,.0f}")
-            st.metric("Month 18 (30%)", f"${comp_deferred_val:,.0f}")
+        with deal_structure_cols[1]:
+            st.markdown("**📅 Payment Terms (Modular)**")
+            
+            # Upfront percentage
+            default_upfront_pct = 70.0 if business_type == "Insurance" else 60.0 if business_type == "SaaS/Subscription" else 50.0 if business_type == "Consulting/Services" else 100.0
+            upfront_pct = st.slider(
+                "Upfront Payment %",
+                0.0,
+                100.0,
+                st.session_state.get('upfront_payment_pct', default_upfront_pct),
+                1.0,
+                key="upfront_payment_pct",
+                help="% of deal value received upfront/immediately"
+            )
+            
+            deferred_pct = 100.0 - upfront_pct
+            st.metric("Deferred Payment %", f"{deferred_pct:.0f}%")
+            
+            # Deferred payment timing
+            if deferred_pct > 0:
+                deferred_timing_months = st.number_input(
+                    "Deferred Payment After (months)",
+                    min_value=1,
+                    max_value=60,
+                    value=st.session_state.get('deferred_timing_months', 18 if business_type == "Insurance" else 1),
+                    step=1,
+                    key="deferred_timing_months",
+                    help="When deferred payment is received (e.g., 18 months for insurance renewal)"
+                )
         
-        with deal_col3:
-            st.markdown("**Per Deal Economics**")
-            # Convert to USD for display (using 18:1 exchange rate)
-            deal_size_usd = total_comp_main / 18
-            monthly_value = avg_pm_main / 18
-            st.metric("Deal Size (USD)", f"${deal_size_usd:,.0f}")
-            st.metric("Monthly Premium (USD)", f"${monthly_value:,.0f}")
-            st.metric("Contract Length", f"{contract_years_main} years")
-            st.info(f"📊 Effective commission: {carrier_rate_main*100:.1f}% of premium")
+        with deal_structure_cols[2]:
+            st.markdown("**📈 Deal Breakdown**")
+            
+            # Calculate upfront and deferred amounts
+            comp_immediate_val = avg_deal_value * (upfront_pct / 100)
+            comp_deferred_val = avg_deal_value * (deferred_pct / 100)
+            
+            st.metric("Total Deal Value", f"${avg_deal_value:,.0f}")
+            st.metric("Upfront Cash", f"${comp_immediate_val:,.0f}", f"{upfront_pct:.0f}%")
+            
+            if deferred_pct > 0:
+                st.metric(
+                    "Deferred Cash", 
+                    f"${comp_deferred_val:,.0f}",
+                    f"{deferred_pct:.0f}% at month {deferred_timing_months if 'deferred_timing_months' in locals() else 1}"
+                )
+            else:
+                st.metric("Deferred Cash", "$0", "No deferred payment")
+        
+        # Additional context
+        st.markdown("---")
+        st.markdown("**💡 Use Cases by Business Type:**")
+        
+        use_case_cols = st.columns(3)
+        
+        with use_case_cols[0]:
+            st.caption("👉 **Insurance**: 70/30 split, deferred at renewal (18mo)")
+            st.caption("👉 **SaaS**: 60% upfront, 40% as monthly residuals")
+        
+        with use_case_cols[1]:
+            st.caption("👉 **Consulting**: 50% deposit, 50% on completion")
+            st.caption("👉 **Agency**: 100% upfront monthly retainer")
+        
+        with use_case_cols[2]:
+            st.caption("👉 **Milestone-based**: Custom splits (e.g., 25/50/25)")
+            st.caption("👉 **One-time**: 100% upfront, no deferred")
+        
+        # Store values for use in calculations
+        total_comp_main = avg_deal_value
+        avg_pm_main = avg_deal_value / contract_length_months if contract_length_months > 0 else avg_deal_value
+        contract_years_main = contract_length_months / 12
     
     # Operating Costs Configuration (Marketing moved to channels)
     with st.expander("🏢 **Operating Costs**", expanded=False):
