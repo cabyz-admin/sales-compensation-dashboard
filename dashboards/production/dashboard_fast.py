@@ -596,19 +596,6 @@ with tab1:
     
     st.markdown("---")
     
-    # Funnel metrics
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("📊 Monthly Leads", f"{gtm_metrics['monthly_leads']:,.0f}")
-    with col2:
-        st.metric("🤝 Monthly Sales", f"{gtm_metrics['monthly_sales']:.1f}")
-    with col3:
-        st.metric("💵 Revenue", f"${gtm_metrics['monthly_revenue_immediate']:,.0f}")
-    with col4:
-        st.metric("🎯 Close Rate", f"{gtm_metrics['blended_close_rate']:.1%}")
-    
-    st.markdown("---")
-    
     # Multi-Channel Configuration
     st.markdown("### 📡 Multi-Channel Configuration")
     
