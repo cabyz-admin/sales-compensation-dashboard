@@ -25,6 +25,8 @@ from plotly.subplots import make_subplots
 import plotly.express as px
 import sys
 import os
+import json
+from datetime import datetime
 
 # Setup paths
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -615,23 +617,103 @@ with tab1:
                 )
                 st.session_state.gtm_channels[idx]['segment'] = segment
                 
-                leads = st.number_input(
-                    "Monthly Leads",
-                    min_value=0,
-                    value=channel.get('monthly_leads', 500),
-                    step=50,
-                    key=f"ch_leads_{channel['id']}"
+                st.markdown("**Cost Input Method**")
+                cost_point = st.selectbox(
+                    "Cost Input Point",
+                    ["Cost per Lead", "Cost per Contact", "Cost per Meeting", "Cost per Sale", "Total Budget"],
+                    index=0,
+                    key=f"ch_cost_point_{channel['id']}",
+                    help="Choose how you want to input marketing costs"
                 )
-                st.session_state.gtm_channels[idx]['monthly_leads'] = leads
                 
-                cpl = st.number_input(
-                    "Cost per Lead ($)",
-                    min_value=0,
-                    value=channel.get('cpl', 50),
-                    step=5,
-                    key=f"ch_cpl_{channel['id']}"
-                )
-                st.session_state.gtm_channels[idx]['cpl'] = cpl
+                # Dynamic inputs based on cost point
+                if cost_point == "Cost per Lead":
+                    cpl = st.number_input(
+                        "Cost per Lead ($)",
+                        min_value=0,
+                        value=channel.get('cpl', 50),
+                        step=5,
+                        key=f"ch_cpl_{channel['id']}"
+                    )
+                    leads = st.number_input(
+                        "Monthly Leads",
+                        min_value=0,
+                        value=channel.get('monthly_leads', 500),
+                        step=50,
+                        key=f"ch_leads_{channel['id']}"
+                    )
+                    
+                elif cost_point == "Cost per Contact":
+                    cost_per_contact = st.number_input(
+                        "Cost per Contact ($)",
+                        min_value=0,
+                        value=channel.get('cost_per_contact', 75),
+                        step=10,
+                        key=f"ch_cpc_{channel['id']}"
+                    )
+                    contacts_target = st.number_input(
+                        "Monthly Contacts Target",
+                        min_value=0,
+                        value=channel.get('contacts_target', 300),
+                        step=50,
+                        key=f"ch_contacts_{channel['id']}"
+                    )
+                    # Will calculate leads after we have contact rate
+                    leads = contacts_target
+                    cpl = cost_per_contact
+                    
+                elif cost_point == "Cost per Meeting":
+                    cost_per_meeting = st.number_input(
+                        "Cost per Meeting ($)",
+                        min_value=0,
+                        value=channel.get('cost_per_meeting', 200),
+                        step=25,
+                        key=f"ch_cpm_{channel['id']}"
+                    )
+                    meetings_target = st.number_input(
+                        "Monthly Meetings Target",
+                        min_value=0,
+                        value=channel.get('meetings_target', 20),
+                        step=5,
+                        key=f"ch_meetings_{channel['id']}"
+                    )
+                    leads = meetings_target * 5  # Rough estimate
+                    cpl = cost_per_meeting / 5
+                    
+                elif cost_point == "Cost per Sale":
+                    cost_per_sale = st.number_input(
+                        "Cost per Sale ($)",
+                        min_value=0,
+                        value=channel.get('cost_per_sale', 500),
+                        step=50,
+                        key=f"ch_cps_{channel['id']}"
+                    )
+                    sales_target = st.number_input(
+                        "Monthly Sales Target",
+                        min_value=0,
+                        value=channel.get('sales_target', 5),
+                        step=1,
+                        key=f"ch_sales_{channel['id']}"
+                    )
+                    leads = sales_target * 20  # Rough estimate
+                    cpl = cost_per_sale / 20
+                    
+                else:  # Total Budget
+                    total_budget = st.number_input(
+                        "Total Budget ($)",
+                        min_value=0,
+                        value=channel.get('total_budget', 25000),
+                        step=1000,
+                        key=f"ch_budget_{channel['id']}"
+                    )
+                    leads = st.number_input(
+                        "Estimated Monthly Leads",
+                        min_value=1,
+                        value=channel.get('monthly_leads', 500),
+                        step=50,
+                        key=f"ch_leads_budget_{channel['id']}"
+                    )
+                    cpl = total_budget / leads if leads > 0 else 0
             
             with cfg_cols[1]:
                 st.markdown("**Conversion Rates**")
@@ -670,6 +752,35 @@ with tab1:
                     key=f"ch_close_{channel['id']}"
                 ) / 100
                 st.session_state.gtm_channels[idx]['close_rate'] = close_rate
+                
+                # Reverse calculate leads based on cost point and conversion rates
+                if cost_point == "Cost per Contact":
+                    # Calculate leads needed to get target contacts
+                    leads = contacts_target / contact_rate if contact_rate > 0 else contacts_target
+                    cpl = cost_per_contact / contact_rate if contact_rate > 0 else cost_per_contact
+                    st.info(f"📊 Need {leads:.0f} leads to get {contacts_target} contacts")
+                    
+                elif cost_point == "Cost per Meeting":
+                    # Calculate leads needed to get target meetings
+                    conversion_to_meeting = contact_rate * meeting_rate * show_up_rate
+                    leads = meetings_target / conversion_to_meeting if conversion_to_meeting > 0 else meetings_target * 5
+                    cpl = cost_per_meeting / conversion_to_meeting if conversion_to_meeting > 0 else cost_per_meeting
+                    st.info(f"📊 Need {leads:.0f} leads to get {meetings_target} meetings")
+                    
+                elif cost_point == "Cost per Sale":
+                    # Calculate leads needed to get target sales
+                    full_conversion = contact_rate * meeting_rate * show_up_rate * close_rate
+                    leads = sales_target / full_conversion if full_conversion > 0 else sales_target * 20
+                    cpl = cost_per_sale / full_conversion if full_conversion > 0 else cost_per_sale
+                    st.info(f"📊 Need {leads:.0f} leads to get {sales_target} sales")
+                    
+                elif cost_point == "Total Budget":
+                    cpl = total_budget / leads if leads > 0 else 0
+                    st.info(f"📊 Effective CPL: ${cpl:.2f}")
+                
+                # Store the calculated values
+                st.session_state.gtm_channels[idx]['monthly_leads'] = leads
+                st.session_state.gtm_channels[idx]['cpl'] = cpl
             
             with cfg_cols[2]:
                 st.markdown("**Channel Performance**")
