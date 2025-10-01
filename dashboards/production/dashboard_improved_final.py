@@ -1736,6 +1736,97 @@ with tabs[0]:
                                  f"{commission_pct}%")
                     
                     st.caption(f"📊 Formula: ${comm_base_per_deal:,.0f} × {commission_pct}% = ${role_comm_per_deal:,.0f}")
+                    
+                    # Add Performance Requirements to Hit OTE
+                    st.markdown("---")
+                    st.markdown(f"**🎯 {'Requisitos de Desempeño' if lang == 'es' else 'Performance Requirements to Hit OTE'}**")
+                    
+                    # Calculate how many deals needed to earn the variable comp
+                    if role_comm_per_deal > 0:
+                        deals_needed_monthly = variable_comp / role_comm_per_deal
+                        deals_needed_weekly = deals_needed_monthly / 4.33
+                        deals_needed_daily = deals_needed_monthly / working_days if working_days > 0 else 0
+                        
+                        # Calculate revenue quota
+                        revenue_quota_monthly = deals_needed_monthly * avg_deal_value_calc
+                        revenue_quota_annual = revenue_quota_monthly * 12
+                        
+                        quota_cols = st.columns(4)
+                        with quota_cols[0]:
+                            st.metric("Monthly Quota" if lang == 'en' else "Cuota Mensual",
+                                     f"{deals_needed_monthly:.1f} deals",
+                                     f"${revenue_quota_monthly:,.0f}")
+                        with quota_cols[1]:
+                            st.metric("Weekly" if lang == 'en' else "Semanal",
+                                     f"{deals_needed_weekly:.1f} deals")
+                        with quota_cols[2]:
+                            st.metric("Daily" if lang == 'en' else "Diario",
+                                     f"{deals_needed_daily:.2f} deals")
+                        with quota_cols[3]:
+                            st.metric("Annual Quota" if lang == 'en' else "Cuota Anual",
+                                     f"{deals_needed_monthly*12:.0f} deals",
+                                     f"${revenue_quota_annual:,.0f}")
+                        
+                        # Show performance scenarios
+                        st.markdown("**📈 " + ("Escenarios de Desempeño" if lang == 'es' else "Performance Scenarios") + "**")
+                        scenario_cols = st.columns(3)
+                        
+                        with scenario_cols[0]:
+                            st.info(f"**80% Attainment**\n\n"
+                                   f"Deals: {deals_needed_monthly*0.8:.1f}/mo\n\n"
+                                   f"Earnings: ${base_salary + (variable_comp*0.8):,.0f}/mo\n\n"
+                                   f"({(base_salary + (variable_comp*0.8))/ote*100:.0f}% of OTE)")
+                        
+                        with scenario_cols[1]:
+                            st.success(f"**100% Attainment (OTE)**\n\n"
+                                      f"Deals: {deals_needed_monthly:.1f}/mo\n\n"
+                                      f"Earnings: ${ote:,.0f}/mo\n\n"
+                                      f"(Target)")
+                        
+                        with scenario_cols[2]:
+                            st.warning(f"**120% Attainment**\n\n"
+                                      f"Deals: {deals_needed_monthly*1.2:.1f}/mo\n\n"
+                                      f"Earnings: ${base_salary + (variable_comp*1.2):,.0f}/mo\n\n"
+                                      f"({(base_salary + (variable_comp*1.2))/ote*100:.0f}% of OTE)")
+                        
+                        # Reality check against capacity
+                        st.markdown("---")
+                        st.markdown("**⚠️ " + ("Verificación de Realidad" if lang == 'es' else "Reality Check") + "**")
+                        
+                        # Get close rate and capacity
+                        close_rate = st.session_state.get('close_rate', 0.30)
+                        meetings_per_closer_day = st.session_state.get('meetings_per_closer', 3.0)
+                        meetings_capacity_monthly = meetings_per_closer_day * working_days if working_days > 0 else 60
+                        
+                        # Calculate required meetings for quota
+                        meetings_needed_for_quota = deals_needed_monthly / close_rate if close_rate > 0 else deals_needed_monthly / 0.30
+                        capacity_utilization = (meetings_needed_for_quota / meetings_capacity_monthly * 100) if meetings_capacity_monthly > 0 else 0
+                        
+                        reality_cols = st.columns(3)
+                        with reality_cols[0]:
+                            st.metric("Meetings Needed" if lang == 'en' else "Reuniones Necesarias",
+                                     f"{meetings_needed_for_quota:.0f}/mo",
+                                     f"{meetings_needed_for_quota/working_days:.1f}/day" if working_days > 0 else "")
+                        with reality_cols[1]:
+                            st.metric("Capacity" if lang == 'en' else "Capacidad",
+                                     f"{meetings_capacity_monthly:.0f}/mo",
+                                     f"{meetings_per_closer_day:.1f}/day")
+                        with reality_cols[2]:
+                            capacity_color = "🟢" if capacity_utilization <= 80 else "🟡" if capacity_utilization <= 100 else "🔴"
+                            st.metric("Utilization" if lang == 'en' else "Utilización",
+                                     f"{capacity_utilization:.0f}%",
+                                     capacity_color)
+                        
+                        # Warning if over capacity
+                        if capacity_utilization > 100:
+                            st.error(f"⚠️ {'ALERTA' if lang == 'es' else 'WARNING'}: Quota requires {capacity_utilization:.0f}% capacity utilization. "
+                                    f"This rep needs {meetings_needed_for_quota:.0f} meetings/month but only has capacity for {meetings_capacity_monthly:.0f}. "
+                                    f"{'Considere aumentar equipo o ajustar compensación.' if lang == 'es' else 'Consider increasing team size or adjusting compensation.'}")
+                        elif capacity_utilization > 80:
+                            st.warning(f"⚡ High utilization ({capacity_utilization:.0f}%). "
+                                      f"{'Poco margen para error.' if lang == 'es' else 'Limited margin for error.'}")
+                    else:
+                        st.warning("⚠️ Set commission % to see performance requirements")
         
         # Get stakeholder percentage
         stakeholder_pct = st.session_state.get('stakeholder_pct', 10.0)
