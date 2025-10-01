@@ -553,6 +553,9 @@ with tab1:
     st.header("🎯 GTM Command Center")
     st.caption("Go-to-market metrics, channels, and funnel performance")
     
+    # Get fresh deal economics for this tab (for channel preview calculations)
+    tab1_deal_econ = DealEconomicsManager.get_current_deal_economics()
+    
     # Calculate P&L data for alerts
     team_base = (st.session_state.closer_base * st.session_state.num_closers_main +
                  st.session_state.setter_base * st.session_state.num_setters_main +
@@ -815,13 +818,13 @@ with tab1:
             with cfg_cols[2]:
                 st.markdown("**Channel Performance**")
                 
-                # Calculate this channel's metrics
+                # Calculate this channel's metrics (using fresh deal economics)
                 contacts = leads * contact_rate
                 meetings_sched = contacts * meeting_rate
                 meetings_held = meetings_sched * show_up_rate
                 sales = meetings_held * close_rate
                 spend = leads * cpl
-                revenue = sales * deal_econ['upfront_cash']
+                revenue = sales * tab1_deal_econ['upfront_cash']  # Use fresh deal economics
                 
                 st.metric("💼 Sales", f"{sales:.1f}")
                 st.metric("💰 Revenue", f"${revenue:,.0f}")
