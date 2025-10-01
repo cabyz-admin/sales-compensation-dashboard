@@ -1853,11 +1853,6 @@ with tab5:
                 monthly_value = avg_deal_value / contract_length if contract_length > 0 else 0
                 st.metric("Monthly Value", f"${monthly_value:,.0f}")
         
-        # Update session state with calculated values
-        st.session_state.avg_deal_value = int(avg_deal_value)
-        if "Insurance" in calc_method or "Subscription" in calc_method:
-            st.session_state.contract_length_months = int(contract_length)
-        
         st.markdown("---")
         
         # Payment Terms Section (keeping existing structure)
