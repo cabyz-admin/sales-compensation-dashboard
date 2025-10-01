@@ -1365,10 +1365,10 @@ with tab3:
                 st.error(f"🚨 Low EBITDA margin: {pnl_data['ebitda_margin']:.1f}%")
     
     # 7. Channel Funnel Comparison & Revenue Contribution
+    st.markdown("---")
+    st.markdown("### 📊 Channel Performance Analysis")
+    
     if gtm_metrics.get('channels_breakdown') and len(gtm_metrics['channels_breakdown']) > 0:
-        st.markdown("---")
-        st.markdown("### 📊 Channel Performance Analysis")
-        
         chart_cols = st.columns(2)
         
         with chart_cols[0]:
@@ -1452,6 +1452,8 @@ with tab3:
             use_container_width=True,
             hide_index=True
         )
+    else:
+        st.info("📊 Configure channels in the GTM tab to see channel performance analysis")
 
 # ============= TAB 4: WHAT-IF ANALYSIS =============
 with tab4:
