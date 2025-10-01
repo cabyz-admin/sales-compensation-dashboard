@@ -563,7 +563,7 @@ with tab1:
     st.markdown("### 📡 Multi-Channel Configuration")
     
     # Channel management buttons
-    ch_btn_cols = st.columns([1, 1, 2, 2])
+    ch_btn_cols = st.columns([1, 1, 2])
     with ch_btn_cols[0]:
         if st.button("➕ Add Channel", use_container_width=True, key="add_channel_gtm"):
             new_id = f"channel_{len(st.session_state.gtm_channels) + 1}"
@@ -588,14 +588,7 @@ with tab1:
                 st.rerun()
     
     with ch_btn_cols[2]:
-        view_mode = st.selectbox(
-            "View Mode",
-            ["Summary", "Detailed"],
-            key="channel_view_mode"
-        )
-    
-    with ch_btn_cols[3]:
-        st.info(f"Managing {len(st.session_state.gtm_channels)} channel(s)")
+        st.info(f"📊 Managing {len(st.session_state.gtm_channels)} channel(s)")
     
     st.markdown("---")
     
