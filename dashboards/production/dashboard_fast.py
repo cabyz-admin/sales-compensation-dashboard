@@ -531,8 +531,14 @@ with kpi_row2[5]:
 
 st.markdown("---")
 
-# ============= LANGUAGE SELECTOR (SIDEBAR) =============
+# ============= SIDEBAR =============
 with st.sidebar:
+    st.markdown("### ⚙️ Dashboard Settings")
+    
+    st.info("💡 **Tip**: To prevent page refreshes while editing, use the Configuration tab's 'Apply' buttons at the bottom of each section.")
+    
+    st.markdown("---")
+    
     st.markdown("### 🌐 Language / Idioma")
     lang = st.selectbox(
         "",
