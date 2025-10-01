@@ -2531,13 +2531,13 @@ with tab5:
                 st.markdown("**🎯 Closer**")
                 closer_base_input = st.number_input(
                     "Base Salary (Annual $)", 
-                    0, 200000, st.session_state.closer_base, 1000, 
+                    0, 200000, st.session_state.get('closer_base', 32000), 1000, 
                     key="closer_base_input",
                     help="Annual salary + commission on deals"
                 )
                 closer_comm_input = st.number_input(
                     "Commission % (Per Deal)", 
-                    0.0, 50.0, st.session_state.closer_commission_pct, 0.5, 
+                    0.0, 50.0, st.session_state.get('closer_commission_pct', 20.0), 0.5, 
                     key="closer_commission_input",
                     help="Percentage of each deal value (unlimited upside)"
                 )
@@ -2546,13 +2546,13 @@ with tab5:
                 st.markdown("**📞 Setter**")
                 setter_base_input = st.number_input(
                     "Base Salary (Annual $)", 
-                    0, 200000, st.session_state.setter_base, 1000, 
+                    0, 200000, st.session_state.get('setter_base', 16000), 1000, 
                     key="setter_base_input",
                     help="Annual salary + commission on deals"
                 )
                 setter_comm_input = st.number_input(
                     "Commission % (Per Deal)", 
-                    0.0, 50.0, st.session_state.setter_commission_pct, 0.5, 
+                    0.0, 50.0, st.session_state.get('setter_commission_pct', 3.0), 0.5, 
                     key="setter_commission_input",
                     help="Percentage of each deal value (unlimited upside)"
                 )
@@ -2561,13 +2561,13 @@ with tab5:
                 st.markdown("**👔 Manager**")
                 manager_base_input = st.number_input(
                     "Base Salary (Annual $)", 
-                    0, 300000, st.session_state.manager_base, 1000, 
+                    0, 300000, st.session_state.get('manager_base', 72000), 1000, 
                     key="manager_base_input",
                     help="Annual salary + team override commission"
                 )
                 manager_comm_input = st.number_input(
                     "Commission % (Per Deal)", 
-                    0.0, 50.0, st.session_state.manager_commission_pct, 0.5, 
+                    0.0, 50.0, st.session_state.get('manager_commission_pct', 5.0), 0.5, 
                     key="manager_commission_input",
                     help="Percentage of each deal value (team override)"
                 )
@@ -2575,12 +2575,12 @@ with tab5:
             submitted = st.form_submit_button("✅ Apply Compensation Changes", use_container_width=True, type="primary")
             
             if submitted:
-                st.session_state.closer_base = closer_base_input
-                st.session_state.closer_commission_pct = closer_comm_input
-                st.session_state.setter_base = setter_base_input
-                st.session_state.setter_commission_pct = setter_comm_input
-                st.session_state.manager_base = manager_base_input
-                st.session_state.manager_commission_pct = manager_comm_input
+                st.session_state['closer_base'] = closer_base_input
+                st.session_state['closer_commission_pct'] = closer_comm_input
+                st.session_state['setter_base'] = setter_base_input
+                st.session_state['setter_commission_pct'] = setter_comm_input
+                st.session_state['manager_base'] = manager_base_input
+                st.session_state['manager_commission_pct'] = manager_comm_input
                 st.success("✅ Compensation updated!")
                 st.rerun()
     
@@ -2590,18 +2590,18 @@ with tab5:
             ops_cols = st.columns(3)
             
             with ops_cols[0]:
-                rent_input = st.number_input("Office Rent ($)", 0, 100000, st.session_state.office_rent, 500, key="office_rent_input")
+                rent_input = st.number_input("Office Rent ($)", 0, 100000, st.session_state.get('office_rent', 20000), 500, key="office_rent_input")
             with ops_cols[1]:
-                software_input = st.number_input("Software ($)", 0, 50000, st.session_state.software_costs, 100, key="software_costs_input")
+                software_input = st.number_input("Software ($)", 0, 50000, st.session_state.get('software_costs', 10000), 100, key="software_costs_input")
             with ops_cols[2]:
-                opex_input = st.number_input("Other OpEx ($)", 0, 100000, st.session_state.other_opex, 500, key="other_opex_input")
+                opex_input = st.number_input("Other OpEx ($)", 0, 100000, st.session_state.get('other_opex', 5000), 500, key="other_opex_input")
             
             submitted = st.form_submit_button("✅ Apply Operating Costs", use_container_width=True, type="primary")
             
             if submitted:
-                st.session_state.office_rent = rent_input
-                st.session_state.software_costs = software_input
-                st.session_state.other_opex = opex_input
+                st.session_state['office_rent'] = rent_input
+                st.session_state['software_costs'] = software_input
+                st.session_state['other_opex'] = opex_input
                 st.success("✅ Operating costs updated!")
                 st.rerun()
     
