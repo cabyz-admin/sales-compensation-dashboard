@@ -208,12 +208,21 @@ def calculate_gtm_metrics_cached(channels_json: str):
         }
     
     # Aggregate across channels
-    total_leads = sum(ch.get('monthly_leads', 0) for ch in channels)
+    total_leads = 0
+    total_contacts = 0
+    total_meetings_sched = 0
+    total_meetings_held = 0
     total_sales = 0
     total_revenue = 0
+    total_spend = 0
+    channels_breakdown = []
     
     for ch in channels:
+        if not ch.get('enabled', True):
+            continue
+            
         leads = ch.get('monthly_leads', 0)
+        cpl = ch.get('cpl', 50)
         contact_rate = ch.get('contact_rate', 0.6)
         meeting_rate = ch.get('meeting_rate', 0.3)
         show_up_rate = ch.get('show_up_rate', 0.7)
@@ -224,18 +233,47 @@ def calculate_gtm_metrics_cached(channels_json: str):
         meetings_held = meetings_sched * show_up_rate
         sales = meetings_held * close_rate
         
-        total_sales += sales
-        
         # Get deal economics
         deal_econ = DealEconomicsManager.get_current_deal_economics()
         revenue = sales * deal_econ['upfront_cash']
+        spend = leads * cpl
+        
+        # Aggregate
+        total_leads += leads
+        total_contacts += contacts
+        total_meetings_sched += meetings_sched
+        total_meetings_held += meetings_held
+        total_sales += sales
         total_revenue += revenue
+        total_spend += spend
+        
+        # Channel breakdown
+        channels_breakdown.append({
+            'name': ch.get('name', 'Channel'),
+            'segment': ch.get('segment', 'Unknown'),
+            'leads': leads,
+            'sales': sales,
+            'revenue': revenue,
+            'spend': spend,
+            'cpa': spend / sales if sales > 0 else 0,
+            'roas': revenue / spend if spend > 0 else 0,
+            'close_rate': close_rate
+        })
+    
+    cost_per_sale = total_spend / total_sales if total_sales > 0 else 0
+    blended_close_rate = total_sales / total_meetings_held if total_meetings_held > 0 else 0
     
     return {
         'monthly_leads': total_leads,
+        'monthly_contacts': total_contacts,
+        'monthly_meetings_scheduled': total_meetings_sched,
+        'monthly_meetings_held': total_meetings_held,
         'monthly_sales': total_sales,
         'monthly_revenue_immediate': total_revenue,
-        'blended_close_rate': total_sales / (total_leads * 0.6 * 0.3 * 0.7) if total_leads > 0 else 0,
+        'total_marketing_spend': total_spend,
+        'cost_per_sale': cost_per_sale,
+        'blended_close_rate': blended_close_rate,
+        'channels_breakdown': channels_breakdown
     }
 
 @st.cache_data(ttl=300)
@@ -367,22 +405,71 @@ import json
 gtm_metrics = calculate_gtm_metrics_cached(json.dumps(st.session_state.gtm_channels))
 deal_econ = DealEconomicsManager.get_current_deal_economics()
 
-header_cols = st.columns(5)
-with header_cols[0]:
+# Calculate additional metrics for top display
+team_base = (st.session_state.closer_base * st.session_state.num_closers_main +
+             st.session_state.setter_base * st.session_state.num_setters_main +
+             st.session_state.manager_base * st.session_state.num_managers_main +
+             st.session_state.bench_base * st.session_state.num_benchs_main)
+
+roles_comp = {
+    'closer': {'commission_pct': st.session_state.closer_commission_pct},
+    'setter': {'commission_pct': st.session_state.setter_commission_pct},
+    'manager': {'commission_pct': st.session_state.manager_commission_pct}
+}
+
+comm_calc = DealEconomicsManager.calculate_monthly_commission(
+    gtm_metrics['monthly_sales'], roles_comp, deal_econ
+)
+
+marketing_spend = sum(ch.get('monthly_leads', 0) * ch.get('cpl', 50) 
+                     for ch in st.session_state.gtm_channels if ch.get('enabled', True))
+
+pnl_data = calculate_pnl_cached(
+    gtm_metrics['monthly_revenue_immediate'],
+    team_base,
+    comm_calc['total_commission'],
+    marketing_spend,
+    st.session_state.office_rent + st.session_state.software_costs + st.session_state.other_opex,
+    0
+)
+
+unit_econ = calculate_unit_economics_cached(
+    deal_econ['avg_deal_value'],
+    deal_econ['upfront_pct'],
+    st.session_state.grr_rate,
+    gtm_metrics['cost_per_sale'] if gtm_metrics.get('cost_per_sale', 0) > 0 else 5000
+)
+
+# TOP KPI ROW - All key metrics visible at once
+st.markdown("### 📊 Key Performance Indicators")
+kpi_row1 = st.columns(6)
+with kpi_row1[0]:
     st.metric("💰 Monthly Revenue", f"${gtm_metrics['monthly_revenue_immediate']:,.0f}")
-with header_cols[1]:
+with kpi_row1[1]:
     st.metric("📈 Monthly Sales", f"{gtm_metrics['monthly_sales']:.1f}")
-with header_cols[2]:
+with kpi_row1[2]:
+    st.metric("📊 Leads", f"{gtm_metrics['monthly_leads']:,.0f}")
+with kpi_row1[3]:
+    st.metric("🎯 Close Rate", f"{gtm_metrics['blended_close_rate']:.1%}")
+with kpi_row1[4]:
+    color = "normal" if unit_econ['ltv_cac'] >= 3 else "inverse"
+    st.metric("🎯 LTV:CAC", f"{unit_econ['ltv_cac']:.1f}:1", delta_color=color)
+with kpi_row1[5]:
+    st.metric("⏱️ Payback", f"{unit_econ['payback_months']:.0f}mo")
+
+kpi_row2 = st.columns(6)
+with kpi_row2[0]:
     st.metric("💎 Deal Value", f"${deal_econ['avg_deal_value']:,.0f}")
-with header_cols[3]:
-    unit_econ = calculate_unit_economics_cached(
-        deal_econ['avg_deal_value'],
-        deal_econ['upfront_pct'],
-        st.session_state.grr_rate,
-        5000  # Placeholder CAC
-    )
-    st.metric("🎯 LTV:CAC", f"{unit_econ['ltv_cac']:.1f}:1")
-with header_cols[4]:
+with kpi_row2[1]:
+    st.metric("💸 Total Commissions", f"${comm_calc['total_commission']:,.0f}")
+with kpi_row2[2]:
+    st.metric("📣 Marketing", f"${marketing_spend:,.0f}")
+with kpi_row2[3]:
+    ebitda_color = "normal" if pnl_data['ebitda'] > 0 else "inverse"
+    st.metric("💎 EBITDA", f"${pnl_data['ebitda']:,.0f}", delta_color=ebitda_color)
+with kpi_row2[4]:
+    st.metric("📊 EBITDA Margin", f"{pnl_data['ebitda_margin']:.1f}%")
+with kpi_row2[5]:
     policy = DealEconomicsManager.get_commission_policy()
     st.metric("💸 Comm Policy", "Upfront" if policy == 'upfront' else "Full")
 
@@ -458,17 +545,17 @@ with tab1:
     
     st.markdown("---")
     
-    # Channel configuration
-    with st.expander("📡 Channel Configuration", expanded=True):
-        st.info("💡 Configure your GTM channels for accurate forecasting")
-        
-        num_channels = len(st.session_state.gtm_channels)
-        st.metric("Active Channels", num_channels)
-        
-        if st.button("➕ Add Channel"):
-            new_channel = {
-                'id': f'channel_{num_channels + 1}',
-                'name': f'Channel {num_channels + 1}',
+    # Multi-Channel Configuration
+    st.markdown("### 📡 Multi-Channel Configuration")
+    
+    # Channel management buttons
+    ch_btn_cols = st.columns([1, 1, 2, 2])
+    with ch_btn_cols[0]:
+        if st.button("➕ Add Channel", use_container_width=True, key="add_channel_gtm"):
+            new_id = f"channel_{len(st.session_state.gtm_channels) + 1}"
+            st.session_state.gtm_channels.append({
+                'id': new_id,
+                'name': f'Channel {len(st.session_state.gtm_channels) + 1}',
                 'segment': 'SMB',
                 'monthly_leads': 500,
                 'cpl': 50,
@@ -476,36 +563,171 @@ with tab1:
                 'meeting_rate': 0.3,
                 'show_up_rate': 0.7,
                 'close_rate': 0.25,
-            }
-            st.session_state.gtm_channels.append(new_channel)
+                'enabled': True
+            })
             st.rerun()
-        
-        # Show channel summary
-        for i, channel in enumerate(st.session_state.gtm_channels):
-            with st.container():
-                ch_cols = st.columns([3, 1, 1, 1, 1, 1])
-                with ch_cols[0]:
-                    st.markdown(f"**{channel['name']}** ({channel['segment']})")
-                with ch_cols[1]:
-                    st.caption(f"{channel['monthly_leads']:,.0f} leads")
-                with ch_cols[2]:
-                    st.caption(f"${channel.get('cpl', 50)} CPL")
-                with ch_cols[3]:
-                    st.caption(f"{channel.get('close_rate', 0.25):.1%} close")
-                with ch_cols[4]:
-                    if st.button("✏️", key=f"edit_{i}"):
-                        st.session_state[f'editing_channel_{i}'] = True
-                with ch_cols[5]:
-                    if st.button("🗑️", key=f"delete_{i}"):
-                        st.session_state.gtm_channels.pop(i)
-                        st.rerun()
     
-    # Advanced analytics (lazy load)
-    with st.expander("📊 Advanced Channel Analytics", expanded=False):
-        st.caption("🔄 Loading advanced analytics...")
+    with ch_btn_cols[1]:
+        if len(st.session_state.gtm_channels) > 1:
+            if st.button("🗑️ Remove Last", use_container_width=True, key="remove_channel_gtm"):
+                st.session_state.gtm_channels.pop()
+                st.rerun()
+    
+    with ch_btn_cols[2]:
+        view_mode = st.selectbox(
+            "View Mode",
+            ["Summary", "Detailed"],
+            key="channel_view_mode"
+        )
+    
+    with ch_btn_cols[3]:
+        st.info(f"Managing {len(st.session_state.gtm_channels)} channel(s)")
+    
+    st.markdown("---")
+    
+    # Configure each channel in expanders
+    for idx, channel in enumerate(st.session_state.gtm_channels):
+        with st.expander(f"📊 **{channel['name']}** ({channel['segment']})", expanded=(idx == 0)):
+            cfg_cols = st.columns(3)
+            
+            with cfg_cols[0]:
+                st.markdown("**Channel Info**")
+                name = st.text_input("Name", value=channel['name'], key=f"ch_name_{channel['id']}")
+                st.session_state.gtm_channels[idx]['name'] = name
+                
+                segment = st.selectbox(
+                    "Segment",
+                    ['SMB', 'MID', 'ENT', 'Custom'],
+                    index=['SMB', 'MID', 'ENT', 'Custom'].index(channel.get('segment', 'SMB')),
+                    key=f"ch_segment_{channel['id']}"
+                )
+                st.session_state.gtm_channels[idx]['segment'] = segment
+                
+                leads = st.number_input(
+                    "Monthly Leads",
+                    min_value=0,
+                    value=channel.get('monthly_leads', 500),
+                    step=50,
+                    key=f"ch_leads_{channel['id']}"
+                )
+                st.session_state.gtm_channels[idx]['monthly_leads'] = leads
+                
+                cpl = st.number_input(
+                    "Cost per Lead ($)",
+                    min_value=0,
+                    value=channel.get('cpl', 50),
+                    step=5,
+                    key=f"ch_cpl_{channel['id']}"
+                )
+                st.session_state.gtm_channels[idx]['cpl'] = cpl
+            
+            with cfg_cols[1]:
+                st.markdown("**Conversion Rates**")
+                contact_rate = st.slider(
+                    "Contact %",
+                    0, 100,
+                    int(channel.get('contact_rate', 0.6) * 100),
+                    5,
+                    key=f"ch_contact_{channel['id']}"
+                ) / 100
+                st.session_state.gtm_channels[idx]['contact_rate'] = contact_rate
+                
+                meeting_rate = st.slider(
+                    "Meeting %",
+                    0, 100,
+                    int(channel.get('meeting_rate', 0.3) * 100),
+                    5,
+                    key=f"ch_meeting_{channel['id']}"
+                ) / 100
+                st.session_state.gtm_channels[idx]['meeting_rate'] = meeting_rate
+                
+                show_up_rate = st.slider(
+                    "Show-up %",
+                    0, 100,
+                    int(channel.get('show_up_rate', 0.7) * 100),
+                    5,
+                    key=f"ch_showup_{channel['id']}"
+                ) / 100
+                st.session_state.gtm_channels[idx]['show_up_rate'] = show_up_rate
+                
+                close_rate = st.slider(
+                    "Close %",
+                    0, 100,
+                    int(channel.get('close_rate', 0.25) * 100),
+                    5,
+                    key=f"ch_close_{channel['id']}"
+                ) / 100
+                st.session_state.gtm_channels[idx]['close_rate'] = close_rate
+            
+            with cfg_cols[2]:
+                st.markdown("**Channel Performance**")
+                
+                # Calculate this channel's metrics
+                contacts = leads * contact_rate
+                meetings_sched = contacts * meeting_rate
+                meetings_held = meetings_sched * show_up_rate
+                sales = meetings_held * close_rate
+                spend = leads * cpl
+                revenue = sales * deal_econ['upfront_cash']
+                
+                st.metric("💼 Sales", f"{sales:.1f}")
+                st.metric("💰 Revenue", f"${revenue:,.0f}")
+                st.metric("📣 Spend", f"${spend:,.0f}")
+                roas = revenue / spend if spend > 0 else 0
+                st.metric("📊 ROAS", f"{roas:.1f}x")
+                
+                # Enabled toggle
+                enabled = st.checkbox(
+                    "✅ Channel Enabled",
+                    value=channel.get('enabled', True),
+                    key=f"ch_enabled_{channel['id']}"
+                )
+                st.session_state.gtm_channels[idx]['enabled'] = enabled
+    
+    # Channel Performance Comparison
+    if gtm_metrics.get('channels_breakdown'):
+        st.markdown("---")
+        st.markdown("### 📊 Channel Performance Comparison")
         
-        if st.button("📈 Load Channel Performance Charts"):
-            st.info("Charts would load here - implement full GTM analytics when needed")
+        df_channels = pd.DataFrame(gtm_metrics['channels_breakdown'])
+        
+        if len(df_channels) > 0:
+            # Quick metrics
+            comp_cols = st.columns(4)
+            with comp_cols[0]:
+                fig_leads = px.bar(df_channels, x='name', y='leads', title="Leads by Channel",
+                                  color='segment', color_discrete_sequence=px.colors.qualitative.Set2)
+                fig_leads.update_layout(height=250, showlegend=False)
+                st.plotly_chart(fig_leads, use_container_width=True, key="chart_leads")
+            
+            with comp_cols[1]:
+                fig_sales = px.bar(df_channels, x='name', y='sales', title="Sales by Channel",
+                                  color='segment', color_discrete_sequence=px.colors.qualitative.Set2)
+                fig_sales.update_layout(height=250, showlegend=False)
+                st.plotly_chart(fig_sales, use_container_width=True, key="chart_sales")
+            
+            with comp_cols[2]:
+                fig_roas = px.bar(df_channels, x='name', y='roas', title="ROAS by Channel",
+                                 color='segment', color_discrete_sequence=px.colors.qualitative.Set2)
+                fig_roas.update_layout(height=250, showlegend=False)
+                st.plotly_chart(fig_roas, use_container_width=True, key="chart_roas")
+            
+            with comp_cols[3]:
+                fig_close = px.bar(df_channels, x='name', y='close_rate', title="Close Rate",
+                                  color='segment', color_discrete_sequence=px.colors.qualitative.Set2)
+                fig_close.update_layout(height=250, showlegend=False, yaxis_tickformat='.1%')
+                st.plotly_chart(fig_close, use_container_width=True, key="chart_close")
+            
+            # Detailed table
+            st.dataframe(df_channels.style.format({
+                'leads': '{:,.0f}',
+                'sales': '{:.1f}',
+                'revenue': '${:,.0f}',
+                'spend': '${:,.0f}',
+                'cpa': '${:,.0f}',
+                'roas': '{:.2f}x',
+                'close_rate': '{:.1%}'
+            }), use_container_width=True, hide_index=True)
 
 # ============= TAB 2: COMPENSATION STRUCTURE =============
 with tab2:
