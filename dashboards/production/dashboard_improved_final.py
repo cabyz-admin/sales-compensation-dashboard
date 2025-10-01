@@ -1551,10 +1551,24 @@ with tabs[0]:
                 stakeholder_pct = st.session_state.get('stakeholder_pct', 10.0)
                 
                 # Calculate EBITDA for stakeholder distribution
-                # Need to calculate this properly - for now use placeholder
                 if 'gtm_metrics' in locals():
                     monthly_rev = gtm_metrics.get('monthly_revenue_immediate', actual_revenue)
-                    total_comm = (monthly_rev * closer_comm_rate) + (monthly_rev * setter_comm_rate) + (monthly_rev * 0.05)
+                    
+                    # Get commission rates from role configs
+                    closer_rate = roles_comp.get('closer', {}).get('commission_pct', 20.0) / 100
+                    setter_rate = roles_comp.get('setter', {}).get('commission_pct', 3.0) / 100
+                    manager_rate = roles_comp.get('manager', {}).get('commission_pct', 5.0) / 100
+                    
+                    # Calculate commission base
+                    comm_mult = st.session_state.get('commission_multiplier', 1.0)
+                    upfront_pct_calc = st.session_state.get('upfront_payment_pct', 70.0) / 100
+                    
+                    if comm_mult < 1.0:
+                        rev_for_comm = monthly_rev
+                    else:
+                        rev_for_comm = monthly_rev / upfront_pct_calc if upfront_pct_calc > 0 else monthly_rev
+                    
+                    total_comm = (rev_for_comm * closer_rate) + (rev_for_comm * setter_rate) + (rev_for_comm * manager_rate)
                     cogs = total_monthly_base + total_comm
                     gross_profit = monthly_rev - cogs
                     monthly_opex = st.session_state.get('monthly_opex', 100000)
@@ -1575,6 +1589,7 @@ with tabs[0]:
                             'Annual': f"${stake_annual:,.0f}",
                             'vs OTE': f"{stakeholder_pct:.1f}% EBITDA"
                         })
+                # Continue to next iteration (skip the rest of the loop for stakeholders)
                 continue
                 
             role_count = st.session_state.get(f'num_{role_key}s_main', 0)
@@ -1748,16 +1763,14 @@ with tabs[0]:
             st.markdown("**💰 Deal Value**")
             
             # Average deal value
-            default_deal_value = st.session_state.get('avg_deal_value', 50000)
             avg_deal_value = st.number_input(
                 "Average Deal Value ($)",
                 min_value=0,
-                value=int(default_deal_value),
+                value=int(st.session_state.get('avg_deal_value', 50000)),
                 step=1000,
                 key="avg_deal_value",
                 help="Total value of an average deal/contract"
             )
-            st.session_state['avg_deal_value'] = avg_deal_value
             
             # Contract/engagement length (if applicable)
             contract_length_months = st.number_input(
