@@ -1677,32 +1677,167 @@ with tab5:
         
         st.markdown("---")
         
+        # Modular Deal Value Calculator
+        st.markdown("**💡 Deal Value Calculation Method**")
+        calc_method_col, info_col = st.columns([2, 1])
+        
+        with calc_method_col:
+            calc_method = st.selectbox(
+                "How do you calculate deal value?",
+                ["💰 Direct Value", "🏥 Insurance (Premium-Based)", "📊 Subscription (MRR)", "📋 Commission % of Contract"],
+                key="deal_calc_method",
+                help="Choose the method that matches your business model"
+            )
+        
+        with info_col:
+            if "Insurance" in calc_method:
+                st.info("Perfect for insurance brokers!")
+            elif "Subscription" in calc_method:
+                st.info("Ideal for SaaS/subscriptions")
+            elif "Commission" in calc_method:
+                st.info("For commission-based sales")
+            else:
+                st.info("Simple direct entry")
+        
+        # Calculator based on method
+        calc_cols = st.columns(3)
+        
+        if "Insurance" in calc_method:
+            # Insurance-specific: Monthly Premium × Commission Rate × Contract Years
+            with calc_cols[0]:
+                monthly_premium = st.number_input(
+                    "Monthly Premium ($)",
+                    min_value=0,
+                    value=int(st.session_state.get('monthly_premium', 3000)),
+                    step=100,
+                    key="monthly_premium",
+                    help="Customer's monthly insurance premium"
+                )
+            with calc_cols[1]:
+                commission_rate = st.number_input(
+                    "Commission Rate (%)",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=st.session_state.get('insurance_commission_rate', 2.7),
+                    step=0.1,
+                    key="insurance_commission_rate",
+                    help="Your commission % (e.g., 2.7%)"
+                )
+            with calc_cols[2]:
+                contract_years = st.number_input(
+                    "Contract Term (Years)",
+                    min_value=1,
+                    max_value=50,
+                    value=int(st.session_state.get('insurance_contract_years', 18)),
+                    step=1,
+                    key="insurance_contract_years"
+                )
+            
+            # Calculate
+            total_premium = monthly_premium * 12 * contract_years
+            avg_deal_value = total_premium * (commission_rate / 100)
+            contract_length = contract_years * 12
+            
+            st.success(f"💰 **Your Commission**: ${avg_deal_value:,.0f}")
+            st.caption(f"💡 ${monthly_premium:,.0f}/mo × 12 × {contract_years}y × {commission_rate}% = ${avg_deal_value:,.0f}")
+            
+        elif "Subscription" in calc_method:
+            # Subscription: MRR × Contract Term
+            with calc_cols[0]:
+                mrr = st.number_input(
+                    "Monthly Recurring Revenue",
+                    min_value=0,
+                    value=int(st.session_state.get('mrr', 5000)),
+                    step=500,
+                    key="mrr"
+                )
+            with calc_cols[1]:
+                sub_term = st.number_input(
+                    "Contract Term (Months)",
+                    min_value=1,
+                    max_value=60,
+                    value=int(st.session_state.get('sub_term_months', 12)),
+                    step=1,
+                    key="sub_term_months"
+                )
+            with calc_cols[2]:
+                st.metric("Total Contract Value", f"${mrr * sub_term:,.0f}")
+            
+            avg_deal_value = mrr * sub_term
+            contract_length = sub_term
+            st.caption(f"💡 ${mrr:,.0f}/mo × {sub_term} months = ${avg_deal_value:,.0f}")
+            
+        elif "Commission" in calc_method:
+            # Commission-based: Total Contract × Commission %
+            with calc_cols[0]:
+                total_contract = st.number_input(
+                    "Total Contract Value ($)",
+                    min_value=0,
+                    value=int(st.session_state.get('total_contract_value', 100000)),
+                    step=5000,
+                    key="total_contract_value"
+                )
+            with calc_cols[1]:
+                commission_pct = st.number_input(
+                    "Your Commission (%)",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=st.session_state.get('contract_commission_pct', 10.0),
+                    step=0.5,
+                    key="contract_commission_pct"
+                )
+            with calc_cols[2]:
+                contract_length = st.number_input(
+                    "Contract Length (Months)",
+                    min_value=1,
+                    max_value=60,
+                    value=int(st.session_state.get('contract_length_months', 12)),
+                    step=1,
+                    key="contract_length_months"
+                )
+            
+            avg_deal_value = total_contract * (commission_pct / 100)
+            st.caption(f"💡 ${total_contract:,.0f} × {commission_pct}% = ${avg_deal_value:,.0f}")
+            
+        else:  # Direct Value
+            with calc_cols[0]:
+                avg_deal_value = st.number_input(
+                    "Average Deal Value ($)",
+                    min_value=0,
+                    value=st.session_state.avg_deal_value,
+                    step=1000,
+                    key="avg_deal_value",
+                    help="Total contract value"
+                )
+            with calc_cols[1]:
+                contract_length = st.number_input(
+                    "Contract Length (Months)",
+                    min_value=1,
+                    max_value=60,
+                    value=st.session_state.contract_length_months,
+                    step=1,
+                    key="contract_length_months"
+                )
+            with calc_cols[2]:
+                monthly_value = avg_deal_value / contract_length if contract_length > 0 else 0
+                st.metric("Monthly Value", f"${monthly_value:,.0f}")
+        
+        # Update session state with calculated values
+        st.session_state.avg_deal_value = int(avg_deal_value)
+        if "Insurance" in calc_method or "Subscription" in calc_method:
+            st.session_state.contract_length_months = int(contract_length)
+        
+        st.markdown("---")
+        
+        # Payment Terms Section (keeping existing structure)
         deal_cols = st.columns(3)
         
         with deal_cols[0]:
-            st.markdown("**Deal Structure**")
-            avg_deal_value = st.number_input(
-                "Average Deal Value ($)",
-                min_value=0,
-                value=st.session_state.avg_deal_value,
-                step=1000,
-                key="avg_deal_value",
-                help="Total contract value"
-            )
-            
-            contract_length = st.number_input(
-                "Contract Length (months)",
-                min_value=1,
-                max_value=60,
-                value=st.session_state.contract_length_months,
-                step=1,
-                key="contract_length_months",
-                help="Duration of the contract"
-            )
-            
-            # Show calculated values
+            st.markdown("**Deal Summary**")
+            st.metric("💰 Deal Value", f"${avg_deal_value:,.0f}")
             monthly_value = avg_deal_value / contract_length if contract_length > 0 else 0
-            st.caption(f"💡 Monthly: ${monthly_value:,.0f}")
+            st.caption(f"📅 Contract: {contract_length} months")
+            st.caption(f"💵 Monthly: ${monthly_value:,.0f}")
         
         with deal_cols[1]:
             st.markdown("**Payment Terms**")
