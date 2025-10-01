@@ -63,12 +63,18 @@ TRANSLATIONS = {
         # Main titles
         'page_title': '🎯 Sales Compensation Model - Final Version',
         'language': 'Language',
+        'model_summary': 'Model Summary',
+        'revenue_target': 'Revenue Target',
         'revenue_targets': '🎯 Revenue Targets',
         'team_compensation_structure': '💵 Team & Compensation Structure',
         'team_configuration': '👥 Team Configuration',
         'compensation_configuration': '💵 Compensation Configuration',
         'deal_economics': '💰 Deal Economics & Payment Terms (Universal)',
         'operating_costs': '🏢 Operating Costs',
+        'whatif_scenario': '🔮 What-If Scenario Analysis',
+        'business_alerts': '🚨 Business Alerts',
+        'gtm_command_center': '🎯 GTM Command Center',
+        'configuration_center': '⚙️ Configuration Center',
         
         # Team labels
         'closers': 'Closers',
@@ -76,6 +82,8 @@ TRANSLATIONS = {
         'managers': 'Managers',
         'bench': 'Bench',
         'stakeholders': 'Stakeholders',
+        'sales_team': 'Sales Team',
+        'team_metrics': 'Team Metrics',
         
         # Metrics
         'total_team': 'Total Team',
@@ -84,13 +92,30 @@ TRANSLATIONS = {
         'monthly_base': 'Monthly Base',
         'monthly_ote': 'Monthly OTE',
         'annual_ote': 'Annual OTE',
+        'expected_monthly': 'Expected Monthly',
+        'monthly': 'Monthly',
+        'annual': 'Annual',
+        'daily': 'Daily',
+        'weekly': 'Weekly',
+        
+        # Inputs
+        'base_salary': 'Base Salary ($)',
+        'variable_comp': 'Variable Comp ($)',
+        'avg_deal_value': 'Average Deal Value ($)',
+        'contract_length': 'Contract Length (months)',
+        'upfront_payment_pct': 'Upfront Payment %',
+        'deferred_payment_pct': 'Deferred Payment %',
+        'input_period': 'Input Period',
         
         # Commission
         'commission_pct': 'Commission % of Revenue',
         'commission_flow': '💸 Commission Flow Visualization',
+        'commission_base': 'Commission Base',
         'pay_commissions_from': 'Pay Commissions From',
         'upfront_cash_only': 'Upfront Cash Only',
         'full_deal_value': 'Full Deal Value',
+        'total_commission': 'Total Commission',
+        'commission_rate': 'Commission Rate',
         
         # Business types
         'business_type_template': 'Business Type Template',
@@ -101,6 +126,14 @@ TRANSLATIONS = {
         'agency': 'Agency/Retainer',
         'one_time_sale': 'One-Time Sale',
         
+        # Payment terms
+        'deal_value': '💰 Deal Value',
+        'payment_terms': '📅 Payment Terms (Modular)',
+        'deal_breakdown': '📈 Deal Breakdown',
+        'total_deal_value': 'Total Deal Value',
+        'upfront_cash': 'Upfront Cash',
+        'deferred_cash': 'Deferred Cash',
+        
         # Common actions
         'configure': 'Configure',
         'calculate': 'Calculate',
@@ -108,20 +141,67 @@ TRANSLATIONS = {
         'monthly_total': '📊 Monthly Total',
         'per_deal': '🎯 Per Deal (Unit Case)',
         
+        # Capacity
+        'capacity_settings': 'Capacity Settings',
+        'meetings_per_closer_day': 'Meetings/Closer/Day',
+        'working_days_month': 'Working Days/Month',
+        'meetings_per_setter_day': 'Meetings Booked/Setter/Day',
+        
         # Descriptions
-        'configure_team': 'Configure team size, capacity, and compensation per role',
-        'universal_deal': 'Configure your deal structure - works for any business',
+        'configure_team': 'Configure team size, capacity, and compensation per role. Changes affect all calculations.',
+        'universal_deal': 'Configure your deal structure - works for any business: SaaS, Services, Consulting, Insurance, etc.',
+        'commission_policy': 'Commission Payment Policy: Choose whether commissions are paid from upfront cash (70%) or full deal value (100%)',
+        
+        # Alerts
+        'all_systems_healthy': '✅ All Systems Healthy',
+        'no_issues': 'No issues detected',
+        'critical': 'CRITICAL',
+        'warning': 'WARNING',
+        'recommended_actions': '🎯 Recommended Actions',
+        
+        # Period earnings
+        'period_earnings': '📅 Period-Based Earnings Preview',
+        'role': 'Role',
+        'count': 'Count',
+        'vs_ote': 'vs OTE',
+        
+        # Compensation breakdown
+        'compensation_breakdown': 'Compensation Breakdown',
+        'total_ote': 'Total OTE',
+        'base_pct': 'Base %',
+        'variable_pct': 'Variable %',
+        'team_cost_impact': 'Team Cost Impact',
+        'team_count': 'Team Count',
+        'monthly_base_cost': 'Monthly Base Cost',
+        'monthly_ote_cost': 'Monthly OTE Cost',
+        'annual_ote_cost': 'Annual OTE Cost',
+        
+        # Summary
+        'total_compensation_summary': '📊 Total Compensation Summary',
+        'stakeholder_annual': 'Stakeholder Annual',
+        'stakeholder_share': 'Stakeholder Share',
+        'ebitda_impact': '💰 EBITDA Impact',
+        
+        # Daily activities
+        'daily_activities': '📊 Daily Activity Requirements (Visual)',
+        'daily_activities_title': 'Daily Activities per Person by Role',
     },
     'es': {
         # Main titles
         'page_title': '🎯 Modelo de Compensación de Ventas - Versión Final',
         'language': 'Idioma',
+        'model_summary': 'Resumen del Modelo',
+        'revenue_target': 'Objetivo de Ingresos',
         'revenue_targets': '🎯 Objetivos de Ingresos',
         'team_compensation_structure': '💵 Estructura de Equipo y Compensación',
         'team_configuration': '👥 Configuración del Equipo',
         'compensation_configuration': '💵 Configuración de Compensación',
         'deal_economics': '💰 Economía del Negocio y Términos de Pago (Universal)',
         'operating_costs': '🏢 Costos Operativos',
+        'whatif_scenario': '🔮 Análisis de Escenarios Hipotéticos',
+        'business_alerts': '🚨 Alertas del Negocio',
+        'gtm_command_center': '🎯 Centro de Comando GTM',
+        'configuration_center': '⚙️ Centro de Configuración',
         
         # Team labels  
         'closers': 'Cerradores',
@@ -129,6 +209,8 @@ TRANSLATIONS = {
         'managers': 'Gerentes',
         'bench': 'Banca',
         'stakeholders': 'Accionistas',
+        'sales_team': 'Equipo de Ventas',
+        'team_metrics': 'Métricas del Equipo',
         
         # Metrics
         'total_team': 'Equipo Total',
@@ -137,13 +219,30 @@ TRANSLATIONS = {
         'monthly_base': 'Base Mensual',
         'monthly_ote': 'OTE Mensual',
         'annual_ote': 'OTE Anual',
+        'expected_monthly': 'Mensual Esperado',
+        'monthly': 'Mensual',
+        'annual': 'Anual',
+        'daily': 'Diario',
+        'weekly': 'Semanal',
+        
+        # Inputs
+        'base_salary': 'Salario Base ($)',
+        'variable_comp': 'Comp. Variable ($)',
+        'avg_deal_value': 'Valor Promedio del Negocio ($)',
+        'contract_length': 'Duración del Contrato (meses)',
+        'upfront_payment_pct': 'Pago Inicial %',
+        'deferred_payment_pct': 'Pago Diferido %',
+        'input_period': 'Período de Entrada',
         
         # Commission
         'commission_pct': 'Comisión % de Ingresos',
         'commission_flow': '💸 Visualización de Flujo de Comisiones',
+        'commission_base': 'Base de Comisión',
         'pay_commissions_from': 'Pagar Comisiones De',
         'upfront_cash_only': 'Solo Efectivo Inicial',
         'full_deal_value': 'Valor Total del Negocio',
+        'total_commission': 'Comisión Total',
+        'commission_rate': 'Tasa de Comisión',
         
         # Business types
         'business_type_template': 'Plantilla de Tipo de Negocio',
@@ -154,6 +253,14 @@ TRANSLATIONS = {
         'agency': 'Agencia/Retainer',
         'one_time_sale': 'Venta Única',
         
+        # Payment terms
+        'deal_value': '💰 Valor del Negocio',
+        'payment_terms': '📅 Términos de Pago (Modular)',
+        'deal_breakdown': '📈 Desglose del Negocio',
+        'total_deal_value': 'Valor Total del Negocio',
+        'upfront_cash': 'Efectivo Inicial',
+        'deferred_cash': 'Efectivo Diferido',
+        
         # Common actions
         'configure': 'Configurar',
         'calculate': 'Calcular',
@@ -161,9 +268,50 @@ TRANSLATIONS = {
         'monthly_total': '📊 Total Mensual',
         'per_deal': '🎯 Por Negocio (Caso Unitario)',
         
+        # Capacity
+        'capacity_settings': 'Configuración de Capacidad',
+        'meetings_per_closer_day': 'Juntas/Cerrador/Día',
+        'working_days_month': 'Días Laborables/Mes',
+        'meetings_per_setter_day': 'Juntas Agendadas/Agendador/Día',
+        
         # Descriptions
-        'configure_team': 'Configure el tamaño del equipo, capacidad y compensación por rol',
-        'universal_deal': 'Configure su estructura de negocio - funciona para cualquier empresa',
+        'configure_team': 'Configure el tamaño del equipo, capacidad y compensación por rol. Los cambios afectan todos los cálculos.',
+        'universal_deal': 'Configure su estructura de negocio - funciona para cualquier empresa: SaaS, Servicios, Consultoría, Seguros, etc.',
+        'commission_policy': 'Política de Pago de Comisiones: Elija si las comisiones se pagan del efectivo inicial (70%) o del valor total del negocio (100%)',
+        
+        # Alerts
+        'all_systems_healthy': '✅ Todos los Sistemas Saludables',
+        'no_issues': 'No se detectaron problemas',
+        'critical': 'CRÍTICO',
+        'warning': 'ADVERTENCIA',
+        'recommended_actions': '🎯 Acciones Recomendadas',
+        
+        # Period earnings
+        'period_earnings': '📅 Vista Previa de Ganancias por Período',
+        'role': 'Rol',
+        'count': 'Cantidad',
+        'vs_ote': 'vs OTE',
+        
+        # Compensation breakdown
+        'compensation_breakdown': 'Desglose de Compensación',
+        'total_ote': 'OTE Total',
+        'base_pct': 'Base %',
+        'variable_pct': 'Variable %',
+        'team_cost_impact': 'Impacto de Costo del Equipo',
+        'team_count': 'Cantidad de Equipo',
+        'monthly_base_cost': 'Costo Base Mensual',
+        'monthly_ote_cost': 'Costo OTE Mensual',
+        'annual_ote_cost': 'Costo OTE Anual',
+        
+        # Summary
+        'total_compensation_summary': '📊 Resumen Total de Compensación',
+        'stakeholder_annual': 'Anual de Accionistas',
+        'stakeholder_share': 'Participación de Accionistas',
+        'ebitda_impact': '💰 Impacto en EBITDA',
+        
+        # Daily activities
+        'daily_activities': '📊 Requisitos de Actividad Diaria (Visual)',
+        'daily_activities_title': 'Actividades Diarias por Persona por Rol',
     }
 }
 
@@ -739,14 +887,14 @@ with st.sidebar:
     )
     st.markdown("---")
     
-    st.markdown(f"## 📋 {t('model_summary', lang) if 'model_summary' in TRANSLATIONS[lang] else 'Model Summary'}")
+    st.markdown(f"## 📋 {t('model_summary', lang)}")
     st.markdown("---")
     
     # Revenue Target Section
-    st.markdown("### 🎯 Revenue Target")
+    st.markdown(f"### {t('revenue_target', lang)}")
     monthly_target_display = st.session_state.get('monthly_revenue_target_main', monthly_revenue_target)
-    st.metric("Monthly", f"${monthly_target_display:,.0f}")
-    st.metric("Annual", f"${monthly_target_display*12:,.0f}")
+    st.metric(t('monthly', lang), f"${monthly_target_display:,.0f}")
+    st.metric(t('annual', lang), f"${monthly_target_display*12:,.0f}")
     
     st.markdown("---")
     
@@ -786,7 +934,7 @@ with st.sidebar:
     st.markdown("---")
     
     # Compact Alerts Section
-    st.markdown("### 🚨 Business Alerts")
+    st.markdown(f"### {t('business_alerts', lang)}")
     
     if alerts:
         critical_count = sum(1 for alert in alerts if alert['type'] == 'critical')
@@ -817,12 +965,12 @@ with st.sidebar:
                 unsafe_allow_html=True
             )
     else:
-        st.success("✅ All Systems Healthy")
-        st.caption("No issues detected")
+        st.success(t('all_systems_healthy', lang))
+        st.caption(t('no_issues', lang))
     
     # Recommended Actions Section
     if recommended_actions:
-        st.markdown("**🎯 Recommended Actions**")
+        st.markdown(f"**{t('recommended_actions', lang)}**")
         for action in recommended_actions[:5]:  # Show top 5
             st.markdown(
                 f"""
@@ -964,12 +1112,12 @@ tabs = st.tabs([
 
 # TAB 1: BOWTIE & MULTI-CHANNEL GTM INTEGRATED
 with tabs[0]:
-    st.header("🎯 GTM Command Center")
-    st.markdown("**Unified view of your Go-to-Market strategy with all KPIs**")
+    st.header(t('gtm_command_center', lang))
+    st.markdown("**Unified view of your Go-to-Market strategy with all KPIs**" if lang == 'en' else "**Vista unificada de su estrategia de salida al mercado con todos los KPIs**")
     
     # Configuration Sections - All inputs in main view
-    st.markdown("### ⚙️ Configuration Center")
-    st.markdown("Configure all parameters directly in the main view with immediate feedback")
+    st.markdown(f"### {t('configuration_center', lang)}")
+    st.markdown("Configure all parameters directly in the main view with immediate feedback" if lang == 'en' else "Configure todos los parámetros directamente en la vista principal con retroalimentación inmediata")
     
     # Revenue Targets Configuration
     with st.expander(f"{t('revenue_targets', lang)}", expanded=True):
@@ -1046,12 +1194,12 @@ with tabs[0]:
         team_col1, team_col2, team_col3 = st.columns(3)
         
         with team_col1:
-            st.markdown("**Sales Team**")
-            num_closers_main = st.number_input("💼 Closers", min_value=0, max_value=50, value=num_closers, step=1, key="closers_main")
-            num_setters_main = st.number_input("📞 Setters", min_value=0, max_value=50, value=num_setters, step=1, key="setters_main")
-            num_bench_main = st.number_input("🏋 Bench", min_value=0, max_value=20, value=num_bench, step=1, key="bench_main")
-            num_managers_main = st.number_input("👔 Managers", min_value=0, max_value=10, value=num_managers, step=1, key="managers_main")
-            st.markdown("**Capacity Settings**")
+            st.markdown(f"**{t('sales_team', lang)}**")
+            num_closers_main = st.number_input(f"💼 {t('closers', lang)}", min_value=0, max_value=50, value=num_closers, step=1, key="closers_main")
+            num_setters_main = st.number_input(f"📞 {t('setters', lang)}", min_value=0, max_value=50, value=num_setters, step=1, key="setters_main")
+            num_bench_main = st.number_input(f"🏋 {t('bench', lang)}", min_value=0, max_value=20, value=num_bench, step=1, key="bench_main")
+            num_managers_main = st.number_input(f"👔 {t('managers', lang)}", min_value=0, max_value=10, value=num_managers, step=1, key="managers_main")
+            st.markdown(f"**{t('capacity_settings', lang)}**")
             meetings_per_closer = st.number_input(
                 "Meetings/Closer/Day",
                 min_value=0.0,
@@ -1076,16 +1224,16 @@ with tabs[0]:
             )
         
         with team_col2:
-            st.markdown("**Team Metrics")
+            st.markdown(f"**{t('team_metrics', lang)}**")
             team_total_main = num_closers_main + num_setters_main + num_bench_main + num_managers_main
             active_ratio_main = (num_closers_main + num_setters_main) / max(1, team_total_main)
             setter_closer_ratio_main = num_setters_main / max(1, num_closers_main)
-            st.metric("Total Team", f"{team_total_main}")
-            st.metric("Active Ratio", f"{active_ratio_main:.0%}")
+            st.metric(t('total_team', lang), f"{team_total_main}")
+            st.metric(t('active_ratio', lang), f"{active_ratio_main:.0%}")
             st.metric("S:C Ratio", f"{setter_closer_ratio_main:.1f}:1")
         
         with team_col3:
-            st.markdown("**Capacity Analysis")
+            st.markdown(f"**{t('capacity_analysis', lang)}**")
             monthly_closer_capacity = num_closers_main * meetings_per_closer * working_days
             capacity_util_main = gtm_monthly_meetings / monthly_closer_capacity if monthly_closer_capacity > 0 else 0
             monthly_setter_capacity = num_setters_main * meetings_per_setter * working_days
@@ -1235,7 +1383,7 @@ with tabs[0]:
         st.markdown(f"### {t('compensation_configuration', lang)}")
         
         # Commission Base Setting (critical for cash flow)
-        st.info("⚙️ **Commission Payment Policy**: Choose whether commissions are paid from upfront cash (70%) or full deal value (100%)")
+        st.info(f"⚙️ **{t('commission_policy', lang)}**")
         comm_policy_cols = st.columns([2, 2, 3])
         
         with comm_policy_cols[0]:
@@ -1255,10 +1403,10 @@ with tabs[0]:
             # Show the multiplier being used
             if "Upfront" in commission_base:
                 comm_multiplier = 0.70
-                st.metric("Commission Base", "70%", "Upfront Only")
+                st.metric(t('commission_base', lang), "70%", t('upfront_cash_only', lang).replace(' (70%)', ''))
             else:
                 comm_multiplier = 1.0
-                st.metric("Commission Base", "100%", "Full Deal")
+                st.metric(t('commission_base', lang), "100%", t('full_deal_value', lang).replace(' (100%)', ''))
             st.session_state['commission_multiplier'] = comm_multiplier
         
         with comm_policy_cols[2]:
@@ -1350,13 +1498,13 @@ with tabs[0]:
                         st.markdown(f"**Monthly Compensation**")
                         
                         base_salary = st.number_input(
-                            "Base Salary ($)",
+                            t('base_salary', lang),
                             min_value=0,
                             max_value=200000,
                             value=int(role_config.get('base', 32000)),
                             step=1000,
                             key=f"{role_key}_base",
-                            help="Fixed monthly salary regardless of performance"
+                            help="Fixed monthly salary regardless of performance" if lang == 'en' else "Salario mensual fijo sin importar el rendimiento"
                         )
                         
                         # Variable comp as percentage of revenue
@@ -1403,15 +1551,15 @@ with tabs[0]:
                         role_config['ote'] = ote
                     
                     with comp_col2:
-                        st.markdown(f"**Compensation Breakdown**")
+                        st.markdown(f"**{t('compensation_breakdown', lang)}**")
                         
                         # Show pie chart of base vs variable
                         base_pct = (base_salary / ote * 100) if ote > 0 else 50
                         variable_pct = (variable_comp / ote * 100) if ote > 0 else 50
                         
-                        st.metric("Total OTE", f"${ote:,.0f}/mo", f"${ote*12:,.0f}/yr")
-                        st.metric("Base %", f"{base_pct:.0f}%")
-                        st.metric("Variable %", f"{variable_pct:.0f}%")
+                        st.metric(t('total_ote', lang), f"${ote:,.0f}/mo", f"${ote*12:,.0f}/yr")
+                        st.metric(t('base_pct', lang), f"{base_pct:.0f}%")
+                        st.metric(t('variable_pct', lang), f"{variable_pct:.0f}%")
                         
                         # Show risk profile
                         if base_pct >= 75:
@@ -1422,7 +1570,7 @@ with tabs[0]:
                             st.warning("🟡 High Risk (High Variable)")
                     
                     with comp_col3:
-                        st.markdown(f"**Team Cost Impact**")
+                        st.markdown(f"**{t('team_cost_impact', lang)}**")
                         
                         # Get count from main team inputs
                         role_count = st.session_state.get(f'num_{role_key}s_main', role_config.get('count', 0))
@@ -1431,17 +1579,17 @@ with tabs[0]:
                         monthly_ote_cost = ote * role_count
                         annual_ote_cost = monthly_ote_cost * 12
                         
-                        st.metric("Team Count", f"{role_count}")
-                        st.metric("Monthly Base Cost", f"${monthly_base_cost:,.0f}")
-                        st.metric("Monthly OTE Cost", f"${monthly_ote_cost:,.0f}")
-                        st.metric("Annual OTE Cost", f"${annual_ote_cost:,.0f}")
+                        st.metric(t('team_count', lang), f"{role_count}")
+                        st.metric(t('monthly_base_cost', lang), f"${monthly_base_cost:,.0f}")
+                        st.metric(t('monthly_ote_cost', lang), f"${monthly_ote_cost:,.0f}")
+                        st.metric(t('annual_ote_cost', lang), f"${annual_ote_cost:,.0f}")
         
         # Get stakeholder percentage
         stakeholder_pct = st.session_state.get('stakeholder_pct', 10.0)
         
         # Summary section
         st.markdown("---")
-        st.markdown("### 📊 Total Compensation Summary")
+        st.markdown(f"### {t('total_compensation_summary', lang)}")
         
         summary_cols = st.columns(5)
         
@@ -1464,36 +1612,36 @@ with tabs[0]:
         expected_monthly_total = total_monthly_base + expected_monthly_variable
         
         with summary_cols[0]:
-            st.metric("Monthly Base", f"${total_monthly_base:,.0f}")
+            st.metric(t('monthly_base', lang), f"${total_monthly_base:,.0f}")
         with summary_cols[1]:
-            st.metric("Monthly OTE", f"${total_monthly_ote:,.0f}")
+            st.metric(t('monthly_ote', lang), f"${total_monthly_ote:,.0f}")
         with summary_cols[2]:
-            st.metric("Expected Monthly", f"${expected_monthly_total:,.0f}", "80% attainment")
+            st.metric(t('expected_monthly', lang), f"${expected_monthly_total:,.0f}", "80% attainment" if lang == 'en' else "80% alcanzado")
         with summary_cols[3]:
-            st.metric("Annual OTE", f"${total_annual_ote:,.0f}")
+            st.metric(t('annual_ote', lang), f"${total_annual_ote:,.0f}")
         with summary_cols[4]:
             if 'monthly_ebitda' in locals() and monthly_ebitda > 0:
                 stakeholder_annual = monthly_ebitda * (stakeholder_pct / 100) * 12
-                st.metric("Stakeholder Annual", f"${stakeholder_annual:,.0f}", f"{stakeholder_pct}% EBITDA")
+                st.metric(t('stakeholder_annual', lang), f"${stakeholder_annual:,.0f}", f"{stakeholder_pct}% EBITDA")
             else:
-                st.metric("Stakeholder Share", f"{stakeholder_pct:.1f}%")
+                st.metric(t('stakeholder_share', lang), f"{stakeholder_pct:.1f}%")
         
         # Show EBITDA impact
-        st.markdown("**💰 EBITDA Impact:**")
+        st.markdown(f"**{t('ebitda_impact', lang)}:**")
         if 'monthly_revenue_total' in locals():
             comp_as_pct_revenue = (total_monthly_ote / monthly_revenue_total * 100) if monthly_revenue_total > 0 else 0
             st.caption(f"Team comp is **{comp_as_pct_revenue:.1f}%** of revenue (target: <40% for healthy margins)")
         
         # Commission Flow Visualization
         st.markdown("---")
-        st.markdown("### 💸 Commission Flow Visualization")
+        st.markdown(f"### {t('commission_flow', lang)}")
         
         import plotly.graph_objects as go
         
         # Toggle between monthly and per-deal view
         flow_view = st.radio(
-            "View",
-            ["📊 Monthly Total", "🎯 Per Deal (Unit Case)"],
+            t('view', lang),
+            [t('monthly_total', lang), t('per_deal', lang)],
             horizontal=True,
             key="commission_flow_view"
         )
@@ -1671,7 +1819,7 @@ with tabs[0]:
         
         # Period-Based Earnings Preview
         st.markdown("---")
-        st.markdown("### 📅 Period-Based Earnings Preview")
+        st.markdown(f"### {t('period_earnings', lang)}")
         
         working_days = st.session_state.get('working_days', 20)
         
@@ -1810,7 +1958,7 @@ with tabs[0]:
         
         # Visual Daily Activity Requirements per Role
         st.markdown("---")
-        st.markdown("### 📊 Daily Activity Requirements (Visual)")
+        st.markdown(f"### {t('daily_activities', lang)}")
         
         daily_leads = gtm_monthly_leads / working_days if working_days > 0 and 'gtm_monthly_leads' in locals() else 0
         daily_contacts = daily_leads * gtm_blended_contact_rate if 'gtm_blended_contact_rate' in locals() else 0
@@ -1847,7 +1995,7 @@ with tabs[0]:
         fig_daily.add_trace(go.Bar(name='Sales', x=roles_visual, y=sales_per_role, marker_color='#22c55e'))
         
         fig_daily.update_layout(
-            title="Daily Activities per Person by Role",
+            title=t('daily_activities_title', lang),
             barmode='group',
             height=300,
             xaxis_title="Role",
@@ -1864,18 +2012,22 @@ with tabs[0]:
         st.session_state.roles_comp_custom = roles_comp
     
     # Deal Economics Configuration - Modular for Any Business Type
-    with st.expander("💰 **Deal Economics & Payment Terms** (Universal)", expanded=False):
-        st.info("🌐 Configure your deal structure - works for any business: SaaS, Services, Consulting, Insurance, etc.")
+    with st.expander(f"{t('deal_economics', lang)}", expanded=False):
+        st.info(f"🌐 {t('universal_deal', lang)}")
         
         # Business Type Selector with Templates
         biz_type_col1, biz_type_col2 = st.columns([1, 2])
         
         with biz_type_col1:
-            business_type = st.selectbox(
-                "Business Type Template",
-                ["Custom", "Insurance", "SaaS/Subscription", "Consulting/Services", "Agency/Retainer", "One-Time Sale"],
-                key="business_type_template"
+            business_type_options = [t('custom', lang), t('insurance', lang), t('saas', lang), t('consulting', lang), t('agency', lang), t('one_time_sale', lang)]
+            business_type_map = {t('custom', lang): 'Custom', t('insurance', lang): 'Insurance', t('saas', lang): 'SaaS/Subscription', t('consulting', lang): 'Consulting/Services', t('agency', lang): 'Agency/Retainer', t('one_time_sale', lang): 'One-Time Sale'}
+            
+            business_type_display = st.selectbox(
+                t('business_type_template', lang),
+                business_type_options,
+                key="business_type_template_display"
             )
+            business_type = business_type_map.get(business_type_display, 'Custom')
         
         with biz_type_col2:
             # Show template description
@@ -1891,32 +2043,158 @@ with tabs[0]:
         
         st.markdown("---")
         
-        # Universal Deal Structure
+        # Smart inputs based on business type
         deal_structure_cols = st.columns(3)
         
         with deal_structure_cols[0]:
-            st.markdown("**💰 Deal Value**")
+            st.markdown(f"**{t('deal_value', lang)}**")
             
-            # Average deal value
-            avg_deal_value = st.number_input(
-                "Average Deal Value ($)",
-                min_value=0,
-                value=int(st.session_state.get('avg_deal_value', 50000)),
-                step=1000,
-                key="avg_deal_value",
-                help="Total value of an average deal/contract"
-            )
+            # INSURANCE-SPECIFIC INPUTS (like Allianz)
+            if business_type == "Insurance":
+                st.markdown("📋 **Insurance Configuration**" if lang == 'en' else "📋 **Configuración de Seguros**")
+                
+                monthly_premium_mxn = st.number_input(
+                    "Monthly Premium (MXN)" if lang == 'en' else "Prima Mensual (MXN)",
+                    min_value=0,
+                    value=int(st.session_state.get('monthly_premium_mxn', 3000)),
+                    step=100,
+                    key="monthly_premium_mxn",
+                    help="Monthly premium charged to customer (e.g., 3,000 MXN for Allianz)"
+                )
+                
+                contract_years = st.number_input(
+                    "Contract Years" if lang == 'en' else "Años de Contrato",
+                    min_value=1,
+                    max_value=30,
+                    value=int(st.session_state.get('insurance_contract_years', 18)),
+                    step=1,
+                    key="insurance_contract_years",
+                    help="Duration of insurance policy"
+                )
+                
+                carrier_commission_rate = st.slider(
+                    "Carrier Commission Rate %" if lang == 'en' else "Tasa de Comisión Aseguradora %",
+                    min_value=1.0,
+                    max_value=5.0,
+                    value=float(st.session_state.get('carrier_commission_rate', 2.7)),
+                    step=0.1,
+                    key="carrier_commission_rate",
+                    help="Commission rate paid by insurance carrier (e.g., 2.7% for Allianz)"
+                )
+                
+                # AUTO-CALCULATE deal value
+                total_premium_value = monthly_premium_mxn * contract_years * 12
+                avg_deal_value = int(total_premium_value * (carrier_commission_rate / 100))
+                contract_length_months = contract_years * 12
+                
+                st.success(f"✅ Auto-calculated: ${avg_deal_value:,.0f} deal value")
+                st.caption(f"Formula: {monthly_premium_mxn:,} MXN/mo × {contract_years} years × {carrier_commission_rate}% = ${avg_deal_value:,.0f}")
             
-            # Contract/engagement length (if applicable)
-            contract_length_months = st.number_input(
-                "Contract Length (months)",
-                min_value=1,
-                max_value=120,
-                value=st.session_state.get('contract_length_months', 12),
-                step=1,
-                key="contract_length_months",
-                help="Duration of contract/engagement (1 for one-time sales)"
-            )
+            # SAAS-SPECIFIC INPUTS
+            elif business_type == "SaaS/Subscription":
+                st.markdown("📋 **SaaS Configuration**" if lang == 'en' else "📋 **Configuración SaaS**")
+                
+                monthly_mrr = st.number_input(
+                    "Monthly Recurring Revenue (MRR)" if lang == 'en' else "Ingreso Recurrente Mensual (MRR)",
+                    min_value=0,
+                    value=int(st.session_state.get('monthly_mrr', 5000)),
+                    step=100,
+                    key="monthly_mrr"
+                )
+                
+                contract_length_months = st.number_input(
+                    "Contract Length (months)" if lang == 'en' else "Duración de Contrato (meses)",
+                    min_value=1,
+                    max_value=36,
+                    value=int(st.session_state.get('saas_contract_months', 12)),
+                    step=1,
+                    key="saas_contract_months"
+                )
+                
+                # AUTO-CALCULATE
+                avg_deal_value = monthly_mrr * contract_length_months
+                st.success(f"✅ Auto-calculated: ${avg_deal_value:,.0f} ACV")
+                st.caption(f"Formula: ${monthly_mrr:,}/mo × {contract_length_months} months")
+            
+            # CONSULTING/SERVICES
+            elif business_type == "Consulting/Services":
+                st.markdown("📋 **Project Configuration**" if lang == 'en' else "📋 **Configuración de Proyecto**")
+                
+                avg_deal_value = st.number_input(
+                    "Average Project Value" if lang == 'en' else "Valor Promedio del Proyecto",
+                    min_value=0,
+                    value=int(st.session_state.get('project_value', 50000)),
+                    step=1000,
+                    key="project_value"
+                )
+                
+                contract_length_months = st.number_input(
+                    "Project Duration (months)" if lang == 'en' else "Duración del Proyecto (meses)",
+                    min_value=1,
+                    max_value=24,
+                    value=int(st.session_state.get('project_duration_months', 3)),
+                    step=1,
+                    key="project_duration_months"
+                )
+            
+            # ONE-TIME SALE
+            elif business_type == "One-Time Sale":
+                st.markdown("📋 **Sale Configuration**" if lang == 'en' else "📋 **Configuración de Venta**")
+                
+                avg_deal_value = st.number_input(
+                    "Average Sale Price" if lang == 'en' else "Precio Promedio de Venta",
+                    min_value=0,
+                    value=int(st.session_state.get('sale_price', 10000)),
+                    step=500,
+                    key="sale_price"
+                )
+                contract_length_months = 1  # One-time sale
+            
+            # AGENCY/RETAINER
+            elif business_type == "Agency/Retainer":
+                st.markdown("📋 **Retainer Configuration**" if lang == 'en' else "📋 **Configuración de Retainer**")
+                
+                monthly_retainer = st.number_input(
+                    "Monthly Retainer" if lang == 'en' else "Retainer Mensual",
+                    min_value=0,
+                    value=int(st.session_state.get('monthly_retainer', 10000)),
+                    step=500,
+                    key="monthly_retainer"
+                )
+                
+                contract_length_months = st.number_input(
+                    "Retainer Duration (months)" if lang == 'en' else "Duración del Retainer (meses)",
+                    min_value=1,
+                    max_value=24,
+                    value=int(st.session_state.get('retainer_duration_months', 6)),
+                    step=1,
+                    key="retainer_duration_months"
+                )
+                
+                # AUTO-CALCULATE
+                avg_deal_value = monthly_retainer * contract_length_months
+                st.success(f"✅ Auto-calculated: ${avg_deal_value:,.0f} total value")
+            
+            # CUSTOM (original universal inputs)
+            else:
+                avg_deal_value = st.number_input(
+                    t('avg_deal_value', lang),
+                    min_value=0,
+                    value=int(st.session_state.get('avg_deal_value', 50000)),
+                    step=1000,
+                    key="avg_deal_value",
+                    help="Total value of an average deal/contract"
+                )
+                
+                contract_length_months = st.number_input(
+                    t('contract_length', lang),
+                    min_value=1,
+                    max_value=120,
+                    value=st.session_state.get('contract_length_months', 12),
+                    step=1,
+                    key="contract_length_months",
+                    help="Duration of contract/engagement (1 for one-time sales)"
+                )
         
         with deal_structure_cols[1]:
             st.markdown("**📅 Payment Terms (Modular)**")
@@ -1934,7 +2212,7 @@ with tabs[0]:
             )
             
             deferred_pct = 100.0 - upfront_pct
-            st.metric("Deferred Payment %", f"{deferred_pct:.0f}%")
+            st.metric(t('deferred_payment_pct', lang), f"{deferred_pct:.0f}%")
             
             # Deferred payment timing
             if deferred_pct > 0:
@@ -1949,23 +2227,23 @@ with tabs[0]:
                 )
         
         with deal_structure_cols[2]:
-            st.markdown("**📈 Deal Breakdown**")
+            st.markdown(f"**{t('deal_breakdown', lang)}**")
             
             # Calculate upfront and deferred amounts
             comp_immediate_val = avg_deal_value * (upfront_pct / 100)
             comp_deferred_val = avg_deal_value * (deferred_pct / 100)
             
-            st.metric("Total Deal Value", f"${avg_deal_value:,.0f}")
-            st.metric("Upfront Cash", f"${comp_immediate_val:,.0f}", f"{upfront_pct:.0f}%")
+            st.metric(t('total_deal_value', lang), f"${avg_deal_value:,.0f}")
+            st.metric(t('upfront_cash', lang), f"${comp_immediate_val:,.0f}", f"{upfront_pct:.0f}%")
             
             if deferred_pct > 0:
                 st.metric(
-                    "Deferred Cash", 
+                    t('deferred_cash', lang), 
                     f"${comp_deferred_val:,.0f}",
                     f"{deferred_pct:.0f}% at month {deferred_timing_months if 'deferred_timing_months' in locals() else 1}"
                 )
             else:
-                st.metric("Deferred Cash", "$0", "No deferred payment")
+                st.metric(t('deferred_cash', lang), "$0", "No deferred payment" if lang == 'en' else "Sin pago diferido")
         
         # Additional context
         st.markdown("---")
@@ -1991,7 +2269,7 @@ with tabs[0]:
         contract_years_main = contract_length_months / 12
     
     # Operating Costs Configuration (Marketing moved to channels)
-    with st.expander("🏢 **Operating Costs**", expanded=False):
+    with st.expander(f"{t('operating_costs', lang)}", expanded=False):
         ops_col1, ops_col2, ops_col3 = st.columns(3)
         
         with ops_col1:
@@ -2033,7 +2311,7 @@ with tabs[0]:
             st.session_state["cash_balance_main"] = cash_balance_main
     
     # What-If Analysis Configuration
-    with st.expander("🔮 **What-If Scenario Analysis**", expanded=False):
+    with st.expander(f"{t('whatif_scenario', lang)}", expanded=False):
         whatif_col1, whatif_col2 = st.columns(2)
         
         with whatif_col1:
