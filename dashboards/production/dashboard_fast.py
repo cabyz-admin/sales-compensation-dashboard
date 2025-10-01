@@ -300,10 +300,26 @@ def calculate_commission_data_cached(sales_count: float, roles_json: str, deal_e
     return DealEconomicsManager.calculate_monthly_commission(sales_count, roles_comp, deal_econ)
 
 @st.cache_data(ttl=600)
-def calculate_unit_economics_cached(deal_value: float, upfront_pct: float, grr: float, cost_per_sale: float):
-    """Cached unit economics"""
+def calculate_deal_cash_splits(deal_value: float, upfront_pct: float):
+    """Cached calculation of upfront/deferred cash splits - used everywhere"""
     upfront_cash = deal_value * (upfront_pct / 100)
     deferred_cash = deal_value * ((100 - upfront_pct) / 100)
+    deferred_pct = 100 - upfront_pct
+    
+    return {
+        'upfront_cash': upfront_cash,
+        'deferred_cash': deferred_cash,
+        'upfront_pct': upfront_pct,
+        'deferred_pct': deferred_pct
+    }
+
+@st.cache_data(ttl=600)
+def calculate_unit_economics_cached(deal_value: float, upfront_pct: float, grr: float, cost_per_sale: float):
+    """Cached unit economics"""
+    cash_splits = calculate_deal_cash_splits(deal_value, upfront_pct)
+    upfront_cash = cash_splits['upfront_cash']
+    deferred_cash = cash_splits['deferred_cash']
+    
     ltv = upfront_cash + (deferred_cash * grr)
     ltv_cac = ltv / cost_per_sale if cost_per_sale > 0 else 0
     payback_months = cost_per_sale / (upfront_cash / 12) if upfront_cash > 0 else 999
@@ -312,7 +328,8 @@ def calculate_unit_economics_cached(deal_value: float, upfront_pct: float, grr: 
         'ltv': ltv,
         'cac': cost_per_sale,
         'ltv_cac': ltv_cac,
-        'payback_months': payback_months
+        'payback_months': payback_months,
+        **cash_splits  # Include cash splits in unit economics
     }
 
 @st.cache_data(ttl=300)
@@ -1184,8 +1201,10 @@ with tab3:
     st.markdown("### 💰 Financial Performance")
     finance_cols = st.columns(5)
     
-    upfront_cash = deal_econ['avg_deal_value'] * (deal_econ['upfront_pct'] / 100)
-    deferred_cash = deal_econ['avg_deal_value'] * ((100 - deal_econ['upfront_pct']) / 100)
+    # Use cached cash splits calculation
+    cash_splits = calculate_deal_cash_splits(deal_econ['avg_deal_value'], deal_econ['upfront_pct'])
+    upfront_cash = cash_splits['upfront_cash']
+    deferred_cash = cash_splits['deferred_cash']
     
     with finance_cols[0]:
         st.metric("💳 CAC", f"${unit_econ['cac']:,.0f}", f"LTV: ${unit_econ['ltv']:,.0f}")
@@ -1479,9 +1498,9 @@ with tab4:
         close_impact = new_close_rate / gtm_metrics['blended_close_rate'] if gtm_metrics['blended_close_rate'] > 0 else 1.0
         new_sales = baseline_sales * lead_impact * close_impact
         
-        # New revenue
-        upfront_cash_new = new_deal_value * (deal_econ['upfront_pct'] / 100)
-        new_revenue = new_sales * upfront_cash_new
+        # New revenue (use cached calculation)
+        new_cash_splits = calculate_deal_cash_splits(new_deal_value, deal_econ['upfront_pct'])
+        new_revenue = new_sales * new_cash_splits['upfront_cash']
         
         # Recalculate commissions
         new_comm_pct = comm_calc['commission_rate'] / 100
@@ -1653,9 +1672,11 @@ with tab5:
                 help="Percentage paid upfront"
             )
             
-            deferred_pct = 100 - upfront_pct
-            upfront_cash = avg_deal_value * (upfront_pct / 100)
-            deferred_cash = avg_deal_value * (deferred_pct / 100)
+            # Use cached calculation for payment splits
+            payment_splits = calculate_deal_cash_splits(avg_deal_value, upfront_pct)
+            upfront_cash = payment_splits['upfront_cash']
+            deferred_cash = payment_splits['deferred_cash']
+            deferred_pct = payment_splits['deferred_pct']
             
             st.caption(f"**Upfront:** ${upfront_cash:,.0f} ({upfront_pct:.0f}%)")
             st.caption(f"**Deferred:** ${deferred_cash:,.0f} ({deferred_pct:.0f}%)")
