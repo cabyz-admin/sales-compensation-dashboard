@@ -23,10 +23,10 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.express as px
-import sys
-import os
 import json
 from datetime import datetime
+import sys
+import os
 
 # Setup paths
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
