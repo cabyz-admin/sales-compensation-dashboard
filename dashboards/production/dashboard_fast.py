@@ -955,62 +955,64 @@ with tab1:
                 ))
             
             funnel_fig.update_layout(
-                title="Individual Channel Funnels",
-                height=400,
+                title="Individual Channels",
+                height=450,
                 showlegend=True
             )
             
             st.plotly_chart(funnel_fig, use_container_width=True, key="gtm_channel_funnel")
-            
-            # Separate chart for aggregated total
-            st.markdown("#### 🎯 Aggregated Total")
+        
+        with chart_cols[1]:
+            # Aggregated total chart (same size)
+            st.markdown("#### All Channels (Total)")
             
             total_fig = go.Figure(go.Funnel(
                 y=['Leads', 'Contacts', 'Meetings Scheduled', 'Meetings Held', 'Sales'],
                 x=[total_leads, total_contacts, total_meetings_scheduled, total_meetings_held, total_sales],
                 textinfo="value+percent initial",
-                marker=dict(color='#F59E0B', line=dict(width=2, color='#D97706'))  # Amber/gold color
+                marker=dict(color='#F59E0B', line=dict(width=2, color='#D97706'))
             ))
             
             total_fig.update_layout(
-                title="All Channels Combined",
-                height=300,
+                title="Aggregated Funnel",
+                height=450,
                 showlegend=False
             )
             
             st.plotly_chart(total_fig, use_container_width=True, key="gtm_total_funnel")
         
-        with chart_cols[1]:
-            st.markdown("#### 💰 Revenue Contribution")
-            
-            # Create pie chart for revenue distribution
-            revenue_data = {
-                'Channel': [ch['name'] for ch in gtm_metrics['channels_breakdown']],
-                'Revenue': [ch['revenue'] for ch in gtm_metrics['channels_breakdown']]
-            }
-            
-            pie_fig = go.Figure(data=[go.Pie(
-                labels=revenue_data['Channel'],
-                values=revenue_data['Revenue'],
-                hole=0.4,
-                textinfo='label+percent',
-                hovertemplate='<b>%{label}</b><br>Revenue: $%{value:,.0f}<br>%{percent}<extra></extra>'
-            )])
-            
-            pie_fig.update_layout(
-                title="Revenue Distribution by Channel",
-                height=450,
-                showlegend=True,
-                legend=dict(
-                    orientation="v",
-                    yanchor="middle",
-                    y=0.5,
-                    xanchor="left",
-                    x=1.05
-                )
+        # Revenue contribution below
+        st.markdown("---")
+        st.markdown("#### Revenue Contribution")
+        
+        # Create pie chart for revenue distribution
+        revenue_data = {
+            'Channel': [ch['name'] for ch in gtm_metrics['channels_breakdown']],
+            'Revenue': [ch['revenue'] for ch in gtm_metrics['channels_breakdown']]
+        }
+        
+        pie_fig = go.Figure(data=[go.Pie(
+            labels=revenue_data['Channel'],
+            values=revenue_data['Revenue'],
+            hole=0.4,
+            textinfo='label+percent',
+            hovertemplate='<b>%{label}</b><br>Revenue: $%{value:,.0f}<br>%{percent}<extra></extra>'
+        )])
+        
+        pie_fig.update_layout(
+            title="Revenue Distribution by Channel",
+            height=450,
+            showlegend=True,
+            legend=dict(
+                orientation="v",
+                yanchor="middle",
+                y=0.5,
+                xanchor="left",
+                x=1.05
             )
-            
-            st.plotly_chart(pie_fig, use_container_width=True, key="gtm_revenue_contribution")
+        )
+        
+        st.plotly_chart(pie_fig, use_container_width=True, key="gtm_revenue_contribution")
 
 # ============= TAB 2: COMPENSATION STRUCTURE =============
 with tab2:
@@ -1344,39 +1346,33 @@ with tab3:
         st.plotly_chart(fig_waterfall, use_container_width=True, key="pnl_waterfall")
     
     with viz_cols[1]:
-        st.markdown("#### 📊 Key Metrics")
+        st.markdown("#### Key Metrics")
         
-        # Margins card
-        st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 10px; margin-bottom: 15px;">
-            <h4 style="margin: 0; color: white;">Gross Margin</h4>
-            <h1 style="margin: 10px 0; color: white;">{pnl_data['gross_margin']:.1f}%</h1>
-            <p style="margin: 0; color: rgba(255,255,255,0.8);">Target: >60%</p>
-        </div>
-        """, unsafe_allow_html=True)
+        # Clean metrics display
+        metric_cols = st.columns(2)
         
-        # EBITDA Margin card
-        ebitda_color = "#10B981" if pnl_data['ebitda_margin'] > 20 else "#EF4444"
-        st.markdown(f"""
-        <div style="background: {ebitda_color}; padding: 20px; border-radius: 10px; margin-bottom: 15px;">
-            <h4 style="margin: 0; color: white;">EBITDA Margin</h4>
-            <h1 style="margin: 10px 0; color: white;">{pnl_data['ebitda_margin']:.1f}%</h1>
-            <p style="margin: 0; color: rgba(255,255,255,0.8);">Target: >20%</p>
-        </div>
-        """, unsafe_allow_html=True)
+        with metric_cols[0]:
+            st.metric(
+                "Gross Margin",
+                f"{pnl_data['gross_margin']:.1f}%",
+                "Target: >60%"
+            )
+            st.metric(
+                "Revenue/Sale",
+                f"${pnl_data['gross_revenue'] / gtm_metrics['monthly_sales']:,.0f}" if gtm_metrics['monthly_sales'] > 0 else "$0"
+            )
         
-        # Unit Economics
-        cost_per_sale = gtm_metrics.get('cost_per_sale', 0)
-        revenue_per_sale = pnl_data['gross_revenue'] / gtm_metrics['monthly_sales'] if gtm_metrics['monthly_sales'] > 0 else 0
-        st.markdown(f"""
-        <div style="background: #1F2937; padding: 15px; border-radius: 10px; border-left: 4px solid #3B82F6;">
-            <p style="margin: 0; color: #9CA3AF; font-size: 0.875rem;">PER SALE</p>
-            <p style="margin: 5px 0; color: #10B981; font-size: 1.25rem; font-weight: bold;">Revenue: ${revenue_per_sale:,.0f}</p>
-            <p style="margin: 5px 0; color: #EF4444; font-size: 1.25rem; font-weight: bold;">Cost: ${cost_per_sale:,.0f}</p>
-            <p style="margin: 5px 0; color: #3B82F6; font-size: 1.25rem; font-weight: bold;">Net: ${revenue_per_sale - cost_per_sale:,.0f}</p>
-            <p style="margin: 5px 0 0 0; color: #9CA3AF; font-size: 0.875rem;">Sales: {gtm_metrics['monthly_sales']:.0f}/mo</p>
-        </div>
-        """, unsafe_allow_html=True)
+        with metric_cols[1]:
+            ebitda_delta = "🟢 Healthy" if pnl_data['ebitda_margin'] > 20 else "🔴 Low"
+            st.metric(
+                "EBITDA Margin",
+                f"{pnl_data['ebitda_margin']:.1f}%",
+                ebitda_delta
+            )
+            st.metric(
+                "Cost/Sale",
+                f"${gtm_metrics.get('cost_per_sale', 0):,.0f}"
+            )
     
     st.markdown("---")
     
@@ -1660,62 +1656,64 @@ with tab3:
                 ))
             
             funnel_fig.update_layout(
-                title="Individual Channel Funnels",
-                height=400,
+                title="Individual Channels",
+                height=450,
                 showlegend=True
             )
             
             st.plotly_chart(funnel_fig, use_container_width=True, key="channel_funnel")
-            
-            # Separate chart for aggregated total
-            st.markdown("#### 🎯 Aggregated Total")
+        
+        with chart_cols[1]:
+            # Aggregated total chart (same size)
+            st.markdown("#### All Channels (Total)")
             
             total_fig = go.Figure(go.Funnel(
                 y=['Leads', 'Contacts', 'Meetings Scheduled', 'Meetings Held', 'Sales'],
                 x=[total_leads, total_contacts, total_meetings_scheduled, total_meetings_held, total_sales],
                 textinfo="value+percent initial",
-                marker=dict(color='#F59E0B', line=dict(width=2, color='#D97706'))  # Amber/gold color
+                marker=dict(color='#F59E0B', line=dict(width=2, color='#D97706'))
             ))
             
             total_fig.update_layout(
-                title="All Channels Combined",
-                height=300,
+                title="Aggregated Funnel",
+                height=450,
                 showlegend=False
             )
             
             st.plotly_chart(total_fig, use_container_width=True, key="total_funnel")
         
-        with chart_cols[1]:
-            st.markdown("#### 💰 Revenue Contribution")
-            
-            # Create pie chart for revenue distribution
-            revenue_data = {
-                'Channel': [ch['name'] for ch in gtm_metrics['channels_breakdown']],
-                'Revenue': [ch['revenue'] for ch in gtm_metrics['channels_breakdown']]
-            }
-            
-            pie_fig = go.Figure(data=[go.Pie(
-                labels=revenue_data['Channel'],
-                values=revenue_data['Revenue'],
-                hole=0.4,
-                textinfo='label+percent',
-                hovertemplate='<b>%{label}</b><br>Revenue: $%{value:,.0f}<br>%{percent}<extra></extra>'
-            )])
-            
-            pie_fig.update_layout(
-                title="Revenue Distribution by Channel",
-                height=450,
-                showlegend=True,
-                legend=dict(
-                    orientation="v",
-                    yanchor="middle",
-                    y=0.5,
-                    xanchor="left",
-                    x=1.05
-                )
+        # Revenue contribution below
+        st.markdown("---")
+        st.markdown("#### Revenue Contribution")
+        
+        # Create pie chart for revenue distribution
+        revenue_data = {
+            'Channel': [ch['name'] for ch in gtm_metrics['channels_breakdown']],
+            'Revenue': [ch['revenue'] for ch in gtm_metrics['channels_breakdown']]
+        }
+        
+        pie_fig = go.Figure(data=[go.Pie(
+            labels=revenue_data['Channel'],
+            values=revenue_data['Revenue'],
+            hole=0.4,
+            textinfo='label+percent',
+            hovertemplate='<b>%{label}</b><br>Revenue: $%{value:,.0f}<br>%{percent}<extra></extra>'
+        )])
+        
+        pie_fig.update_layout(
+            title="Revenue Distribution by Channel",
+            height=450,
+            showlegend=True,
+            legend=dict(
+                orientation="v",
+                yanchor="middle",
+                y=0.5,
+                xanchor="left",
+                x=1.05
             )
-            
-            st.plotly_chart(pie_fig, use_container_width=True, key="revenue_contribution")
+        )
+        
+        st.plotly_chart(pie_fig, use_container_width=True, key="revenue_contribution")
         
         # Channel Performance Table
         st.markdown("#### 📈 Channel Performance Breakdown")
