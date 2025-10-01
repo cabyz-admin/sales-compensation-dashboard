@@ -1776,6 +1776,10 @@ with tab5:
             avg_deal_value = total_premium * (commission_rate / 100)
             contract_length = contract_years * 12
             
+            # Store calculated value for other components to use
+            st.session_state['calculated_deal_value'] = avg_deal_value
+            st.session_state['calculated_contract_length'] = contract_length
+            
             st.success(f"💰 **Your Commission**: ${avg_deal_value:,.0f}")
             st.caption(f"💡 ${monthly_premium:,.0f}/mo × 12 × {contract_years}y × {commission_rate}% = ${avg_deal_value:,.0f}")
             
@@ -1803,6 +1807,11 @@ with tab5:
             
             avg_deal_value = mrr * sub_term
             contract_length = sub_term
+            
+            # Store calculated value for other components to use
+            st.session_state['calculated_deal_value'] = avg_deal_value
+            st.session_state['calculated_contract_length'] = contract_length
+            
             st.caption(f"💡 ${mrr:,.0f}/mo × {sub_term} months = ${avg_deal_value:,.0f}")
             
         elif "Commission" in calc_method:
@@ -1835,6 +1844,11 @@ with tab5:
                 )
             
             avg_deal_value = total_contract * (commission_pct / 100)
+            
+            # Store calculated value for other components to use
+            st.session_state['calculated_deal_value'] = avg_deal_value
+            st.session_state['calculated_contract_length'] = contract_length
+            
             st.caption(f"💡 ${total_contract:,.0f} × {commission_pct}% = ${avg_deal_value:,.0f}")
             
         else:  # Direct Value
@@ -1859,6 +1873,10 @@ with tab5:
             with calc_cols[2]:
                 monthly_value = avg_deal_value / contract_length if contract_length > 0 else 0
                 st.metric("Monthly Value", f"${monthly_value:,.0f}")
+            
+            # Store values (Direct Value mode uses widget values directly)
+            st.session_state['calculated_deal_value'] = avg_deal_value
+            st.session_state['calculated_contract_length'] = contract_length
         
         st.markdown("---")
         
