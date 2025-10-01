@@ -1588,7 +1588,7 @@ with tab5:
         with biz_type_col:
             business_type = st.selectbox(
                 "Business Type",
-                ["Custom", "SaaS/Subscription", "Consulting/Services", "Agency/Retainer", "One-Time Sale"],
+                ["Custom", "Insurance", "Allianz - Optimax Plus", "SaaS/Subscription", "Consulting/Services", "Agency/Retainer", "One-Time Sale"],
                 index=0,
                 key="business_type",
                 help="Select a business type for pre-configured deal economics"
@@ -1598,6 +1598,18 @@ with tab5:
             if business_type != "Custom" and st.button("📋 Apply Template", use_container_width=True):
                 # Apply business type templates
                 templates = {
+                    "Insurance": {
+                        'avg_deal_value': 45000,
+                        'upfront_payment_pct': 70.0,
+                        'contract_length_months': 18,
+                        'deferred_timing_months': 18
+                    },
+                    "Allianz - Optimax Plus": {
+                        'avg_deal_value': 48600,  # 3000 MXN/month * 18 months * 2.7% * 20 MXN/USD
+                        'upfront_payment_pct': 70.0,
+                        'contract_length_months': 18,
+                        'deferred_timing_months': 18
+                    },
                     "SaaS/Subscription": {
                         'avg_deal_value': 60000,
                         'upfront_payment_pct': 100.0,
