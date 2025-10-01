@@ -1121,7 +1121,6 @@ with tabs[0]:
                 key="commission_base_policy",
                 help="Upfront = Conservative, protects cash flow. Full = Aggressive, better margins but cash risk"
             )
-            st.session_state['commission_base_policy'] = commission_base
         
         with comm_policy_cols[1]:
             # Show the multiplier being used
@@ -1225,6 +1224,9 @@ with tabs[0]:
                         
                         # Variable comp as percentage of revenue
                         default_pct = role_config.get('commission_pct', 20.0 if role_key == 'closer' else 3.0 if role_key == 'setter' else 5.0)
+                        # Get commission base policy
+                        comm_base_policy = st.session_state.get('commission_base_policy', 'Upfront Cash Only (70%)')
+                        
                         commission_pct = st.number_input(
                             "Commission % of Revenue",
                             min_value=0.0,
@@ -1232,7 +1234,7 @@ with tabs[0]:
                             value=float(default_pct),
                             step=0.5,
                             key=f"{role_key}_commission_pct",
-                            help=f"Percentage of {'upfront cash (70%)' if 'Upfront' in st.session_state.get('commission_base_policy', 'Upfront') else 'full deal value (100%)'} paid as commission"
+                            help=f"Percentage of {'upfront cash (70%)' if 'Upfront' in comm_base_policy else 'full deal value (100%)'} paid as commission"
                         )
                         
                         # Calculate variable comp based on projected revenue
