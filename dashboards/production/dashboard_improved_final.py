@@ -57,6 +57,120 @@ except ImportError as e:
     st.error(f"Module import error: {e}")
     st.stop()
 
+# ============= TRANSLATION SYSTEM =============
+TRANSLATIONS = {
+    'en': {
+        # Main titles
+        'page_title': '🎯 Sales Compensation Model - Final Version',
+        'language': 'Language',
+        'revenue_targets': '🎯 Revenue Targets',
+        'team_compensation_structure': '💵 Team & Compensation Structure',
+        'team_configuration': '👥 Team Configuration',
+        'compensation_configuration': '💵 Compensation Configuration',
+        'deal_economics': '💰 Deal Economics & Payment Terms (Universal)',
+        'operating_costs': '🏢 Operating Costs',
+        
+        # Team labels
+        'closers': 'Closers',
+        'setters': 'Setters',
+        'managers': 'Managers',
+        'bench': 'Bench',
+        'stakeholders': 'Stakeholders',
+        
+        # Metrics
+        'total_team': 'Total Team',
+        'active_ratio': 'Active Ratio',
+        'capacity_analysis': 'Capacity Analysis',
+        'monthly_base': 'Monthly Base',
+        'monthly_ote': 'Monthly OTE',
+        'annual_ote': 'Annual OTE',
+        
+        # Commission
+        'commission_pct': 'Commission % of Revenue',
+        'commission_flow': '💸 Commission Flow Visualization',
+        'pay_commissions_from': 'Pay Commissions From',
+        'upfront_cash_only': 'Upfront Cash Only',
+        'full_deal_value': 'Full Deal Value',
+        
+        # Business types
+        'business_type_template': 'Business Type Template',
+        'custom': 'Custom',
+        'insurance': 'Insurance',
+        'saas': 'SaaS/Subscription',
+        'consulting': 'Consulting/Services',
+        'agency': 'Agency/Retainer',
+        'one_time_sale': 'One-Time Sale',
+        
+        # Common actions
+        'configure': 'Configure',
+        'calculate': 'Calculate',
+        'view': 'View',
+        'monthly_total': '📊 Monthly Total',
+        'per_deal': '🎯 Per Deal (Unit Case)',
+        
+        # Descriptions
+        'configure_team': 'Configure team size, capacity, and compensation per role',
+        'universal_deal': 'Configure your deal structure - works for any business',
+    },
+    'es': {
+        # Main titles
+        'page_title': '🎯 Modelo de Compensación de Ventas - Versión Final',
+        'language': 'Idioma',
+        'revenue_targets': '🎯 Objetivos de Ingresos',
+        'team_compensation_structure': '💵 Estructura de Equipo y Compensación',
+        'team_configuration': '👥 Configuración del Equipo',
+        'compensation_configuration': '💵 Configuración de Compensación',
+        'deal_economics': '💰 Economía del Negocio y Términos de Pago (Universal)',
+        'operating_costs': '🏢 Costos Operativos',
+        
+        # Team labels  
+        'closers': 'Cerradores',
+        'setters': 'Agendadores',
+        'managers': 'Gerentes',
+        'bench': 'Banca',
+        'stakeholders': 'Accionistas',
+        
+        # Metrics
+        'total_team': 'Equipo Total',
+        'active_ratio': 'Ratio Activo',
+        'capacity_analysis': 'Análisis de Capacidad',
+        'monthly_base': 'Base Mensual',
+        'monthly_ote': 'OTE Mensual',
+        'annual_ote': 'OTE Anual',
+        
+        # Commission
+        'commission_pct': 'Comisión % de Ingresos',
+        'commission_flow': '💸 Visualización de Flujo de Comisiones',
+        'pay_commissions_from': 'Pagar Comisiones De',
+        'upfront_cash_only': 'Solo Efectivo Inicial',
+        'full_deal_value': 'Valor Total del Negocio',
+        
+        # Business types
+        'business_type_template': 'Plantilla de Tipo de Negocio',
+        'custom': 'Personalizado',
+        'insurance': 'Seguros',
+        'saas': 'SaaS/Suscripción',
+        'consulting': 'Consultoría/Servicios',
+        'agency': 'Agencia/Retainer',
+        'one_time_sale': 'Venta Única',
+        
+        # Common actions
+        'configure': 'Configurar',
+        'calculate': 'Calcular',
+        'view': 'Ver',
+        'monthly_total': '📊 Total Mensual',
+        'per_deal': '🎯 Por Negocio (Caso Unitario)',
+        
+        # Descriptions
+        'configure_team': 'Configure el tamaño del equipo, capacidad y compensación por rol',
+        'universal_deal': 'Configure su estructura de negocio - funciona para cualquier empresa',
+    }
+}
+
+def t(key, lang='en'):
+    """Translation function - returns translated text based on selected language"""
+    return TRANSLATIONS.get(lang, TRANSLATIONS['en']).get(key, key)
+
 # ============= CONFIGURACIÓN =============
 st.set_page_config(
     page_title="🎯 Sales Compensation Model - Final Version",
@@ -612,9 +726,20 @@ if close_rate < 0.2:
 # This section shows health metrics and recommendations in a calmer way
 # Actual critical alerts logic is preserved but displayed differently in the main tab
 
-# ============= SIDEBAR: MODEL SUMMARY & SAVE/LOAD =============
+# ============= SIDEBAR: LANGUAGE SELECTOR & MODEL SUMMARY =============
 with st.sidebar:
-    st.markdown("## 📋 Model Summary")
+    # Language Selector at the very top
+    st.markdown("### 🌐 Language / Idioma")
+    lang = st.selectbox(
+        "",
+        options=['en', 'es'],
+        format_func=lambda x: '🇺🇸 English' if x == 'en' else '🇪🇸 Español',
+        key='language_selector',
+        label_visibility='collapsed'
+    )
+    st.markdown("---")
+    
+    st.markdown(f"## 📋 {t('model_summary', lang) if 'model_summary' in TRANSLATIONS[lang] else 'Model Summary'}")
     st.markdown("---")
     
     # Revenue Target Section
@@ -847,7 +972,7 @@ with tabs[0]:
     st.markdown("Configure all parameters directly in the main view with immediate feedback")
     
     # Revenue Targets Configuration
-    with st.expander("🎯 **Revenue Targets**", expanded=True):
+    with st.expander(f"{t('revenue_targets', lang)}", expanded=True):
         rev_col1, rev_col2, rev_col3 = st.columns(3)
         
         with rev_col1:
@@ -913,11 +1038,11 @@ with tabs[0]:
     # Legacy conversion funnel removed - all configuration happens through channels
     
     # Compensation Structure Configuration - Fully Customizable (with Team Structure integrated)
-    with st.expander("💵 **Team & Compensation Structure**", expanded=True):
-        st.info("💡 Configure team size, capacity, and compensation per role. Changes affect all calculations.")
+    with st.expander(f"{t('team_compensation_structure', lang)}", expanded=True):
+        st.info(f"💡 {t('configure_team', lang)}")
         
         # Team Structure Section (moved from above)
-        st.markdown("### 👥 Team Configuration")
+        st.markdown(f"### {t('team_configuration', lang)}")
         team_col1, team_col2, team_col3 = st.columns(3)
         
         with team_col1:
@@ -1107,16 +1232,20 @@ with tabs[0]:
         
         # Compensation Configuration Section
         st.markdown("---")
-        st.markdown("### 💵 Compensation Configuration")
+        st.markdown(f"### {t('compensation_configuration', lang)}")
         
         # Commission Base Setting (critical for cash flow)
         st.info("⚙️ **Commission Payment Policy**: Choose whether commissions are paid from upfront cash (70%) or full deal value (100%)")
         comm_policy_cols = st.columns([2, 2, 3])
         
         with comm_policy_cols[0]:
+            commission_base_options = [
+                f"{t('upfront_cash_only', lang)} (70%)",
+                f"{t('full_deal_value', lang)} (100%)"
+            ]
             commission_base = st.selectbox(
-                "Pay Commissions From",
-                ["Upfront Cash Only (70%)", "Full Deal Value (100%)"],
+                t('pay_commissions_from', lang),
+                commission_base_options,
                 index=0,
                 key="commission_base_policy",
                 help="Upfront = Conservative, protects cash flow. Full = Aggressive, better margins but cash risk"
@@ -1157,7 +1286,13 @@ with tabs[0]:
         roles_comp = st.session_state.roles_comp_custom
         
         # Display each role's compensation
-        role_tabs = st.tabs(["💼 Closers", "📞 Setters", "👔 Managers", "🏋 Bench", "👔 Stakeholders"])
+        role_tabs = st.tabs([
+            f"💼 {t('closers', lang)}",
+            f"📞 {t('setters', lang)}",
+            f"👔 {t('managers', lang)}",
+            f"🏋 {t('bench', lang)}",
+            f"👔 {t('stakeholders', lang)}"
+        ])
         
         for idx, (role_key, tab) in enumerate(zip(['closer', 'setter', 'manager', 'bench', 'stakeholder'], role_tabs)):
             with tab:
@@ -1230,7 +1365,7 @@ with tabs[0]:
                         comm_base_policy = st.session_state.get('commission_base_policy', 'Upfront Cash Only (70%)')
                         
                         commission_pct = st.number_input(
-                            "Commission % of Revenue",
+                            t('commission_pct', lang),
                             min_value=0.0,
                             max_value=50.0,
                             value=float(default_pct),
