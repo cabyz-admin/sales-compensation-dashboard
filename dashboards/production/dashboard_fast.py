@@ -959,28 +959,185 @@ with tab2:
 
 # ============= TAB 3: BUSINESS PERFORMANCE =============
 with tab3:
-    st.header("📊 Business Performance")
-    st.caption("P&L, EBITDA, unit economics, and financial health")
+    st.header("📊 Business Performance Command Center")
+    st.caption("Comprehensive business metrics, P&L, unit economics, and channel performance")
     
-    # Unit Economics
-    col1, col2, col3, col4 = st.columns(4)
+    # 1. 🎯 Key Performance Indicators (Top Row)
+    st.markdown("### 🎯 Key Performance Indicators")
+    kpi_cols = st.columns(6)
     
-    unit_econ = calculate_unit_economics_cached(
-        deal_econ['avg_deal_value'],
-        deal_econ['upfront_pct'],
-        st.session_state.grr_rate,
-        5000  # CAC placeholder
-    )
+    # Calculate revenue target achievement
+    monthly_revenue_target = st.session_state.get('monthly_revenue_target', 500000)
+    achievement = (gtm_metrics['monthly_revenue_immediate'] / monthly_revenue_target - 1) * 100 if monthly_revenue_target > 0 else 0
     
-    with col1:
+    with kpi_cols[0]:
+        st.metric(
+            "💵 Monthly Revenue",
+            f"${gtm_metrics['monthly_revenue_immediate']:,.0f}",
+            f"{achievement:+.1f}% vs target"
+        )
+    with kpi_cols[1]:
+        ebitda_color = "normal" if pnl_data['ebitda'] > 0 else "inverse"
+        st.metric(
+            "💰 EBITDA",
+            f"${pnl_data['ebitda']:,.0f}",
+            f"{pnl_data['ebitda_margin']:.1f}% margin",
+            delta_color=ebitda_color
+        )
+    with kpi_cols[2]:
+        ltv_cac_color = "normal" if unit_econ['ltv_cac'] >= 3 else "inverse"
+        st.metric(
+            "🎯 LTV:CAC",
+            f"{unit_econ['ltv_cac']:.1f}:1",
+            "Target: >3:1",
+            delta_color=ltv_cac_color
+        )
+    with kpi_cols[3]:
+        roas = gtm_metrics['monthly_revenue_immediate'] / marketing_spend if marketing_spend > 0 else 0
+        st.metric(
+            "🚀 ROAS",
+            f"{roas:.1f}x",
+            "Target: >4x"
+        )
+    with kpi_cols[4]:
+        # Capacity utilization
+        working_days = st.session_state.get('working_days', 20)
+        meetings_per_closer = st.session_state.get('meetings_per_closer', 3.0)
+        monthly_closer_capacity = st.session_state.num_closers_main * meetings_per_closer * working_days
+        current_meetings = gtm_metrics.get('monthly_meetings_held', 0)
+        capacity_util = (current_meetings / monthly_closer_capacity) if monthly_closer_capacity > 0 else 0
+        cap_status = "OK" if capacity_util < 0.9 else "⚠️ High"
+        st.metric("📅 Capacity Used", f"{capacity_util:.0%}", cap_status)
+    with kpi_cols[5]:
+        # Pipeline coverage
+        pipeline_value = current_meetings * deal_econ['upfront_cash']
+        pipeline_coverage = pipeline_value / monthly_revenue_target if monthly_revenue_target > 0 else 0
+        pipeline_status = "Good" if pipeline_coverage >= 3 else "Low"
+        st.metric("📊 Pipeline Coverage", f"{pipeline_coverage:.1f}x", pipeline_status)
+    
+    st.markdown("---")
+    
+    # 2. 💰 Quick P&L Overview (Compact)
+    st.markdown("### 💰 Quick P&L Overview")
+    pnl_quick_cols = st.columns(5)
+    
+    with pnl_quick_cols[0]:
+        st.metric("Revenue", f"${pnl_data['gross_revenue']:,.0f}")
+    with pnl_quick_cols[1]:
+        st.metric("COGS", f"${pnl_data['cogs']:,.0f}", f"{pnl_data['cogs']/pnl_data['gross_revenue']*100:.1f}%")
+    with pnl_quick_cols[2]:
+        st.metric("Gross Profit", f"${pnl_data['gross_profit']:,.0f}", f"{pnl_data['gross_margin']:.1f}%")
+    with pnl_quick_cols[3]:
+        st.metric("OpEx", f"${pnl_data['total_opex']:,.0f}")
+    with pnl_quick_cols[4]:
+        st.metric("EBITDA", f"${pnl_data['ebitda']:,.0f}", f"{pnl_data['ebitda_margin']:.1f}%")
+    
+    st.markdown("---")
+    
+    # 3. 💵 Unit Economics (Expanded)
+    st.markdown("### 💵 Unit Economics")
+    unit_cols = st.columns(5)
+    
+    with unit_cols[0]:
         st.metric("💎 LTV", f"${unit_econ['ltv']:,.0f}")
-    with col2:
+    with unit_cols[1]:
         st.metric("💰 CAC", f"${unit_econ['cac']:,.0f}")
-    with col3:
+    with unit_cols[2]:
         color = "normal" if unit_econ['ltv_cac'] >= 3 else "inverse"
-        st.metric("🎯 LTV:CAC", f"{unit_econ['ltv_cac']:.1f}:1", delta=None, delta_color=color)
-    with col4:
-        st.metric("⏱️ Payback", f"{unit_econ['payback_months']:.1f} mo")
+        st.metric("🎯 LTV:CAC", f"{unit_econ['ltv_cac']:.1f}:1", delta_color=color)
+    with unit_cols[3]:
+        st.metric("⏱️ Payback", f"{unit_econ['payback_months']:.1f} mo", "Target: <12mo")
+    with unit_cols[4]:
+        magic_number = (deal_econ['avg_deal_value'] / 12) / unit_econ['cac'] if unit_econ['cac'] > 0 else 0
+        st.metric("✨ Magic Number", f"{magic_number:.2f}", "Target: >0.75")
+    
+    st.markdown("---")
+    
+    # 4. Sales Activity
+    st.markdown("### 📈 Sales Activity")
+    activity_cols = st.columns(5)
+    
+    with activity_cols[0]:
+        daily_leads = gtm_metrics['monthly_leads'] / working_days if working_days > 0 else 0
+        st.metric("👥 Leads", f"{gtm_metrics['monthly_leads']:,.0f}/mo", f"{daily_leads:.0f}/day")
+    with activity_cols[1]:
+        daily_meetings = current_meetings / working_days if working_days > 0 else 0
+        st.metric("🤝 Meetings", f"{current_meetings:,.0f}/mo", f"{daily_meetings:.0f}/day")
+    with activity_cols[2]:
+        per_closer_sales = gtm_metrics['monthly_sales'] / st.session_state.num_closers_main if st.session_state.num_closers_main > 0 else 0
+        st.metric("✅ Monthly Sales", f"{gtm_metrics['monthly_sales']:.0f}", f"{per_closer_sales:.1f} per closer")
+    with activity_cols[3]:
+        show_up_rate = 0.75  # Default - could be calculated from GTM metrics
+        st.metric("📈 Close Rate", f"{gtm_metrics['blended_close_rate']:.0%}", f"Show-up: {show_up_rate:.0%}")
+    with activity_cols[4]:
+        sales_cycle_days = 30  # Could be configuration
+        velocity = gtm_metrics['monthly_sales'] / sales_cycle_days * 30 if sales_cycle_days > 0 else 0
+        st.metric("🕒 Sales Cycle", f"{sales_cycle_days} days", f"Velocity: {velocity:.0f}/mo")
+    
+    st.markdown("---")
+    
+    # 5. Financial Performance
+    st.markdown("### 💰 Financial Performance")
+    finance_cols = st.columns(5)
+    
+    upfront_cash = deal_econ['avg_deal_value'] * (deal_econ['upfront_pct'] / 100)
+    deferred_cash = deal_econ['avg_deal_value'] * ((100 - deal_econ['upfront_pct']) / 100)
+    
+    with finance_cols[0]:
+        st.metric("💳 CAC", f"${unit_econ['cac']:,.0f}", f"LTV: ${unit_econ['ltv']:,.0f}")
+    with finance_cols[1]:
+        payback_color = "normal" if unit_econ['payback_months'] < 12 else "inverse"
+        st.metric("⏱️ Payback", f"{unit_econ['payback_months']:.1f} mo", "Target: <12m", delta_color=payback_color)
+    with finance_cols[2]:
+        st.metric(
+            "📈 Revenue (Upfront)",
+            f"${gtm_metrics['monthly_revenue_immediate']:,.0f}",
+            f"{deal_econ['upfront_pct']:.0f}% split"
+        )
+    with finance_cols[3]:
+        deferred_revenue = gtm_metrics['monthly_sales'] * deferred_cash
+        st.metric(
+            "📅 Revenue (Deferred)",
+            f"${deferred_revenue:,.0f}",
+            f"{100-deal_econ['upfront_pct']:.0f}% split"
+        )
+    with finance_cols[4]:
+        team_total = (st.session_state.num_closers_main + st.session_state.num_setters_main + 
+                     st.session_state.num_managers_main + st.session_state.num_benchs_main)
+        monthly_opex = marketing_spend + pnl_data['opex']
+        st.metric("🏢 Team", f"{team_total} people", f"Burn: ${monthly_opex:,.0f}/mo")
+    
+    st.markdown("---")
+    
+    # 6. Sales Process & Pipeline Stages
+    st.markdown("### 🔄 Sales Process & Pipeline Stages")
+    st.caption("Track your complete sales funnel from lead to close")
+    
+    # Timeline visualization
+    timeline_data = [
+        {"stage": "Lead Generated", "day": 0, "icon": "👥", "count": gtm_metrics['monthly_leads']},
+        {"stage": "First Contact", "day": 1, "icon": "📞", "count": gtm_metrics.get('monthly_contacts', gtm_metrics['monthly_leads'] * 0.6)},
+        {"stage": "Meeting Scheduled", "day": 3, "icon": "📅", "count": gtm_metrics.get('monthly_meetings_scheduled', current_meetings * 1.3)},
+        {"stage": "Meeting Held", "day": 5, "icon": "🤝", "count": current_meetings},
+        {"stage": "Deal Closed", "day": sales_cycle_days, "icon": "✅", "count": gtm_metrics['monthly_sales']},
+    ]
+    
+    timeline_cols = st.columns(len(timeline_data))
+    
+    for idx, stage_data in enumerate(timeline_data):
+        with timeline_cols[idx]:
+            # Calculate conversion rate from previous stage
+            if idx > 0:
+                prev_count = timeline_data[idx-1]['count']
+                conversion = (stage_data['count'] / prev_count * 100) if prev_count > 0 else 0
+            else:
+                conversion = 100
+            
+            st.metric(
+                f"{stage_data['icon']} {stage_data['stage']}",
+                f"{stage_data['count']:.0f}",
+                f"Day {stage_data['day']} | {conversion:.0f}%" if idx > 0 else f"Day {stage_data['day']}"
+            )
     
     st.markdown("---")
     
@@ -1053,6 +1210,95 @@ with tab3:
                 st.warning(f"⚠️ Moderate EBITDA margin: {pnl_data['ebitda_margin']:.1f}%")
             else:
                 st.error(f"🚨 Low EBITDA margin: {pnl_data['ebitda_margin']:.1f}%")
+    
+    # 7. Channel Funnel Comparison & Revenue Contribution
+    if gtm_metrics.get('channels_breakdown') and len(gtm_metrics['channels_breakdown']) > 0:
+        st.markdown("---")
+        st.markdown("### 📊 Channel Performance Analysis")
+        
+        chart_cols = st.columns(2)
+        
+        with chart_cols[0]:
+            st.markdown("#### 🔄 Channel Funnel Comparison")
+            
+            # Create funnel chart for each channel
+            funnel_fig = go.Figure()
+            
+            for ch_data in gtm_metrics['channels_breakdown']:
+                # Calculate funnel stages
+                leads = ch_data['leads']
+                contacts = leads * 0.6  # Assume 60% contact rate
+                meetings_scheduled = contacts * 0.3  # 30% to meeting
+                meetings_held = meetings_scheduled * 0.75  # 75% show up
+                sales = ch_data['sales']
+                
+                funnel_fig.add_trace(go.Funnel(
+                    name=ch_data['name'],
+                    y=['Leads', 'Contacts', 'Meetings Scheduled', 'Meetings Held', 'Sales'],
+                    x=[leads, contacts, meetings_scheduled, meetings_held, sales],
+                    textinfo="value+percent initial"
+                ))
+            
+            funnel_fig.update_layout(
+                title="Multi-Channel Funnel Flow",
+                height=450,
+                showlegend=True
+            )
+            
+            st.plotly_chart(funnel_fig, use_container_width=True, key="channel_funnel")
+        
+        with chart_cols[1]:
+            st.markdown("#### 💰 Revenue Contribution")
+            
+            # Create pie chart for revenue distribution
+            revenue_data = {
+                'Channel': [ch['name'] for ch in gtm_metrics['channels_breakdown']],
+                'Revenue': [ch['revenue'] for ch in gtm_metrics['channels_breakdown']]
+            }
+            
+            pie_fig = go.Figure(data=[go.Pie(
+                labels=revenue_data['Channel'],
+                values=revenue_data['Revenue'],
+                hole=0.4,
+                textinfo='label+percent',
+                hovertemplate='<b>%{label}</b><br>Revenue: $%{value:,.0f}<br>%{percent}<extra></extra>'
+            )])
+            
+            pie_fig.update_layout(
+                title="Revenue Distribution by Channel",
+                height=450,
+                showlegend=True,
+                legend=dict(
+                    orientation="v",
+                    yanchor="middle",
+                    y=0.5,
+                    xanchor="left",
+                    x=1.05
+                )
+            )
+            
+            st.plotly_chart(pie_fig, use_container_width=True, key="revenue_contribution")
+        
+        # Channel Performance Table
+        st.markdown("#### 📈 Channel Performance Breakdown")
+        
+        channel_perf_df = pd.DataFrame(gtm_metrics['channels_breakdown'])
+        
+        # Format for display
+        display_df = channel_perf_df[['name', 'segment', 'leads', 'sales', 'revenue', 'roas', 'close_rate']].copy()
+        display_df.columns = ['Channel', 'Segment', 'Leads', 'Sales', 'Revenue', 'ROAS', 'Close Rate']
+        
+        st.dataframe(
+            display_df.style.format({
+                'Leads': '{:,.0f}',
+                'Sales': '{:.1f}',
+                'Revenue': '${:,.0f}',
+                'ROAS': '{:.2f}x',
+                'Close Rate': '{:.1%}'
+            }),
+            use_container_width=True,
+            hide_index=True
+        )
 
 # ============= TAB 4: WHAT-IF ANALYSIS =============
 with tab4:
