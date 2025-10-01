@@ -57,6 +57,13 @@ except ImportError as e:
     st.error(f"Module import error: {e}")
     st.stop()
 
+# Import Deal Economics Manager (single source of truth)
+try:
+    from deal_economics_manager import DealEconomicsManager, CommissionCalculator
+except ImportError:
+    st.error("⚠️ Could not import DealEconomicsManager. Please ensure deal_economics_manager.py is in the same directory.")
+    st.stop()
+
 # ============= TRANSLATION SYSTEM =============
 TRANSLATIONS = {
     'en': {
@@ -538,14 +545,25 @@ onboard_rate = st.session_state.get('default_onboard_rate', 0.95)
 
 grr_rate = st.session_state.get('grr_rate_main', 0.90)
 
-avg_pm = st.session_state.get('avg_pm_value', 3000)
-contract_years = st.session_state.get('contract_years_value', 25)
-carrier_rate = st.session_state.get('carrier_rate_value', 0.027)
+# ============= DEAL ECONOMICS - SINGLE SOURCE OF TRUTH =============
+# Get current deal economics from Deal Economics Manager
+# This replaces all hardcoded deal values and uses actual user inputs
+deal_econ = DealEconomicsManager.get_current_deal_economics()
 
-total_contract_value = avg_pm * contract_years * 12
-total_comp = total_contract_value * carrier_rate
-comp_immediate = total_comp * 0.70
-comp_deferred = total_comp * 0.30
+# Extract values for backward compatibility
+avg_deal_value = deal_econ['avg_deal_value']
+upfront_pct = deal_econ['upfront_pct']
+deferred_pct = deal_econ['deferred_pct']
+comp_immediate = deal_econ['upfront_cash']
+comp_deferred = deal_econ['deferred_cash']
+contract_length_months = deal_econ['contract_length_months']
+
+# Legacy values (kept for compatibility with old code that references them)
+avg_pm = avg_deal_value / contract_length_months if contract_length_months > 0 else avg_deal_value
+contract_years = contract_length_months / 12
+carrier_rate = 1.0  # Not applicable in new model, kept for compatibility
+total_contract_value = avg_deal_value
+total_comp = avg_deal_value
 
 default_roles_comp = {
     'closer': {'count': num_closers, 'base': 32000, 'variable': 48000, 'ote': 80000, 'label': 'Closer'},
@@ -629,24 +647,40 @@ try:
 except:
     revenue_timeline = []
 
-# Current month values - safe calculations
-monthly_revenue_immediate = max(monthly_sales, 0) * comp_immediate
-monthly_revenue_deferred = 0  # Month 1 has no deferred
-monthly_revenue_total = monthly_revenue_immediate
+# Current month values - using Deal Economics Manager
+rev_calc = DealEconomicsManager.calculate_monthly_revenue(
+    max(monthly_sales, 0), 
+    deal_econ, 
+    include_deferred=False, 
+    month_number=1
+)
+monthly_revenue_immediate = rev_calc['upfront_revenue']
+monthly_revenue_deferred = rev_calc['deferred_revenue']
+monthly_revenue_total = rev_calc['total_revenue']
 
-# Month 18 values (if applicable)
+# Month 18 values (if applicable) - using Deal Economics Manager
 if projection_months >= 18:
-    month_18_revenue_immediate = monthly_sales * comp_immediate
-    month_18_revenue_deferred = monthly_sales * comp_deferred * grr_rate
+    rev_calc_18 = DealEconomicsManager.calculate_monthly_revenue(
+        max(monthly_sales, 0),
+        deal_econ,
+        include_deferred=True,
+        month_number=18
+    )
+    month_18_revenue_immediate = rev_calc_18['upfront_revenue']
+    month_18_revenue_deferred = rev_calc_18['deferred_revenue'] * grr_rate
     month_18_revenue_total = month_18_revenue_immediate + month_18_revenue_deferred
 else:
     month_18_revenue_immediate = monthly_revenue_immediate
     month_18_revenue_deferred = 0
     month_18_revenue_total = monthly_revenue_total
 
-# Cost structure for P&L
+# Cost structure for P&L - using Deal Economics Manager for commissions
 monthly_marketing = cost_breakdown.get('total_marketing_spend', cost_breakdown.get('cost_per_lead', 0) * monthly_leads)
-monthly_commissions = monthly_revenue_immediate * (closer_comm_pct + setter_comm_pct)
+
+# Calculate commissions using Deal Economics Manager
+comm_calc = DealEconomicsManager.calculate_monthly_commission(max(monthly_sales, 0), roles_comp, deal_econ)
+monthly_commissions = comm_calc['total_commission']
+
 monthly_base_salaries = comp_structure['monthly_base']
 monthly_opex = office_rent + software_costs + other_opex
 monthly_costs_before_fees = monthly_marketing + monthly_commissions + monthly_base_salaries + monthly_opex
@@ -1893,59 +1927,45 @@ with tabs[0]:
         flow_cols = st.columns([2, 1])
         
         with flow_cols[0]:
-            # Get actual revenue and calculate pools
+            # ✅ FIXED: Use Deal Economics Manager for all calculations
             actual_revenue = gtm_metrics.get('monthly_revenue_immediate', monthly_revenue_immediate) if 'gtm_metrics' in locals() else monthly_revenue_immediate
             actual_sales_count = gtm_metrics.get('monthly_sales', monthly_sales) if 'gtm_metrics' in locals() else monthly_sales
             
-            # Get commission percentages from role configs
-            closer_comm_rate = roles_comp.get('closer', {}).get('commission_pct', 20.0) / 100
-            setter_comm_rate = roles_comp.get('setter', {}).get('commission_pct', 3.0) / 100
-            manager_comm_rate = roles_comp.get('manager', {}).get('commission_pct', 5.0) / 100
-            
-            # Get commission multiplier (upfront vs full)
-            comm_multiplier = st.session_state.get('commission_multiplier', 1.0)
-            upfront_pct_val = st.session_state.get('upfront_payment_pct', 70.0) / 100
+            # Get current deal economics
+            current_deal_econ = DealEconomicsManager.get_current_deal_economics()
             
             # Per-deal or monthly
             if "Per Deal" in flow_view or "Por Negocio" in flow_view:
-                # Unit case - per deal (use the actual deal value from deal economics)
-                avg_deal_value_calculated = st.session_state.get('avg_deal_value', 50000)
+                # ✅ Unit case - per deal using Deal Economics Manager
+                per_deal_comm = DealEconomicsManager.calculate_per_deal_commission(roles_comp, current_deal_econ)
                 
-                # Get upfront portion of the deal
-                revenue_per_deal = avg_deal_value_calculated * upfront_pct_val
-                
-                # Apply commission policy
-                if comm_multiplier < 1.0:
-                    # Upfront only - commission on upfront cash only
-                    deal_for_commission = revenue_per_deal
-                else:
-                    # Full deal - commission on full deal value
-                    deal_for_commission = avg_deal_value_calculated
-                
-                closer_pool = deal_for_commission * closer_comm_rate
-                setter_pool = deal_for_commission * setter_comm_rate  
-                manager_pool = deal_for_commission * manager_comm_rate
+                closer_pool = per_deal_comm['closer_pool']
+                setter_pool = per_deal_comm['setter_pool']
+                manager_pool = per_deal_comm['manager_pool']
+                deal_for_commission = per_deal_comm['commission_base']
                 stakeholder_pool = 0  # Stakeholders get EBITDA, not per-deal commission
                 
-                upfront_pct_display = int(st.session_state.get('upfront_payment_pct', 70.0))
-                title_text = f"Per Deal: ${avg_deal_value_calculated:,.0f} ({'Upfront (' + str(upfront_pct_display) + '%)' if comm_multiplier < 1.0 else 'Full (100%)'}) → Commissions"
-            else:
-                # Monthly total
-                if comm_multiplier < 1.0:
-                    # Upfront only - revenue already represents upfront
-                    revenue_for_commission = actual_revenue
-                else:
-                    # Full deal - convert upfront revenue to full deal value
-                    revenue_for_commission = actual_revenue / upfront_pct_val if upfront_pct_val > 0 else actual_revenue
+                avg_deal_value_calculated = current_deal_econ['avg_deal_value']
+                revenue_per_deal = current_deal_econ['upfront_cash']
+                upfront_pct_display = int(current_deal_econ['upfront_pct'])
                 
-                closer_pool = revenue_for_commission * closer_comm_rate
-                setter_pool = revenue_for_commission * setter_comm_rate
-                manager_pool = revenue_for_commission * manager_comm_rate
-                # Calculate stakeholder pool from EBITDA (will calculate below)
+                policy_display = "Upfront (" + str(upfront_pct_display) + "%)" if per_deal_comm['policy'] == 'upfront' else "Full (100%)"
+                title_text = f"Per Deal: ${avg_deal_value_calculated:,.0f} ({policy_display}) → Commissions"
+            else:
+                # ✅ Monthly total using Deal Economics Manager
+                monthly_comm = DealEconomicsManager.calculate_monthly_commission(
+                    actual_sales_count, roles_comp, current_deal_econ
+                )
+                
+                closer_pool = monthly_comm['closer_pool']
+                setter_pool = monthly_comm['setter_pool']
+                manager_pool = monthly_comm['manager_pool']
+                revenue_for_commission = monthly_comm['commission_base']
                 stakeholder_pool = 0  # Placeholder
                 
-                upfront_pct_display = int(st.session_state.get('upfront_payment_pct', 70.0))
-                title_text = f"Revenue → Pools → Per Person ({'Upfront (' + str(upfront_pct_display) + '%)' if comm_multiplier < 1.0 else 'Full (100%)'} Base)"
+                upfront_pct_display = int(current_deal_econ['upfront_pct'])
+                policy_display = "Upfront (" + str(upfront_pct_display) + "%)" if monthly_comm['per_deal']['policy'] == 'upfront' else "Full (100%)"
+                title_text = f"Revenue → Pools → Per Person ({policy_display} Base)"
             
             # Create flow diagram
             fig_flow = go.Figure()
@@ -2089,126 +2109,48 @@ with tabs[0]:
         
         working_days = st.session_state.get('working_days', 20)
         
-        period_data = []
+        # ✅ FIXED: Use CommissionCalculator from Deal Economics Manager
+        actual_sales_for_period = gtm_metrics.get('monthly_sales', monthly_sales) if 'gtm_metrics' in locals() else monthly_sales
+        team_counts = {
+            'closer': num_closers_calc,
+            'setter': num_setters_calc,
+            'manager': num_managers_calc,
+            'bench': st.session_state.get('num_benchs_main', num_bench)
+        }
         
-        # Add stakeholder to the mix
-        all_roles = ['closer', 'setter', 'manager', 'bench', 'stakeholder']
+        period_data = CommissionCalculator.calculate_period_earnings(
+            roles_comp, actual_sales_for_period, team_counts, working_days
+        )
         
-        for role_key in all_roles:
-            if role_key == 'stakeholder':
-                # Stakeholders get EBITDA distribution, not salary
-                stakeholder_pct = st.session_state.get('stakeholder_pct', 10.0)
-                
-                # Calculate EBITDA for stakeholder distribution
-                if 'gtm_metrics' in locals():
-                    monthly_rev = gtm_metrics.get('monthly_revenue_immediate', actual_revenue)
-                    
-                    # Get commission rates from role configs
-                    closer_rate = roles_comp.get('closer', {}).get('commission_pct', 20.0) / 100
-                    setter_rate = roles_comp.get('setter', {}).get('commission_pct', 3.0) / 100
-                    manager_rate = roles_comp.get('manager', {}).get('commission_pct', 5.0) / 100
-                    
-                    # Calculate commission base
-                    comm_mult = st.session_state.get('commission_multiplier', 1.0)
-                    upfront_pct_calc = st.session_state.get('upfront_payment_pct', 70.0) / 100
-                    
-                    if comm_mult < 1.0:
-                        rev_for_comm = monthly_rev
-                    else:
-                        rev_for_comm = monthly_rev / upfront_pct_calc if upfront_pct_calc > 0 else monthly_rev
-                    
-                    total_comm = (rev_for_comm * closer_rate) + (rev_for_comm * setter_rate) + (rev_for_comm * manager_rate)
-                    cogs = total_monthly_base + total_comm
-                    gross_profit = monthly_rev - cogs
-                    monthly_opex = st.session_state.get('monthly_opex', 100000)
-                    ebitda = gross_profit - monthly_opex
-                    
-                    if ebitda > 0:
-                        stake_monthly = ebitda * (stakeholder_pct / 100)
-                        stake_daily = stake_monthly / 30
-                        stake_weekly = stake_monthly / 4.33
-                        stake_annual = stake_monthly * 12
-                        
-                        period_data.append({
-                            'Role': 'Stakeholders',
-                            'Count': 1,
-                            'Daily': f"${stake_daily:,.0f}",
-                            'Weekly': f"${stake_weekly:,.0f}",
-                            'Monthly': f"${stake_monthly:,.0f}",
-                            'Annual': f"${stake_annual:,.0f}",
-                            'vs OTE': f"{stakeholder_pct:.1f}% EBITDA"
-                        })
-                # Continue to next iteration (skip the rest of the loop for stakeholders)
-                continue
-                
-            role_count = st.session_state.get(f'num_{role_key}s_main', 0)
-            if role_count > 0:
-                role_config = roles_comp[role_key]
-                
-                base_monthly = role_config['base']
-                base_daily = base_monthly / 30
-                base_weekly = base_monthly / 4.33
-                base_annual = base_monthly * 12
-                
-                # Commission (only for closer/setter/manager)
-                # Use the monthly pools calculated above with commission multiplier
-                if role_key == 'closer':
-                    monthly_rev = gtm_metrics.get('monthly_revenue_immediate', actual_revenue) if 'gtm_metrics' in locals() else actual_revenue
-                    # Get commission percentage from role config
-                    role_comm_pct = roles_comp.get('closer', {}).get('commission_pct', 20.0) / 100
-                    comm_multiplier = st.session_state.get('commission_multiplier', 1.0)
-                    upfront_pct_val = st.session_state.get('upfront_payment_pct', 70.0) / 100
-                    
-                    # Apply commission policy
-                    if comm_multiplier < 1.0:
-                        revenue_for_commission = monthly_rev  # Upfront only
-                    else:
-                        revenue_for_commission = monthly_rev / upfront_pct_val if upfront_pct_val > 0 else monthly_rev  # Full deal
-                    
-                    comm_pool_monthly = revenue_for_commission * role_comm_pct
-                    comm_monthly = comm_pool_monthly / num_closers_calc if num_closers_calc > 0 else 0
-                elif role_key == 'setter':
-                    monthly_rev = gtm_metrics.get('monthly_revenue_immediate', actual_revenue) if 'gtm_metrics' in locals() else actual_revenue
-                    role_comm_pct = roles_comp.get('setter', {}).get('commission_pct', 3.0) / 100
-                    comm_multiplier = st.session_state.get('commission_multiplier', 1.0)
-                    upfront_pct_val = st.session_state.get('upfront_payment_pct', 70.0) / 100
-                    
-                    if comm_multiplier < 1.0:
-                        revenue_for_commission = monthly_rev
-                    else:
-                        revenue_for_commission = monthly_rev / upfront_pct_val if upfront_pct_val > 0 else monthly_rev
-                    
-                    comm_pool_monthly = revenue_for_commission * role_comm_pct
-                    comm_monthly = comm_pool_monthly / num_setters_calc if num_setters_calc > 0 else 0
-                elif role_key == 'manager':
-                    monthly_rev = gtm_metrics.get('monthly_revenue_immediate', actual_revenue) if 'gtm_metrics' in locals() else actual_revenue
-                    role_comm_pct = roles_comp.get('manager', {}).get('commission_pct', 5.0) / 100
-                    comm_multiplier = st.session_state.get('commission_multiplier', 1.0)
-                    upfront_pct_val = st.session_state.get('upfront_payment_pct', 70.0) / 100
-                    
-                    if comm_multiplier < 1.0:
-                        revenue_for_commission = monthly_rev
-                    else:
-                        revenue_for_commission = monthly_rev / upfront_pct_val if upfront_pct_val > 0 else monthly_rev
-                    
-                    comm_pool_monthly = revenue_for_commission * role_comm_pct
-                    comm_monthly = comm_pool_monthly / num_managers_calc if num_managers_calc > 0 else 0
-                else:
-                    comm_monthly = 0
-                
-                comm_daily = comm_monthly / working_days
-                comm_weekly = comm_monthly / 4.33
-                comm_annual = comm_monthly * 12
-                
-                period_data.append({
-                    'Role': role_key.capitalize(),
-                    'Count': role_count,
-                    'Daily': f"${base_daily + comm_daily:,.0f}",
-                    'Weekly': f"${base_weekly + comm_weekly:,.0f}",
-                    'Monthly': f"${base_monthly + comm_monthly:,.0f}",
-                    'Annual': f"${base_annual + comm_annual:,.0f}",
-                    'vs OTE': f"{((base_monthly + comm_monthly)/role_config['ote']*100):.0f}%" if role_config['ote'] > 0 else "N/A"
-                })
+        # ✅ Add stakeholder earnings (EBITDA-based) - simplified
+        stakeholder_pct = st.session_state.get('stakeholder_pct', 10.0)
+        
+        # Calculate EBITDA using current values
+        actual_revenue_for_ebitda = gtm_metrics.get('monthly_revenue_immediate', monthly_revenue_immediate) if 'gtm_metrics' in locals() else monthly_revenue_immediate
+        
+        # Use already calculated commission from Deal Economics Manager
+        monthly_comm_total = comm_calc['total_commission']
+        total_monthly_base = comp_structure['monthly_base']
+        cogs = total_monthly_base + monthly_comm_total
+        gross_profit = actual_revenue_for_ebitda - cogs
+        monthly_opex_calc = office_rent + software_costs + other_opex
+        ebitda = gross_profit - monthly_opex_calc
+        
+        if ebitda > 0:
+            stake_monthly = ebitda * (stakeholder_pct / 100)
+            stake_daily = stake_monthly / 30
+            stake_weekly = stake_monthly / 4.33
+            stake_annual = stake_monthly * 12
+            
+            period_data.append({
+                'Role': 'Stakeholders',
+                'Count': 1,
+                'Daily': f"${stake_daily:,.0f}",
+                'Weekly': f"${stake_weekly:,.0f}",
+                'Monthly': f"${stake_monthly:,.0f}",
+                'Annual': f"${stake_annual:,.0f}",
+                'vs OTE': f"{stakeholder_pct:.1f}% EBITDA"
+            })
         
         if period_data:
             st.dataframe(
@@ -2510,6 +2452,41 @@ with tabs[0]:
                 )
             else:
                 st.metric(t('deferred_cash', lang), "$0", "No deferred payment" if lang == 'en' else "Sin pago diferido")
+        
+        # Commission Payment Policy
+        st.markdown("---")
+        st.markdown("**💰 Commission Payment Policy**")
+        st.info(f"🎯 {t('commission_policy', lang)}")
+        
+        policy_cols = st.columns([2, 1])
+        with policy_cols[0]:
+            commission_policy = st.radio(
+                t('pay_commissions_from', lang),
+                [t('upfront_cash_only', lang), t('full_deal_value', lang)],
+                index=0 if st.session_state.get('commission_policy', 'upfront') == 'upfront' else 1,
+                horizontal=True,
+                key="commission_policy_selector",
+                help="Choose whether commissions are calculated on upfront cash only or full deal value"
+            )
+            
+            # Store policy in session state
+            if "Upfront" in commission_policy or "Inicial" in commission_policy:
+                st.session_state['commission_policy'] = 'upfront'
+            else:
+                st.session_state['commission_policy'] = 'full'
+        
+        with policy_cols[1]:
+            # Show commission base amount
+            policy_val = st.session_state.get('commission_policy', 'upfront')
+            if policy_val == 'upfront':
+                comm_base_amount = comp_immediate_val
+                comm_base_label = f"${comm_base_amount:,.0f} ({upfront_pct:.0f}%)"
+            else:
+                comm_base_amount = avg_deal_value
+                comm_base_label = f"${comm_base_amount:,.0f} (100%)"
+            
+            st.metric(t('commission_base', lang), comm_base_label)
+            st.caption("This is the base amount for commission calculations")
         
         # Additional context
         st.markdown("---")
