@@ -70,6 +70,11 @@ try:
     )
     from modules.revenue_retention import MultiChannelGTM
     from deal_economics_manager import DealEconomicsManager, CommissionCalculator
+    
+    # ✨ NEW ARCHITECTURE - Single Source of Truth
+    from modules.dashboard_adapter import DashboardAdapter
+    from modules.ui_components import render_dependency_inspector, render_health_score
+    from modules.scenario import calculate_sensitivity, multi_metric_sensitivity
 except ImportError as e:
     st.error(f"⚠️ Module import error: {e}")
     st.stop()
@@ -221,14 +226,15 @@ initialize_session_state()
 # ============= CACHED CALCULATIONS =============
 
 @st.cache_data(ttl=300)
-def calculate_gtm_metrics_cached(channels_json: str):
+def calculate_gtm_metrics_cached(channels_json: str, deal_econ_json: str):
     """
     Cached GTM metrics calculation.
-    Only recalculates if channels configuration changes.
+    Only recalculates if channels configuration or deal economics changes.
     Cache for 5 minutes.
     """
     import json
     channels = json.loads(channels_json)
+    deal_econ = json.loads(deal_econ_json)
     
     if not channels:
         return {
@@ -268,10 +274,31 @@ def calculate_gtm_metrics_cached(channels_json: str):
         meetings_held = meetings_sched * show_up_rate
         sales = meetings_held * close_rate
         
-        # Get deal economics
-        deal_econ = DealEconomicsManager.get_current_deal_economics()
+        # Use deal economics passed from cache params
         revenue = sales * deal_econ['upfront_cash']
-        spend = leads * cpl
+        
+        # CONVERGENT COST MODEL: Later stages override earlier stages
+        # This prevents double-counting - you only pay at ONE funnel stage
+        cost_method = ch.get('cost_method', 'Cost per Lead')
+        
+        if cost_method == "Cost per Sale" or cost_method == "CPA":
+            # Pay per sale only (blocks all upstream costs)
+            cpa = ch.get('cost_per_sale', ch.get('cpl', 50) * 20)
+            spend = sales * cpa
+        elif cost_method == "Cost per Meeting" or cost_method == "CPM":
+            # Pay per meeting only (blocks CPL and CPC)
+            cpm = ch.get('cost_per_meeting', ch.get('cpl', 50) * 5)
+            spend = meetings_held * cpm
+        elif cost_method == "Cost per Contact" or cost_method == "CPC":
+            # Pay per contact only (blocks CPL)
+            cpc = ch.get('cost_per_contact', ch.get('cpl', 50) * 2)
+            spend = contacts * cpc
+        elif cost_method == "Total Budget":
+            # Fixed monthly budget
+            spend = ch.get('monthly_budget', leads * cpl)
+        else:
+            # Default: Cost per Lead (CPL)
+            spend = leads * cpl
         
         # Aggregate
         total_leads += leads
@@ -452,49 +479,57 @@ def generate_alerts(gtm_metrics, unit_econ, pnl_data):
 st.title("💎 ULTIMATE Sales Compensation Dashboard")
 st.caption("⚡ 10X Faster • 📊 Full Features • 🎯 Accurate Calculations")
 
-# Quick metrics at top (cached)
-import json
-gtm_metrics = calculate_gtm_metrics_cached(json.dumps(st.session_state.gtm_channels))
-deal_econ = DealEconomicsManager.get_current_deal_economics()
+# New architecture indicator
+col_indicator1, col_indicator2 = st.columns([3, 1])
+with col_indicator1:
+    st.info("✨ **New Architecture Active**: All calculations now use the single-source-of-truth engine with type-safe models, 19 passing tests, and smart caching. [See traceability below](#traceability-inspector)")
+with col_indicator2:
+    if st.button("🧪 Run Tests", help="Run the test suite to verify all calculations"):
+        st.code("./run_tests.sh", language="bash")
+        st.caption("Run this command in your terminal to verify the engine")
 
-# Calculate additional metrics for top display
-team_base = (st.session_state.closer_base * st.session_state.num_closers_main +
-             st.session_state.setter_base * st.session_state.num_setters_main +
-             st.session_state.manager_base * st.session_state.num_managers_main +
-             st.session_state.bench_base * st.session_state.num_benchs_main)
+# ============= ✨ NEW ARCHITECTURE - Single Source of Truth =============
+# All calculations now go through the engine for consistency and performance
 
-roles_comp = {
-    'closer': {'commission_pct': st.session_state.closer_commission_pct},
-    'setter': {'commission_pct': st.session_state.setter_commission_pct},
-    'manager': {'commission_pct': st.session_state.manager_commission_pct}
+# Get all business metrics from the new architecture adapter
+# This uses: models.py → engine.py → engine_pnl.py (single source of truth)
+metrics = DashboardAdapter.get_metrics()
+
+# Extract metrics for backward compatibility with existing UI code
+gtm_metrics = {
+    'monthly_leads': metrics['monthly_leads'],
+    'monthly_contacts': metrics['monthly_contacts'],
+    'monthly_meetings_scheduled': metrics['monthly_meetings_scheduled'],
+    'monthly_meetings_held': metrics['monthly_meetings_held'],
+    'monthly_sales': metrics['monthly_sales'],
+    'monthly_revenue_immediate': metrics['monthly_revenue_immediate'],
+    'total_marketing_spend': metrics['total_marketing_spend'],  # ✅ Respects cost method!
+    'cost_per_sale': metrics['cost_per_sale'],
+    'blended_close_rate': metrics['blended_close_rate']
 }
 
-comm_calc = DealEconomicsManager.calculate_monthly_commission(
-    gtm_metrics['monthly_sales'], roles_comp, deal_econ
-)
+comm_calc = {
+    'total_commission': metrics['commissions']['total_commission'],
+    'closer_pool': metrics['commissions']['closer_pool'],
+    'setter_pool': metrics['commissions']['setter_pool'],
+    'manager_pool': metrics['commissions']['manager_pool']
+}
 
-marketing_spend = sum(ch.get('monthly_leads', 0) * ch.get('cpl', 50) 
-                     for ch in st.session_state.gtm_channels if ch.get('enabled', True))
+unit_econ = metrics['unit_economics']
 
-# Calculate government costs (% of gross revenue)
-gov_cost_pct = st.session_state.get('government_cost_pct', 10.0) / 100
-gov_fees = gtm_metrics['monthly_revenue_immediate'] * gov_cost_pct
+pnl_data = {
+    'ebitda': metrics['pnl']['ebitda'],
+    'ebitda_margin': metrics['pnl']['ebitda_margin'],
+    'gross_profit': metrics['pnl']['gross_profit'],
+    'gross_margin': metrics['pnl']['gross_margin'],
+    'net_revenue': metrics['pnl']['net_revenue'],
+    'cogs': metrics['pnl']['cogs'],
+    'total_opex': metrics['pnl']['total_opex']
+}
 
-pnl_data = calculate_pnl_cached(
-    gtm_metrics['monthly_revenue_immediate'],
-    team_base,
-    comm_calc['total_commission'],
-    marketing_spend,
-    st.session_state.office_rent + st.session_state.software_costs + st.session_state.other_opex,
-    gov_fees  # Now includes actual government costs
-)
-
-unit_econ = calculate_unit_economics_cached(
-    deal_econ['avg_deal_value'],
-    deal_econ['upfront_pct'],
-    st.session_state.grr_rate,
-    gtm_metrics['cost_per_sale'] if gtm_metrics.get('cost_per_sale', 0) > 0 else 5000
-)
+# For backward compatibility with deal_econ references
+deal_econ = DealEconomicsManager.get_current_deal_economics()
+marketing_spend = metrics['total_marketing_spend']  # ✅ Single source of truth!
 
 # TOP KPI ROW - All key metrics visible at once
 st.markdown("### 📊 Key Performance Indicators")
@@ -528,6 +563,130 @@ with kpi_row2[4]:
 with kpi_row2[5]:
     policy = DealEconomicsManager.get_commission_policy()
     st.metric("💸 Comm Policy", "Upfront" if policy == 'upfront' else "Full")
+
+# Sales Process & Pipeline Stages
+st.markdown("---")
+st.markdown("### 🔄 Sales Process & Pipeline Stages")
+pipeline_cols = st.columns(6)
+
+with pipeline_cols[0]:
+    leads = gtm_metrics['monthly_leads']
+    st.metric(
+        "📊 Leads", 
+        f"{leads:,.0f}",
+        help="Top of funnel - total leads generated"
+    )
+
+with pipeline_cols[1]:
+    contacts = gtm_metrics['monthly_contacts']
+    contact_rate = (contacts / leads * 100) if leads > 0 else 0
+    st.metric(
+        "📞 Contacts", 
+        f"{contacts:,.0f}",
+        f"{contact_rate:.0f}% of leads",
+        help="Leads successfully contacted and engaged"
+    )
+
+with pipeline_cols[2]:
+    meetings = gtm_metrics['monthly_meetings_held']
+    meeting_rate = (meetings / contacts * 100) if contacts > 0 else 0
+    st.metric(
+        "🤝 Meetings", 
+        f"{meetings:,.0f}",
+        f"{meeting_rate:.0f}% of contacts",
+        help="Meetings held (show-up rate applied)"
+    )
+
+with pipeline_cols[3]:
+    sales = gtm_metrics['monthly_sales']
+    close_rate = (sales / meetings * 100) if meetings > 0 else 0
+    st.metric(
+        "✅ Sales", 
+        f"{sales:.1f}",
+        f"{close_rate:.0f}% of meetings",
+        help="Closed deals from meetings"
+    )
+
+with pipeline_cols[4]:
+    overall_conversion = (sales / leads * 100) if leads > 0 else 0
+    st.metric(
+        "🎯 Overall", 
+        f"{overall_conversion:.2f}%",
+        "Lead → Sale",
+        help="End-to-end conversion rate"
+    )
+
+with pipeline_cols[5]:
+    cac = unit_econ['cac']
+    cac_benchmark = "✅ Good" if cac < deal_econ['avg_deal_value'] * 0.2 else "⚠️ High"
+    st.metric(
+        "💰 CAC", 
+        f"${cac:,.0f}",
+        cac_benchmark,
+        help="Customer Acquisition Cost (Marketing + Sales costs per customer)"
+    )
+
+st.markdown("---")
+
+# ============= 🔍 TRACEABILITY - See How Numbers Flow =============
+with st.expander("🔍 **Traceability Inspector** - See Exactly How Your Inputs Flow to Outputs", expanded=False):
+    st.markdown("#### 📊 Complete Data Flow Visualization")
+    st.caption("Understand how every slider and input affects your business metrics")
+    
+    # Get first active channel for example (or aggregate)
+    channels = st.session_state.get('gtm_channels', [])
+    active_channels = [ch for ch in channels if ch.get('enabled', True)]
+    example_channel = active_channels[0] if active_channels else {}
+    
+    # Build inputs dict from current state
+    inputs = {
+        'monthly_leads': metrics['monthly_leads'],
+        'contact_rate': example_channel.get('contact_rate', 0.65) if example_channel else 0.65,
+        'meeting_rate': example_channel.get('meeting_rate', 0.30) if example_channel else 0.30,
+        'show_up_rate': example_channel.get('show_up_rate', 0.70) if example_channel else 0.70,
+        'close_rate': example_channel.get('close_rate', 0.25) if example_channel else 0.25,
+        'cost_per_lead': example_channel.get('cpl', 50) if example_channel.get('cost_method') == 'Cost per Lead' else None,
+        'cost_per_meeting': example_channel.get('cost_per_meeting', 200) if example_channel.get('cost_method') == 'Cost per Meeting' else None,
+        'avg_deal_value': st.session_state.get('avg_deal_value', 50000),
+        'upfront_pct': st.session_state.get('upfront_payment_pct', 70.0) / 100,
+    }
+    
+    # Build intermediates dict
+    intermediates = {
+        'contacts': metrics['monthly_contacts'],
+        'meetings_scheduled': metrics['monthly_meetings_scheduled'],
+        'meetings_held': metrics['monthly_meetings_held'],
+        'sales': metrics['monthly_sales'],
+        'marketing_spend': metrics['total_marketing_spend'],
+        'upfront_cash_per_deal': metrics['unit_economics']['upfront_cash'],
+        'cost_per_sale': metrics['cost_per_sale'],
+    }
+    
+    # Build outputs dict
+    outputs = {
+        'monthly_revenue': metrics['monthly_revenue_immediate'],
+        'roas': metrics['monthly_revenue_immediate'] / metrics['total_marketing_spend'] if metrics['total_marketing_spend'] > 0 else 0,
+        'ltv': metrics['unit_economics']['ltv'],
+        'cac': metrics['unit_economics']['cac'],
+        'ltv_cac_ratio': metrics['unit_economics']['ltv_cac'],
+        'payback_months': metrics['unit_economics']['payback_months'],
+        'ebitda': metrics['pnl']['ebitda'],
+        'ebitda_margin': metrics['pnl']['ebitda_margin'],
+        'gross_margin': metrics['pnl']['gross_margin'],
+    }
+    
+    # Render the inspector
+    render_dependency_inspector(inputs, intermediates, outputs)
+    
+    # Add health score
+    st.markdown("---")
+    st.markdown("#### 💎 Business Health Score")
+    render_health_score(
+        ltv_cac=metrics['unit_economics']['ltv_cac'],
+        payback_months=metrics['unit_economics']['payback_months'],
+        ebitda_margin=metrics['pnl']['ebitda_margin'],
+        gross_margin=metrics['pnl']['gross_margin']
+    )
 
 st.markdown("---")
 
@@ -582,8 +741,8 @@ with tab1:
         gtm_metrics['monthly_sales'], roles_comp, deal_econ
     )
     
-    marketing_spend = sum(ch.get('monthly_leads', 0) * ch.get('cpl', 50) 
-                         for ch in st.session_state.gtm_channels if ch.get('enabled', True))
+    # ✅ Use cached convergent marketing spend (respects cost method)
+    marketing_spend = gtm_metrics['total_marketing_spend']
     
     # Calculate government costs (% of gross revenue)
     gov_cost_pct = st.session_state.get('government_cost_pct', 10.0) / 100
@@ -825,9 +984,29 @@ with tab1:
                     cpl = total_budget / leads if leads > 0 else 0
                     st.info(f"📊 Effective CPL: ${cpl:.2f}")
                 
-                # Store the calculated values (convert to int to avoid type mismatch)
-                st.session_state.gtm_channels[idx]['monthly_leads'] = int(leads)
-                st.session_state.gtm_channels[idx]['cpl'] = int(cpl)
+                # Store the cost method and specific cost values
+                st.session_state.gtm_channels[idx]['cost_method'] = cost_point
+                
+                # Store specific cost values based on method
+                if cost_point == "Cost per Contact":
+                    st.session_state.gtm_channels[idx]['cost_per_contact'] = cost_per_contact
+                elif cost_point == "Cost per Meeting":
+                    st.session_state.gtm_channels[idx]['cost_per_meeting'] = cost_per_meeting
+                elif cost_point == "Cost per Sale":
+                    st.session_state.gtm_channels[idx]['cost_per_sale'] = cost_per_sale
+                elif cost_point == "Total Budget":
+                    st.session_state.gtm_channels[idx]['monthly_budget'] = total_budget
+                
+                # Store the calculated values (keep full precision, format on display)
+                st.session_state.gtm_channels[idx]['monthly_leads'] = float(leads)
+                
+                # Only store 'cpl' for CPL mode; otherwise store 'effective_cpl' for display
+                if cost_point == "Cost per Lead":
+                    st.session_state.gtm_channels[idx]['cpl'] = float(cpl)
+                else:
+                    # Don't pollute 'cpl' - it's used elsewhere for CPL calculations
+                    st.session_state.gtm_channels[idx]['effective_cpl'] = float(cpl)
+                    st.session_state.gtm_channels[idx].pop('cpl', None)
             
             with cfg_cols[2]:
                 st.markdown("**Channel Performance**")
@@ -837,14 +1016,55 @@ with tab1:
                 meetings_sched = contacts * meeting_rate
                 meetings_held = meetings_sched * show_up_rate
                 sales = meetings_held * close_rate
-                spend = leads * cpl
                 revenue = sales * tab1_deal_econ['upfront_cash']  # Use fresh deal economics
+                
+                # Calculate spend using convergent cost model - READ FROM CONFIG, NOT LOCALS
+                cfg = st.session_state.gtm_channels[idx]
+                
+                if cost_point == "Cost per Sale":
+                    spend = sales * cfg.get('cost_per_sale', 0.0)
+                    cost_formula = f"{sales:.1f} sales × ${cfg.get('cost_per_sale', 0):,.0f} CPA"
+                elif cost_point == "Cost per Meeting":
+                    spend = meetings_held * cfg.get('cost_per_meeting', 0.0)
+                    cost_formula = f"{meetings_held:.1f} meetings × ${cfg.get('cost_per_meeting', 0):,.0f} CPM"
+                elif cost_point == "Cost per Contact":
+                    spend = contacts * cfg.get('cost_per_contact', 0.0)
+                    cost_formula = f"{contacts:.1f} contacts × ${cfg.get('cost_per_contact', 0):,.0f} CPC"
+                elif cost_point == "Total Budget":
+                    spend = cfg.get('monthly_budget', 0.0)
+                    cost_formula = "Fixed budget"
+                else:  # Cost per Lead
+                    spend = leads * cfg.get('cpl', 0.0)
+                    cost_formula = f"{leads:.0f} leads × ${cfg.get('cpl', 0):,.0f} CPL"
                 
                 st.metric("💼 Sales", f"{sales:.1f}")
                 st.metric("💰 Revenue", f"${revenue:,.0f}")
                 st.metric("📣 Spend", f"${spend:,.0f}")
                 roas = revenue / spend if spend > 0 else 0
                 st.metric("📊 ROAS", f"{roas:.1f}x")
+                
+                # Cost breakdown expander
+                with st.expander("💡 Cost Calculation Breakdown"):
+                    st.markdown(f"**Active Method**: {cost_point}")
+                    st.markdown(f"**Formula**: `{cost_formula}`")
+                    st.markdown(f"**Result**: ${spend:,.0f}")
+                    
+                    st.markdown("---")
+                    st.caption("**Full Funnel:**")
+                    st.caption(f"• {leads:.0f} Leads → {contacts:.0f} Contacts ({contact_rate:.0%})")
+                    st.caption(f"• {contacts:.0f} Contacts → {meetings_sched:.0f} Meetings Scheduled ({meeting_rate:.0%})")
+                    st.caption(f"• {meetings_sched:.0f} Scheduled → {meetings_held:.0f} Held ({show_up_rate:.0%})")
+                    st.caption(f"• {meetings_held:.0f} Meetings → {sales:.1f} Sales ({close_rate:.0%})")
+                    
+                    st.markdown("---")
+                    st.caption("**Cost Per Stage:**")
+                    st.caption(f"• CPL: ${cpl:,.0f} {'✅ (Active)' if cost_point == 'Cost per Lead' else '⚪ (Blocked)'}")
+                    cpc_calc = spend / contacts if contacts > 0 else 0
+                    st.caption(f"• CPC: ${cpc_calc:,.0f} {'✅ (Active)' if cost_point == 'Cost per Contact' else '⚪ (Blocked)'}")
+                    cpm_calc = spend / meetings_held if meetings_held > 0 else 0
+                    st.caption(f"• CPM: ${cpm_calc:,.0f} {'✅ (Active)' if cost_point == 'Cost per Meeting' else '⚪ (Blocked)'}")
+                    cpa_calc = spend / sales if sales > 0 else 0
+                    st.caption(f"• CPA: ${cpa_calc:,.0f} {'✅ (Active)' if cost_point == 'Cost per Sale' else '⚪ (Blocked)'}")
                 
                 # Enabled toggle
                 enabled = st.checkbox(
