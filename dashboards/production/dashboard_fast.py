@@ -158,6 +158,7 @@ def initialize_session_state():
     """Initialize all session state variables with defaults"""
     defaults = {
         'initialized': True,
+        'prevent_rerun': False,  # Flag to prevent unnecessary reruns
         
         # Deal Economics
         'avg_deal_value': 50000,
@@ -1703,8 +1704,8 @@ with tab5:
                     template = templates[business_type]
                     for key, value in template.items():
                         st.session_state[key] = value
-                    st.success(f"✅ Applied {business_type} template!")
-                    st.rerun()
+                    st.success(f"✅ Applied {business_type} template! Change any value below to update.")
+                    # Note: Removed st.rerun() - let widgets update naturally on next interaction
         
         st.markdown("---")
         
@@ -2463,8 +2464,8 @@ with tab5:
                     if 'gtm_channels' in loaded_config:
                         st.session_state['gtm_channels'] = loaded_config['gtm_channels']
                     
-                    st.success("✅ Configuration loaded successfully!")
-                    st.rerun()
+                    st.success("✅ Configuration loaded! Interact with any widget to see changes.")
+                    # Note: Removed st.rerun() to prevent page refresh
             
             except Exception as e:
                 st.error(f"❌ Error loading config: {str(e)}")
@@ -2532,8 +2533,8 @@ with tab5:
                     if 'gtm_channels' in loaded_config:
                         st.session_state['gtm_channels'] = loaded_config['gtm_channels']
                     
-                    st.success("✅ Configuration applied successfully!")
-                    st.rerun()
+                    st.success("✅ Configuration applied! Interact with any widget to see changes.")
+                    # Note: Removed st.rerun() to prevent page refresh
                 
                 except Exception as e:
                     st.error(f"❌ Error parsing JSON: {str(e)}")
