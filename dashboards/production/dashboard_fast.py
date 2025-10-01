@@ -884,6 +884,74 @@ with tab1:
                 'roas': '{:.2f}x',
                 'close_rate': '{:.1%}'
             }), use_container_width=True, hide_index=True)
+    
+    # Channel Performance Analysis (detailed charts)
+    if gtm_metrics.get('channels_breakdown') and len(gtm_metrics['channels_breakdown']) > 0:
+        st.markdown("---")
+        st.markdown("### 📊 Channel Performance Analysis")
+        
+        chart_cols = st.columns(2)
+        
+        with chart_cols[0]:
+            st.markdown("#### 🔄 Channel Funnel Comparison")
+            
+            # Create funnel chart for each channel
+            funnel_fig = go.Figure()
+            
+            for ch_data in gtm_metrics['channels_breakdown']:
+                # Calculate funnel stages (use actual data from gtm_metrics calculation)
+                leads = ch_data['leads']
+                contacts = leads * 0.6  # Assume 60% contact rate (could be from channel config)
+                meetings_scheduled = contacts * 0.3  # 30% to meeting
+                meetings_held = meetings_scheduled * 0.75  # 75% show up
+                sales = ch_data['sales']
+                
+                funnel_fig.add_trace(go.Funnel(
+                    name=ch_data['name'],
+                    y=['Leads', 'Contacts', 'Meetings Scheduled', 'Meetings Held', 'Sales'],
+                    x=[leads, contacts, meetings_scheduled, meetings_held, sales],
+                    textinfo="value+percent initial"
+                ))
+            
+            funnel_fig.update_layout(
+                title="Multi-Channel Funnel Flow",
+                height=450,
+                showlegend=True
+            )
+            
+            st.plotly_chart(funnel_fig, use_container_width=True, key="gtm_channel_funnel")
+        
+        with chart_cols[1]:
+            st.markdown("#### 💰 Revenue Contribution")
+            
+            # Create pie chart for revenue distribution
+            revenue_data = {
+                'Channel': [ch['name'] for ch in gtm_metrics['channels_breakdown']],
+                'Revenue': [ch['revenue'] for ch in gtm_metrics['channels_breakdown']]
+            }
+            
+            pie_fig = go.Figure(data=[go.Pie(
+                labels=revenue_data['Channel'],
+                values=revenue_data['Revenue'],
+                hole=0.4,
+                textinfo='label+percent',
+                hovertemplate='<b>%{label}</b><br>Revenue: $%{value:,.0f}<br>%{percent}<extra></extra>'
+            )])
+            
+            pie_fig.update_layout(
+                title="Revenue Distribution by Channel",
+                height=450,
+                showlegend=True,
+                legend=dict(
+                    orientation="v",
+                    yanchor="middle",
+                    y=0.5,
+                    xanchor="left",
+                    x=1.05
+                )
+            )
+            
+            st.plotly_chart(pie_fig, use_container_width=True, key="gtm_revenue_contribution")
 
 # ============= TAB 2: COMPENSATION STRUCTURE =============
 with tab2:
