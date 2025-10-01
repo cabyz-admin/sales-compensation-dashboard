@@ -941,6 +941,7 @@ with tab2:
             
             # Show commission base (based on policy), not full deal value
             commission_base = per_deal_comm['commission_base']
+            revenue_display = commission_base  # Use commission base for display
             policy = DealEconomicsManager.get_commission_policy()
             policy_label = "Upfront" if policy == 'upfront' else "Full"
             title_text = f"Per Deal: ${commission_base:,.0f} ({policy_label}) → Commissions"
