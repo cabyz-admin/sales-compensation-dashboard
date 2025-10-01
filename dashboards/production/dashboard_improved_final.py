@@ -1112,7 +1112,19 @@ with st.sidebar:
                     st.session_state['contract_length_months'] = deal_econ.get('contract_length_months', 12)
                     st.session_state['upfront_payment_pct'] = deal_econ.get('upfront_payment_pct', 70.0)
                     st.session_state['deferred_timing_months'] = deal_econ.get('deferred_timing_months', 18)
-                    st.session_state['business_type_template_display'] = deal_econ.get('business_type', 'Custom')
+                    
+                    # Convert English business type to localized display
+                    business_type_loaded = deal_econ.get('business_type', 'Custom')
+                    # Reverse map: English -> Translated
+                    reverse_map = {
+                        'Custom': t('custom', lang),
+                        'Insurance': t('insurance', lang),
+                        'SaaS/Subscription': t('saas', lang),
+                        'Consulting/Services': t('consulting', lang),
+                        'Agency/Retainer': t('agency', lang),
+                        'One-Time Sale': t('one_time_sale', lang)
+                    }
+                    st.session_state['business_type_template_display'] = reverse_map.get(business_type_loaded, t('custom', lang))
                 
                 # Load commission policy
                 if 'commission_policy' in loaded_config:
@@ -1178,7 +1190,19 @@ with st.sidebar:
                     st.session_state['contract_length_months'] = deal_econ.get('contract_length_months', 12)
                     st.session_state['upfront_payment_pct'] = deal_econ.get('upfront_payment_pct', 70.0)
                     st.session_state['deferred_timing_months'] = deal_econ.get('deferred_timing_months', 18)
-                    st.session_state['business_type_template_display'] = deal_econ.get('business_type', 'Custom')
+                    
+                    # Convert English business type to localized display
+                    business_type_loaded = deal_econ.get('business_type', 'Custom')
+                    # Reverse map: English -> Translated
+                    reverse_map = {
+                        'Custom': t('custom', lang),
+                        'Insurance': t('insurance', lang),
+                        'SaaS/Subscription': t('saas', lang),
+                        'Consulting/Services': t('consulting', lang),
+                        'Agency/Retainer': t('agency', lang),
+                        'One-Time Sale': t('one_time_sale', lang)
+                    }
+                    st.session_state['business_type_template_display'] = reverse_map.get(business_type_loaded, t('custom', lang))
                 
                 # Load commission policy
                 if 'commission_policy' in loaded_config:
