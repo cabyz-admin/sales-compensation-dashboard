@@ -1217,107 +1217,126 @@ with tabs[0]:
         roles_comp = st.session_state.roles_comp_custom
         
         # Display each role's compensation
-        role_tabs = st.tabs(["💼 Closers", "📞 Setters", "👔 Managers", "🏋 Bench"])
+        role_tabs = st.tabs(["💼 Closers", "📞 Setters", "👔 Managers", "🏋 Bench", "👔 Stakeholders"])
         
-        for idx, (role_key, tab) in enumerate(zip(['closer', 'setter', 'manager', 'bench'], role_tabs)):
+        for idx, (role_key, tab) in enumerate(zip(['closer', 'setter', 'manager', 'bench', 'stakeholder'], role_tabs)):
             with tab:
-                role_config = roles_comp[role_key]
-                
-                comp_col1, comp_col2, comp_col3 = st.columns(3)
-                
-                with comp_col1:
-                    st.markdown(f"**Monthly Compensation**")
+                if role_key == 'stakeholder':
+                    # Stakeholders Tab
+                    st.markdown("### 👔 Stakeholders (Profit Distribution)")
+                    st.info("💡 Stakeholders receive a percentage of EBITDA after all operating costs")
                     
-                    base_salary = st.number_input(
-                        "Base Salary ($)",
-                        min_value=0,
-                        max_value=200000,
-                        value=int(role_config.get('base', 32000)),
-                        step=1000,
-                        key=f"{role_key}_base",
-                        help="Fixed monthly salary regardless of performance"
-                    )
+                    stake_cols = st.columns([2, 2])
                     
-                    variable_comp = st.number_input(
-                        "Variable Comp ($)",
-                        min_value=0,
-                        max_value=300000,
-                        value=int(role_config.get('variable', 48000)),
-                        step=1000,
-                        key=f"{role_key}_variable",
-                        help="Monthly variable compensation at target (commissions, bonuses)"
-                    )
+                    with stake_cols[0]:
+                        stakeholder_pct = st.number_input(
+                            "Stakeholder Profit Share (%)",
+                            min_value=0.0,
+                            max_value=50.0,
+                            value=st.session_state.get('stakeholder_pct', 10.0),
+                            step=0.5,
+                            key="stakeholder_pct_input",
+                            help="Percentage of EBITDA distributed to stakeholders/owners"
+                        )
+                        st.session_state['stakeholder_pct'] = stakeholder_pct
+                        
+                        st.markdown("**📊 Distribution Source:**")
+                        st.caption("✅ Comes from EBITDA (after all team costs + OpEx)")
+                        st.caption("✅ Remaining EBITDA stays in business for growth")
+                        st.caption("✅ Typical range: 5-25% for healthy businesses")
                     
-                    ote = base_salary + variable_comp
+                    with stake_cols[1]:
+                        st.markdown("**💰 Projected Distribution:**")
+                        
+                        # Calculate stakeholder payout (need to get EBITDA from main calculations)
+                        # For now, show placeholder - will be calculated in summary
+                        if 'monthly_ebitda' in locals() and monthly_ebitda > 0:
+                            stakeholder_monthly = monthly_ebitda * (stakeholder_pct / 100)
+                            ebitda_after_stake = monthly_ebitda - stakeholder_monthly
+                            
+                            st.metric("Monthly Distribution", f"${stakeholder_monthly:,.0f}")
+                            st.metric("Annual Distribution", f"${stakeholder_monthly * 12:,.0f}")
+                            st.metric("EBITDA After Distribution", f"${ebitda_after_stake:,.0f}")
+                            
+                            # Show as % of revenue
+                            if 'monthly_revenue_total' in locals() and monthly_revenue_total > 0:
+                                stake_pct_rev = (stakeholder_monthly / monthly_revenue_total * 100)
+                                st.metric("As % of Revenue", f"{stake_pct_rev:.1f}%")
+                        else:
+                            st.caption("💡 EBITDA will be calculated from revenue and costs")
+                            st.caption("Distribution amounts will appear here once data is available")
+                else:
+                    # Regular role tabs (Closer, Setter, Manager, Bench)
+                    role_config = roles_comp[role_key]
                     
-                    # Update role config
-                    role_config['base'] = base_salary
-                    role_config['variable'] = variable_comp
-                    role_config['ote'] = ote
-                
-                with comp_col2:
-                    st.markdown(f"**Compensation Breakdown**")
+                    comp_col1, comp_col2, comp_col3 = st.columns(3)
                     
-                    # Show pie chart of base vs variable
-                    base_pct = (base_salary / ote * 100) if ote > 0 else 50
-                    variable_pct = (variable_comp / ote * 100) if ote > 0 else 50
+                    with comp_col1:
+                        st.markdown(f"**Monthly Compensation**")
+                        
+                        base_salary = st.number_input(
+                            "Base Salary ($)",
+                            min_value=0,
+                            max_value=200000,
+                            value=int(role_config.get('base', 32000)),
+                            step=1000,
+                            key=f"{role_key}_base",
+                            help="Fixed monthly salary regardless of performance"
+                        )
+                        
+                        variable_comp = st.number_input(
+                            "Variable Comp ($)",
+                            min_value=0,
+                            max_value=300000,
+                            value=int(role_config.get('variable', 48000)),
+                            step=1000,
+                            key=f"{role_key}_variable",
+                            help="Monthly variable compensation at target (commissions, bonuses)"
+                        )
+                        
+                        ote = base_salary + variable_comp
+                        
+                        # Update role config
+                        role_config['base'] = base_salary
+                        role_config['variable'] = variable_comp
+                        role_config['ote'] = ote
                     
-                    st.metric("Total OTE", f"${ote:,.0f}/mo", f"${ote*12:,.0f}/yr")
-                    st.metric("Base %", f"{base_pct:.0f}%")
-                    st.metric("Variable %", f"{variable_pct:.0f}%")
+                    with comp_col2:
+                        st.markdown(f"**Compensation Breakdown**")
+                        
+                        # Show pie chart of base vs variable
+                        base_pct = (base_salary / ote * 100) if ote > 0 else 50
+                        variable_pct = (variable_comp / ote * 100) if ote > 0 else 50
+                        
+                        st.metric("Total OTE", f"${ote:,.0f}/mo", f"${ote*12:,.0f}/yr")
+                        st.metric("Base %", f"{base_pct:.0f}%")
+                        st.metric("Variable %", f"{variable_pct:.0f}%")
+                        
+                        # Show risk profile
+                        if base_pct >= 75:
+                            st.success("🟢 Low Risk (High Base)")
+                        elif base_pct >= 50:
+                            st.info("🔵 Balanced Risk")
+                        else:
+                            st.warning("🟡 High Risk (High Variable)")
                     
-                    # Show risk profile
-                    if base_pct >= 75:
-                        st.success("🟢 Low Risk (High Base)")
-                    elif base_pct >= 50:
-                        st.info("🔵 Balanced Risk")
-                    else:
-                        st.warning("🟡 High Risk (High Variable)")
-                
-                with comp_col3:
-                    st.markdown(f"**Team Cost Impact**")
-                    
-                    # Get count from main team inputs
-                    role_count = st.session_state.get(f'num_{role_key}s_main', role_config.get('count', 0))
-                    
-                    monthly_base_cost = base_salary * role_count
-                    monthly_ote_cost = ote * role_count
-                    annual_ote_cost = monthly_ote_cost * 12
-                    
-                    st.metric("Team Count", f"{role_count}")
-                    st.metric("Monthly Base Cost", f"${monthly_base_cost:,.0f}")
-                    st.metric("Monthly OTE Cost", f"${monthly_ote_cost:,.0f}")
-                    st.metric("Annual OTE Cost", f"${annual_ote_cost:,.0f}")
+                    with comp_col3:
+                        st.markdown(f"**Team Cost Impact**")
+                        
+                        # Get count from main team inputs
+                        role_count = st.session_state.get(f'num_{role_key}s_main', role_config.get('count', 0))
+                        
+                        monthly_base_cost = base_salary * role_count
+                        monthly_ote_cost = ote * role_count
+                        annual_ote_cost = monthly_ote_cost * 12
+                        
+                        st.metric("Team Count", f"{role_count}")
+                        st.metric("Monthly Base Cost", f"${monthly_base_cost:,.0f}")
+                        st.metric("Monthly OTE Cost", f"${monthly_ote_cost:,.0f}")
+                        st.metric("Annual OTE Cost", f"${annual_ote_cost:,.0f}")
         
-        # Stakeholders Configuration
-        st.markdown("---")
-        st.markdown("### 👔 Stakeholders (% of EBITDA)")
-        
-        stake_cols = st.columns([2, 1, 1])
-        
-        with stake_cols[0]:
-            stakeholder_pct = st.slider(
-                "Stakeholder Profit Share (%)",
-                min_value=0.0,
-                max_value=50.0,
-                value=st.session_state.get('stakeholder_pct', 10.0),
-                step=0.5,
-                help="Percentage of EBITDA distributed to stakeholders/owners"
-            )
-            st.session_state['stakeholder_pct'] = stakeholder_pct
-        
-        with stake_cols[1]:
-            # Calculate stakeholder payout (need to get EBITDA)
-            if 'monthly_ebitda' in locals() and monthly_ebitda > 0:
-                stakeholder_monthly = monthly_ebitda * (stakeholder_pct / 100)
-                st.metric("Monthly Distribution", f"${stakeholder_monthly:,.0f}")
-                st.metric("Annual Distribution", f"${stakeholder_monthly * 12:,.0f}")
-            else:
-                st.caption("EBITDA calculations will show here")
-        
-        with stake_cols[2]:
-            st.caption("📊 This comes from EBITDA after all team costs and OpEx")
-            st.caption("💡 Remaining EBITDA stays in business")
+        # Get stakeholder percentage
+        stakeholder_pct = st.session_state.get('stakeholder_pct', 10.0)
         
         # Summary section
         st.markdown("---")
@@ -1356,7 +1375,7 @@ with tabs[0]:
                 stakeholder_annual = monthly_ebitda * (stakeholder_pct / 100) * 12
                 st.metric("Stakeholder Annual", f"${stakeholder_annual:,.0f}", f"{stakeholder_pct}% EBITDA")
             else:
-                st.metric("Stakeholder Share", f"{stakeholder_pct}%")
+                st.metric("Stakeholder Share", f"{stakeholder_pct:.1f}%")
         
         # Show EBITDA impact
         st.markdown("**💰 EBITDA Impact:**")
