@@ -1950,6 +1950,9 @@ with tab5:
     with st.expander("🎯 Revenue Targets", expanded=False):
         st.info("💡 Set your revenue goals - converts between periods automatically")
         
+        # Get fresh deal economics (in case user just changed them above)
+        current_deal_econ = DealEconomicsManager.get_current_deal_economics()
+        
         rev_cols = st.columns(3)
         
         with rev_cols[0]:
@@ -2025,7 +2028,7 @@ with tab5:
             
             # Calculate sales needed based on current deal economics
             current_revenue = gtm_metrics['monthly_revenue_immediate']
-            sales_needed = monthly_revenue_target / deal_econ['upfront_cash'] if deal_econ['upfront_cash'] > 0 else 0
+            sales_needed = monthly_revenue_target / current_deal_econ['upfront_cash'] if current_deal_econ['upfront_cash'] > 0 else 0
             current_sales = gtm_metrics['monthly_sales']
             
             st.metric(
@@ -2035,7 +2038,8 @@ with tab5:
             )
             st.metric(
                 "Revenue per Sale",
-                f"${deal_econ['upfront_cash']:,.0f}"
+                f"${current_deal_econ['upfront_cash']:,.0f}",
+                help="From Deal Economics (upfront cash per deal)"
             )
             
             # Achievement percentage
@@ -2051,7 +2055,7 @@ with tab5:
             # Gap analysis
             if achievement < 100:
                 gap = monthly_revenue_target - current_revenue
-                sales_gap = gap / deal_econ['upfront_cash'] if deal_econ['upfront_cash'] > 0 else 0
+                sales_gap = gap / current_deal_econ['upfront_cash'] if current_deal_econ['upfront_cash'] > 0 else 0
                 st.caption(f"⚠️ Need {sales_gap:.0f} more sales to hit target")
             else:
                 st.caption(f"✅ Target exceeded by ${current_revenue - monthly_revenue_target:,.0f}")
