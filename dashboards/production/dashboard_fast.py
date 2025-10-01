@@ -898,12 +898,31 @@ with tab1:
             # Create funnel chart for each channel
             funnel_fig = go.Figure()
             
-            for ch_data in gtm_metrics['channels_breakdown']:
-                # Calculate funnel stages (use actual data from gtm_metrics calculation)
+            # Get actual channel configs to use real conversion rates
+            for idx, ch_data in enumerate(gtm_metrics['channels_breakdown']):
+                # Find matching channel config to get actual rates
+                channel_config = None
+                for ch in st.session_state.gtm_channels:
+                    if ch['name'] == ch_data['name'] and ch.get('enabled', True):
+                        channel_config = ch
+                        break
+                
+                # Calculate funnel stages using ACTUAL conversion rates from config
                 leads = ch_data['leads']
-                contacts = leads * 0.6  # Assume 60% contact rate (could be from channel config)
-                meetings_scheduled = contacts * 0.3  # 30% to meeting
-                meetings_held = meetings_scheduled * 0.75  # 75% show up
+                if channel_config:
+                    contact_rate = channel_config.get('contact_rate', 0.6)
+                    meeting_rate = channel_config.get('meeting_rate', 0.3)
+                    show_up_rate = channel_config.get('show_up_rate', 0.7)
+                    
+                    contacts = leads * contact_rate
+                    meetings_scheduled = contacts * meeting_rate
+                    meetings_held = meetings_scheduled * show_up_rate
+                else:
+                    # Fallback if config not found
+                    contacts = leads * 0.6
+                    meetings_scheduled = contacts * 0.3
+                    meetings_held = meetings_scheduled * 0.7
+                
                 sales = ch_data['sales']
                 
                 funnel_fig.add_trace(go.Funnel(
@@ -1484,12 +1503,31 @@ with tab3:
             # Create funnel chart for each channel
             funnel_fig = go.Figure()
             
+            # Get actual channel configs to use real conversion rates
             for ch_data in gtm_metrics['channels_breakdown']:
-                # Calculate funnel stages
+                # Find matching channel config to get actual rates
+                channel_config = None
+                for ch in st.session_state.gtm_channels:
+                    if ch['name'] == ch_data['name'] and ch.get('enabled', True):
+                        channel_config = ch
+                        break
+                
+                # Calculate funnel stages using ACTUAL conversion rates from config
                 leads = ch_data['leads']
-                contacts = leads * 0.6  # Assume 60% contact rate
-                meetings_scheduled = contacts * 0.3  # 30% to meeting
-                meetings_held = meetings_scheduled * 0.75  # 75% show up
+                if channel_config:
+                    contact_rate = channel_config.get('contact_rate', 0.6)
+                    meeting_rate = channel_config.get('meeting_rate', 0.3)
+                    show_up_rate = channel_config.get('show_up_rate', 0.7)
+                    
+                    contacts = leads * contact_rate
+                    meetings_scheduled = contacts * meeting_rate
+                    meetings_held = meetings_scheduled * show_up_rate
+                else:
+                    # Fallback if config not found
+                    contacts = leads * 0.6
+                    meetings_scheduled = contacts * 0.3
+                    meetings_held = meetings_scheduled * 0.7
+                
                 sales = ch_data['sales']
                 
                 funnel_fig.add_trace(go.Funnel(
