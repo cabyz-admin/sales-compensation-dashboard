@@ -199,6 +199,185 @@ def create_business_performance_dashboard(
                 </div>
                 """, unsafe_allow_html=True)
         
+        # P&L Flow Visualization
+        st.markdown("---")
+        st.markdown("### 📊 P&L Flow Visualization")
+        
+        pnl_cols = st.columns([2, 1])
+        
+        with pnl_cols[0]:
+            # Calculate P&L components with actual data
+            # COGS (team compensation + commissions)
+            team_base = financial_metrics.get('monthly_compensation', 200000)
+            commission_total = revenue * 0.23  # 20% closer + 3% setter
+            cogs = team_base + commission_total
+            
+            # Gross Profit
+            gross_profit = revenue - cogs
+            
+            # OpEx (operational costs)
+            monthly_opex = financial_metrics.get('monthly_opex', 35000) + financial_metrics.get('monthly_marketing', 100000)
+            
+            # EBITDA
+            ebitda = gross_profit - monthly_opex
+            
+            # Stakeholder Distribution
+            stakeholder_pct = st.session_state.get('stakeholder_pct', 10.0)
+            stakeholder_distribution = ebitda * (stakeholder_pct / 100) if ebitda > 0 else 0
+            
+            # Net (retained in business)
+            net_retained = ebitda - stakeholder_distribution
+            
+            # Create P&L flow diagram
+            fig_pnl = go.Figure()
+            
+            # Revenue (top)
+            fig_pnl.add_trace(go.Scatter(
+                x=[1], y=[7],
+                mode='markers+text',
+                marker=dict(size=110, color='#3b82f6'),
+                text=[f"Revenue<br>${revenue:,.0f}"],
+                textfont=dict(color='white', size=12),
+                textposition="middle center",
+                showlegend=False,
+                hovertemplate='<b>Total Revenue</b><br>$%{text}<extra></extra>'
+            ))
+            
+            # COGS (subtract)
+            fig_pnl.add_trace(go.Scatter(
+                x=[2.5], y=[7],
+                mode='markers+text',
+                marker=dict(size=90, color='#ef4444'),
+                text=[f"COGS<br>-${cogs:,.0f}"],
+                textfont=dict(color='white', size=11),
+                textposition="middle center",
+                showlegend=False,
+                hovertemplate='<b>Cost of Goods Sold</b><br>Team + Commissions<extra></extra>'
+            ))
+            
+            # Gross Profit
+            fig_pnl.add_trace(go.Scatter(
+                x=[4], y=[7],
+                mode='markers+text',
+                marker=dict(size=95, color='#22c55e'),
+                text=[f"Gross Profit<br>${gross_profit:,.0f}"],
+                textfont=dict(color='white', size=11),
+                textposition="middle center",
+                showlegend=False,
+                hovertemplate='<b>Gross Profit</b><br>Revenue - COGS<extra></extra>'
+            ))
+            
+            # OpEx (subtract)
+            fig_pnl.add_trace(go.Scatter(
+                x=[2.5], y=[5],
+                mode='markers+text',
+                marker=dict(size=80, color='#ef4444'),
+                text=[f"OpEx<br>-${monthly_opex:,.0f}"],
+                textfont=dict(color='white', size=10),
+                textposition="middle center",
+                showlegend=False,
+                hovertemplate='<b>Operating Expenses</b><br>Marketing + Fixed Costs<extra></extra>'
+            ))
+            
+            # EBITDA
+            ebitda_color = '#22c55e' if ebitda > 0 else '#ef4444'
+            fig_pnl.add_trace(go.Scatter(
+                x=[4], y=[5],
+                mode='markers+text',
+                marker=dict(size=100, color=ebitda_color),
+                text=[f"EBITDA<br>${ebitda:,.0f}"],
+                textfont=dict(color='white', size=12),
+                textposition="middle center",
+                showlegend=False,
+                hovertemplate='<b>EBITDA</b><br>Earnings Before Interest, Tax, D&A<extra></extra>'
+            ))
+            
+            # Stakeholder Distribution (subtract)
+            if stakeholder_distribution > 0:
+                fig_pnl.add_trace(go.Scatter(
+                    x=[2.5], y=[3],
+                    mode='markers+text',
+                    marker=dict(size=75, color='#f59e0b'),
+                    text=[f"Stakeholders<br>-${stakeholder_distribution:,.0f}"],
+                    textfont=dict(color='white', size=10),
+                    textposition="middle center",
+                    showlegend=False,
+                    hovertemplate=f'<b>Stakeholder Distribution</b><br>{stakeholder_pct}% of EBITDA<extra></extra>'
+                ))
+            
+            # Net Retained
+            net_color = '#22c55e' if net_retained > 0 else '#ef4444'
+            fig_pnl.add_trace(go.Scatter(
+                x=[4], y=[3],
+                mode='markers+text',
+                marker=dict(size=90, color=net_color),
+                text=[f"Retained<br>${net_retained:,.0f}"],
+                textfont=dict(color='white', size=11),
+                textposition="middle center",
+                showlegend=False,
+                hovertemplate='<b>Net Retained in Business</b><br>For growth & reserves<extra></extra>'
+            ))
+            
+            # Add arrows
+            arrows = [
+                # Revenue → COGS
+                (2, 7, 1.3, 7),
+                # COGS → Gross Profit
+                (3.5, 7, 2.8, 7),
+                # Gross Profit → OpEx
+                (3, 6, 4, 6.7),
+                # OpEx → EBITDA
+                (3.5, 5, 2.8, 5),
+            ]
+            
+            if stakeholder_distribution > 0:
+                arrows.extend([
+                    # EBITDA → Stakeholders
+                    (3, 4, 4, 4.7),
+                    # Stakeholders → Net
+                    (3.5, 3, 2.8, 3),
+                ])
+            
+            for x, y, ax, ay in arrows:
+                fig_pnl.add_annotation(
+                    x=x, y=y, ax=ax, ay=ay,
+                    xref="x", yref="y", axref="x", ayref="y",
+                    arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="#94a3b8"
+                )
+            
+            fig_pnl.update_layout(
+                height=450,
+                showlegend=False,
+                xaxis=dict(visible=False, range=[0, 5]),
+                yaxis=dict(visible=False, range=[2, 8]),
+                margin=dict(l=0, r=0, t=30, b=0),
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                title=dict(text="Revenue → COGS → Gross Profit → OpEx → EBITDA → Distribution", 
+                          font=dict(size=13, color='#e2e8f0'))
+            )
+            
+            st.plotly_chart(fig_pnl, use_container_width=True, key="exec_pnl_flow")
+        
+        with pnl_cols[1]:
+            st.markdown("**💰 P&L Metrics**")
+            
+            # Key margins
+            gross_margin = (gross_profit / revenue * 100) if revenue > 0 else 0
+            ebitda_margin_calc = (ebitda / revenue * 100) if revenue > 0 else 0
+            net_margin = (net_retained / revenue * 100) if revenue > 0 else 0
+            
+            st.metric("Gross Margin", f"{gross_margin:.1f}%")
+            st.metric("EBITDA Margin", f"{ebitda_margin_calc:.1f}%", 
+                     "🟢 Healthy" if ebitda_margin_calc > 20 else "🟡 Fair" if ebitda_margin_calc > 10 else "🔴 Low")
+            st.metric("Net Margin", f"{net_margin:.1f}%")
+            
+            st.markdown("---")
+            st.markdown("**📈 Benchmarks:**")
+            st.caption("• Gross Margin: >60% good")
+            st.caption("• EBITDA Margin: >20% healthy")
+            st.caption("• COGS as % Rev: <40% target")
+        
         # Business Health Score, Insights & Actions removed - now in sidebar for better visibility
     
     with perf_tabs[1]:  # Performance Metrics
