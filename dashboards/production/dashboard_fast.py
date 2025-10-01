@@ -641,14 +641,14 @@ with tab1:
                     cpl = st.number_input(
                         "Cost per Lead ($)",
                         min_value=0,
-                        value=channel.get('cpl', 50),
+                        value=int(channel.get('cpl', 50)),
                         step=5,
                         key=f"ch_cpl_{channel['id']}"
                     )
                     leads = st.number_input(
                         "Monthly Leads",
                         min_value=0,
-                        value=channel.get('monthly_leads', 500),
+                        value=int(channel.get('monthly_leads', 500)),
                         step=50,
                         key=f"ch_leads_{channel['id']}"
                     )
@@ -657,14 +657,14 @@ with tab1:
                     cost_per_contact = st.number_input(
                         "Cost per Contact ($)",
                         min_value=0,
-                        value=channel.get('cost_per_contact', 75),
+                        value=int(channel.get('cost_per_contact', 75)),
                         step=10,
                         key=f"ch_cpc_{channel['id']}"
                     )
                     contacts_target = st.number_input(
                         "Monthly Contacts Target",
                         min_value=0,
-                        value=channel.get('contacts_target', 300),
+                        value=int(channel.get('contacts_target', 300)),
                         step=50,
                         key=f"ch_contacts_{channel['id']}"
                     )
@@ -676,14 +676,14 @@ with tab1:
                     cost_per_meeting = st.number_input(
                         "Cost per Meeting ($)",
                         min_value=0,
-                        value=channel.get('cost_per_meeting', 200),
+                        value=int(channel.get('cost_per_meeting', 200)),
                         step=25,
                         key=f"ch_cpm_{channel['id']}"
                     )
                     meetings_target = st.number_input(
                         "Monthly Meetings Target",
                         min_value=0,
-                        value=channel.get('meetings_target', 20),
+                        value=int(channel.get('meetings_target', 20)),
                         step=5,
                         key=f"ch_meetings_{channel['id']}"
                     )
@@ -694,14 +694,14 @@ with tab1:
                     cost_per_sale = st.number_input(
                         "Cost per Sale ($)",
                         min_value=0,
-                        value=channel.get('cost_per_sale', 500),
+                        value=int(channel.get('cost_per_sale', 500)),
                         step=50,
                         key=f"ch_cps_{channel['id']}"
                     )
                     sales_target = st.number_input(
                         "Monthly Sales Target",
                         min_value=0,
-                        value=channel.get('sales_target', 5),
+                        value=int(channel.get('sales_target', 5)),
                         step=1,
                         key=f"ch_sales_{channel['id']}"
                     )
@@ -712,14 +712,14 @@ with tab1:
                     total_budget = st.number_input(
                         "Total Budget ($)",
                         min_value=0,
-                        value=channel.get('total_budget', 25000),
+                        value=int(channel.get('total_budget', 25000)),
                         step=1000,
                         key=f"ch_budget_{channel['id']}"
                     )
                     leads = st.number_input(
                         "Estimated Monthly Leads",
                         min_value=1,
-                        value=channel.get('monthly_leads', 500),
+                        value=int(channel.get('monthly_leads', 500)),
                         step=50,
                         key=f"ch_leads_budget_{channel['id']}"
                     )
