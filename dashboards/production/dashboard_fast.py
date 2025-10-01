@@ -2255,25 +2255,78 @@ with tab5:
     
     # Compensation Configuration
     with st.expander("💵 Compensation Configuration", expanded=False):
+        st.info("💡 **3-Tier Comp Model**: Base (guaranteed) + Variable (at 100% quota) + Commission (unlimited). OTE = Base + Variable")
+        
         comp_cols = st.columns(3)
         
         with comp_cols[0]:
-            st.markdown("**Closer**")
-            st.number_input("Base ($)", 0, 200000, st.session_state.closer_base, 1000, key="closer_base")
-            st.number_input("Variable ($)", 0, 200000, st.session_state.closer_variable, 1000, key="closer_variable")
-            st.number_input("Commission %", 0.0, 50.0, st.session_state.closer_commission_pct, 0.5, key="closer_commission_pct")
+            st.markdown("**🎯 Closer**")
+            st.number_input(
+                "Base Salary (Annual $)", 
+                0, 200000, st.session_state.closer_base, 1000, 
+                key="closer_base",
+                help="Guaranteed annual salary, paid regardless of performance"
+            )
+            st.number_input(
+                "Variable Bonus (Annual $)", 
+                0, 200000, st.session_state.closer_variable, 1000, 
+                key="closer_variable",
+                help="Annual performance bonus earned at 100% quota. OTE = Base + Variable"
+            )
+            st.number_input(
+                "Commission % (Per Deal)", 
+                0.0, 50.0, st.session_state.closer_commission_pct, 0.5, 
+                key="closer_commission_pct",
+                help="Percentage of each deal value (unlimited upside)"
+            )
+            closer_ote = st.session_state.closer_base + st.session_state.closer_variable
+            st.caption(f"💎 **OTE**: ${closer_ote:,.0f}/year (${closer_ote/12:,.0f}/month)")
         
         with comp_cols[1]:
-            st.markdown("**Setter**")
-            st.number_input("Base ($)", 0, 200000, st.session_state.setter_base, 1000, key="setter_base")
-            st.number_input("Variable ($)", 0, 200000, st.session_state.setter_variable, 1000, key="setter_variable")
-            st.number_input("Commission %", 0.0, 50.0, st.session_state.setter_commission_pct, 0.5, key="setter_commission_pct")
+            st.markdown("**📞 Setter**")
+            st.number_input(
+                "Base Salary (Annual $)", 
+                0, 200000, st.session_state.setter_base, 1000, 
+                key="setter_base",
+                help="Guaranteed annual salary, paid regardless of performance"
+            )
+            st.number_input(
+                "Variable Bonus (Annual $)", 
+                0, 200000, st.session_state.setter_variable, 1000, 
+                key="setter_variable",
+                help="Annual performance bonus earned at 100% quota. OTE = Base + Variable"
+            )
+            st.number_input(
+                "Commission % (Per Deal)", 
+                0.0, 50.0, st.session_state.setter_commission_pct, 0.5, 
+                key="setter_commission_pct",
+                help="Percentage of each deal value (unlimited upside)"
+            )
+            setter_ote = st.session_state.setter_base + st.session_state.setter_variable
+            st.caption(f"💎 **OTE**: ${setter_ote:,.0f}/year (${setter_ote/12:,.0f}/month)")
         
         with comp_cols[2]:
-            st.markdown("**Manager**")
-            st.number_input("Base ($)", 0, 300000, st.session_state.manager_base, 1000, key="manager_base")
-            st.number_input("Variable ($)", 0, 300000, st.session_state.manager_variable, 1000, key="manager_variable")
-            st.number_input("Commission %", 0.0, 50.0, st.session_state.manager_commission_pct, 0.5, key="manager_commission_pct")
+            st.markdown("**👔 Manager**")
+            st.number_input(
+                "Base Salary (Annual $)", 
+                0, 300000, st.session_state.manager_base, 1000, 
+                key="manager_base",
+                help="Guaranteed annual salary, paid regardless of performance"
+            )
+            st.number_input(
+                "Variable Bonus (Annual $)", 
+                0, 300000, st.session_state.manager_variable, 1000, 
+                key="manager_variable",
+                help="Annual performance bonus earned at 100% quota. OTE = Base + Variable"
+            )
+            st.number_input(
+                "Commission % (Per Deal)", 
+                0.0, 50.0, st.session_state.manager_commission_pct, 0.5, 
+                key="manager_commission_pct",
+                help="Percentage of each deal value (team override)"
+            )
+            manager_ote = st.session_state.manager_base + st.session_state.manager_variable
+            st.caption(f"💎 **OTE**: ${manager_ote:,.0f}/year (${manager_ote/12:,.0f}/month)")
     
     # Operating Costs
     with st.expander("🏢 Operating Costs", expanded=False):
