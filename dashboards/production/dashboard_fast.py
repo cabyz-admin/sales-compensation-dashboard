@@ -1262,6 +1262,36 @@ with tab3:
                 f"Day {stage_data['day']} | {conversion:.0f}%" if idx > 0 else f"Day {stage_data['day']}"
             )
     
+    # Timing metrics row
+    st.markdown("#### ⏱️ Timing Metrics")
+    timing_cols = st.columns(4)
+    
+    with timing_cols[0]:
+        st.metric("🕒 Lead to Meeting", "5 days")
+    with timing_cols[1]:
+        meeting_to_close = sales_cycle_days - 5
+        st.metric("⏱️ Meeting to Close", f"{meeting_to_close} days")
+    with timing_cols[2]:
+        velocity_calc = gtm_metrics['monthly_sales'] / sales_cycle_days * 30 if sales_cycle_days > 0 else 0
+        st.metric("🚀 Sales Velocity", f"{velocity_calc:.1f} deals/mo", help="Monthly deal throughput based on current closes and sales cycle")
+    with timing_cols[3]:
+        st.metric("🎯 Win Rate", f"{gtm_metrics['blended_close_rate']:.1%}")
+    
+    st.markdown("---")
+    
+    # Channel Performance Summary
+    st.markdown("### 📊 Channel Performance")
+    channel_perf_cols = st.columns(4)
+    
+    with channel_perf_cols[0]:
+        st.metric("Total Channel Leads", f"{gtm_metrics['monthly_leads']:,.0f}")
+    with channel_perf_cols[1]:
+        st.metric("Total Channel Sales", f"{gtm_metrics['monthly_sales']:.0f}")
+    with channel_perf_cols[2]:
+        st.metric("Blended CAC", f"${gtm_metrics.get('cost_per_sale', unit_econ['cac']):,.0f}")
+    with channel_perf_cols[3]:
+        st.metric("Blended Close Rate", f"{gtm_metrics['blended_close_rate']:.1%}")
+    
     st.markdown("---")
     
     # Full P&L Breakdown
