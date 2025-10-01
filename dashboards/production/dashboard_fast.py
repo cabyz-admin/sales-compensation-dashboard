@@ -906,6 +906,13 @@ with tab1:
             # Create funnel chart for each channel
             funnel_fig = go.Figure()
             
+            # Track totals for aggregated funnel
+            total_leads = 0
+            total_contacts = 0
+            total_meetings_scheduled = 0
+            total_meetings_held = 0
+            total_sales = 0
+            
             # Get actual channel configs to use real conversion rates
             for idx, ch_data in enumerate(gtm_metrics['channels_breakdown']):
                 # Find matching channel config to get actual rates
@@ -933,12 +940,28 @@ with tab1:
                 
                 sales = ch_data['sales']
                 
+                # Add to totals
+                total_leads += leads
+                total_contacts += contacts
+                total_meetings_scheduled += meetings_scheduled
+                total_meetings_held += meetings_held
+                total_sales += sales
+                
                 funnel_fig.add_trace(go.Funnel(
                     name=ch_data['name'],
                     y=['Leads', 'Contacts', 'Meetings Scheduled', 'Meetings Held', 'Sales'],
                     x=[leads, contacts, meetings_scheduled, meetings_held, sales],
                     textinfo="value+percent initial"
                 ))
+            
+            # Add aggregated "All Channels" funnel
+            funnel_fig.add_trace(go.Funnel(
+                name='🎯 All Channels (Total)',
+                y=['Leads', 'Contacts', 'Meetings Scheduled', 'Meetings Held', 'Sales'],
+                x=[total_leads, total_contacts, total_meetings_scheduled, total_meetings_held, total_sales],
+                textinfo="value+percent initial",
+                marker=dict(color='rgba(0,128,0,0.6)')  # Green color for total
+            ))
             
             funnel_fig.update_layout(
                 title="Multi-Channel Funnel Flow",
@@ -1520,6 +1543,13 @@ with tab3:
             # Create funnel chart for each channel
             funnel_fig = go.Figure()
             
+            # Track totals for aggregated funnel
+            total_leads = 0
+            total_contacts = 0
+            total_meetings_scheduled = 0
+            total_meetings_held = 0
+            total_sales = 0
+            
             # Get actual channel configs to use real conversion rates
             for ch_data in gtm_metrics['channels_breakdown']:
                 # Find matching channel config to get actual rates
@@ -1547,12 +1577,28 @@ with tab3:
                 
                 sales = ch_data['sales']
                 
+                # Add to totals
+                total_leads += leads
+                total_contacts += contacts
+                total_meetings_scheduled += meetings_scheduled
+                total_meetings_held += meetings_held
+                total_sales += sales
+                
                 funnel_fig.add_trace(go.Funnel(
                     name=ch_data['name'],
                     y=['Leads', 'Contacts', 'Meetings Scheduled', 'Meetings Held', 'Sales'],
                     x=[leads, contacts, meetings_scheduled, meetings_held, sales],
                     textinfo="value+percent initial"
                 ))
+            
+            # Add aggregated "All Channels" funnel
+            funnel_fig.add_trace(go.Funnel(
+                name='🎯 All Channels (Total)',
+                y=['Leads', 'Contacts', 'Meetings Scheduled', 'Meetings Held', 'Sales'],
+                x=[total_leads, total_contacts, total_meetings_scheduled, total_meetings_held, total_sales],
+                textinfo="value+percent initial",
+                marker=dict(color='rgba(0,128,0,0.6)')  # Green color for total
+            ))
             
             funnel_fig.update_layout(
                 title="Multi-Channel Funnel Flow",
