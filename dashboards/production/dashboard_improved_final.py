@@ -286,10 +286,10 @@ comp_immediate = total_comp * 0.70
 comp_deferred = total_comp * 0.30
 
 default_roles_comp = {
-    'closer': {'count': num_closers, 'base': 32000, 'variable': 48000, 'ote': 80000},
-    'setter': {'count': num_setters, 'base': 16000, 'variable': 24000, 'ote': 40000},
-    'manager': {'count': num_managers, 'base': 72000, 'variable': 48000, 'ote': 120000},
-    'bench': {'count': num_bench, 'base': 12500, 'variable': 12500, 'ote': 25000}
+    'closer': {'count': num_closers, 'base': 32000, 'variable': 48000, 'ote': 80000, 'label': 'Closer'},
+    'setter': {'count': num_setters, 'base': 16000, 'variable': 24000, 'ote': 40000, 'label': 'Setter'},
+    'manager': {'count': num_managers, 'base': 72000, 'variable': 48000, 'ote': 120000, 'label': 'Manager'},
+    'bench': {'count': num_bench, 'base': 12500, 'variable': 12500, 'ote': 25000, 'label': 'Bench'}
 }
 
 comp_inputs_state = st.session_state.get('team_compensation_inputs')
@@ -1205,6 +1205,131 @@ with tabs[0]:
     
     # Multi-Channel GTM is now the primary funnel configuration
     # Legacy conversion funnel removed - all configuration happens through channels
+    
+    # Compensation Structure Configuration - Fully Customizable
+    with st.expander("💵 **Compensation Structure** (Custom Base/Variable per Role)", expanded=False):
+        st.info("💡 Customize base salary and variable comp for each role. Changes affect EBITDA calculations.")
+        
+        # Initialize roles_comp in session state if not exists
+        if 'roles_comp_custom' not in st.session_state:
+            st.session_state.roles_comp_custom = default_roles_comp.copy()
+        
+        roles_comp = st.session_state.roles_comp_custom
+        
+        # Display each role's compensation
+        role_tabs = st.tabs(["💼 Closers", "📞 Setters", "👔 Managers", "🏋 Bench"])
+        
+        for idx, (role_key, tab) in enumerate(zip(['closer', 'setter', 'manager', 'bench'], role_tabs)):
+            with tab:
+                role_config = roles_comp[role_key]
+                
+                comp_col1, comp_col2, comp_col3 = st.columns(3)
+                
+                with comp_col1:
+                    st.markdown(f"**Monthly Compensation**")
+                    
+                    base_salary = st.number_input(
+                        "Base Salary ($)",
+                        min_value=0,
+                        max_value=200000,
+                        value=int(role_config.get('base', 32000)),
+                        step=1000,
+                        key=f"{role_key}_base",
+                        help="Fixed monthly salary regardless of performance"
+                    )
+                    
+                    variable_comp = st.number_input(
+                        "Variable Comp ($)",
+                        min_value=0,
+                        max_value=300000,
+                        value=int(role_config.get('variable', 48000)),
+                        step=1000,
+                        key=f"{role_key}_variable",
+                        help="Monthly variable compensation at target (commissions, bonuses)"
+                    )
+                    
+                    ote = base_salary + variable_comp
+                    
+                    # Update role config
+                    role_config['base'] = base_salary
+                    role_config['variable'] = variable_comp
+                    role_config['ote'] = ote
+                
+                with comp_col2:
+                    st.markdown(f"**Compensation Breakdown**")
+                    
+                    # Show pie chart of base vs variable
+                    base_pct = (base_salary / ote * 100) if ote > 0 else 50
+                    variable_pct = (variable_comp / ote * 100) if ote > 0 else 50
+                    
+                    st.metric("Total OTE", f"${ote:,.0f}/mo", f"${ote*12:,.0f}/yr")
+                    st.metric("Base %", f"{base_pct:.0f}%")
+                    st.metric("Variable %", f"{variable_pct:.0f}%")
+                    
+                    # Show risk profile
+                    if base_pct >= 75:
+                        st.success("🟢 Low Risk (High Base)")
+                    elif base_pct >= 50:
+                        st.info("🔵 Balanced Risk")
+                    else:
+                        st.warning("🟡 High Risk (High Variable)")
+                
+                with comp_col3:
+                    st.markdown(f"**Team Cost Impact**")
+                    
+                    # Get count from main team inputs
+                    role_count = st.session_state.get(f'num_{role_key}s_main', role_config.get('count', 0))
+                    
+                    monthly_base_cost = base_salary * role_count
+                    monthly_ote_cost = ote * role_count
+                    annual_ote_cost = monthly_ote_cost * 12
+                    
+                    st.metric("Team Count", f"{role_count}")
+                    st.metric("Monthly Base Cost", f"${monthly_base_cost:,.0f}")
+                    st.metric("Monthly OTE Cost", f"${monthly_ote_cost:,.0f}")
+                    st.metric("Annual OTE Cost", f"${annual_ote_cost:,.0f}")
+        
+        # Summary section
+        st.markdown("---")
+        st.markdown("### 📊 Total Team Compensation")
+        
+        summary_cols = st.columns(4)
+        
+        # Calculate totals
+        total_monthly_base = sum([
+            roles_comp[role]['base'] * st.session_state.get(f'num_{role}s_main', roles_comp[role].get('count', 0))
+            for role in ['closer', 'setter', 'manager', 'bench']
+        ])
+        
+        total_monthly_ote = sum([
+            roles_comp[role]['ote'] * st.session_state.get(f'num_{role}s_main', roles_comp[role].get('count', 0))
+            for role in ['closer', 'setter', 'manager', 'bench']
+        ])
+        
+        total_annual_ote = total_monthly_ote * 12
+        
+        # Calculate expected variable payout (assume 80% attainment)
+        total_monthly_variable_target = total_monthly_ote - total_monthly_base
+        expected_monthly_variable = total_monthly_variable_target * 0.8
+        expected_monthly_total = total_monthly_base + expected_monthly_variable
+        
+        with summary_cols[0]:
+            st.metric("Monthly Base", f"${total_monthly_base:,.0f}")
+        with summary_cols[1]:
+            st.metric("Monthly OTE", f"${total_monthly_ote:,.0f}")
+        with summary_cols[2]:
+            st.metric("Expected Monthly", f"${expected_monthly_total:,.0f}", "80% attainment")
+        with summary_cols[3]:
+            st.metric("Annual OTE", f"${total_annual_ote:,.0f}")
+        
+        # Show EBITDA impact
+        st.markdown("**💰 EBITDA Impact:**")
+        if 'monthly_revenue_total' in locals():
+            comp_as_pct_revenue = (total_monthly_ote / monthly_revenue_total * 100) if monthly_revenue_total > 0 else 0
+            st.caption(f"Team comp is **{comp_as_pct_revenue:.1f}%** of revenue (target: <40% for healthy margins)")
+        
+        # Save to session state
+        st.session_state.roles_comp_custom = roles_comp
     
     # Deal Economics Configuration
     with st.expander("💰 **Deal Economics** (Used by All Channels)", expanded=False):
