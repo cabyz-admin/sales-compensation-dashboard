@@ -1681,6 +1681,60 @@ with tab5:
         with ops_cols[2]:
             st.number_input("Other OpEx ($)", 0, 100000, st.session_state.other_opex, 500, key="other_opex")
     
+    # Profit Distribution (Stakeholders)
+    with st.expander("💰 Profit Distribution (Stakeholders)", expanded=False):
+        st.info("💡 Stakeholders receive a percentage of EBITDA after all operating costs")
+        
+        stake_cols = st.columns(2)
+        
+        with stake_cols[0]:
+            st.markdown("**Configuration**")
+            stakeholder_pct = st.number_input(
+                "Stakeholder Profit Share (%)",
+                min_value=0.0,
+                max_value=50.0,
+                value=st.session_state.get('stakeholder_pct', 10.0),
+                step=0.5,
+                key="stakeholder_pct",
+                help="Percentage of EBITDA distributed to stakeholders/owners"
+            )
+            
+            st.markdown("**📊 Distribution Source:**")
+            st.caption("✅ Comes from EBITDA (after all team costs + OpEx)")
+            st.caption("✅ Remaining EBITDA stays in business for growth")
+            st.caption("✅ Typical range: 5-25% for healthy businesses")
+            st.caption("✅ Not a commission - this is profit distribution")
+        
+        with stake_cols[1]:
+            st.markdown("**💰 Projected Distribution:**")
+            
+            # Calculate stakeholder payout using current P&L data
+            if pnl_data['ebitda'] > 0:
+                stakeholder_monthly = pnl_data['ebitda'] * (stakeholder_pct / 100)
+                stakeholder_annual = stakeholder_monthly * 12
+                ebitda_after_stake = pnl_data['ebitda'] - stakeholder_monthly
+                
+                st.metric("Monthly Distribution", f"${stakeholder_monthly:,.0f}")
+                st.metric("Annual Distribution", f"${stakeholder_annual:,.0f}")
+                st.metric("EBITDA After Distribution", f"${ebitda_after_stake:,.0f}")
+                
+                # Show as % of revenue
+                if gtm_metrics['monthly_revenue_immediate'] > 0:
+                    stake_pct_rev = (stakeholder_monthly / gtm_metrics['monthly_revenue_immediate'] * 100)
+                    st.metric("As % of Revenue", f"{stake_pct_rev:.1f}%")
+                
+                # Health check
+                if stake_pct_rev > 15:
+                    st.warning("⚠️ High profit distribution relative to revenue")
+                elif ebitda_after_stake < 0:
+                    st.error("🚨 Negative EBITDA after distribution!")
+                else:
+                    st.success("✅ Healthy profit distribution")
+            else:
+                st.warning("⚠️ No positive EBITDA to distribute")
+                st.caption("EBITDA must be positive to distribute profits")
+                st.caption(f"Current EBITDA: ${pnl_data['ebitda']:,.0f}")
+    
     # JSON Export/Import - Smart & Fast
     st.markdown("---")
     st.markdown("### 📋 Configuration Export/Import")
