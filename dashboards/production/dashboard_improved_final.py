@@ -1109,6 +1109,46 @@ with tabs[0]:
         st.markdown("---")
         st.markdown("### 💵 Compensation Configuration")
         
+        # Commission Base Setting (critical for cash flow)
+        st.info("⚙️ **Commission Payment Policy**: Choose whether commissions are paid from upfront cash (70%) or full deal value (100%)")
+        comm_policy_cols = st.columns([2, 2, 3])
+        
+        with comm_policy_cols[0]:
+            commission_base = st.selectbox(
+                "Pay Commissions From",
+                ["Upfront Cash Only (70%)", "Full Deal Value (100%)"],
+                index=0,
+                key="commission_base_policy",
+                help="Upfront = Conservative, protects cash flow. Full = Aggressive, better margins but cash risk"
+            )
+            st.session_state['commission_base_policy'] = commission_base
+        
+        with comm_policy_cols[1]:
+            # Show the multiplier being used
+            if "Upfront" in commission_base:
+                comm_multiplier = 0.70
+                st.metric("Commission Base", "70%", "Upfront Only")
+            else:
+                comm_multiplier = 1.0
+                st.metric("Commission Base", "100%", "Full Deal")
+            st.session_state['commission_multiplier'] = comm_multiplier
+        
+        with comm_policy_cols[2]:
+            # Show example calculation
+            example_deal = comp_immediate if 'comp_immediate' in locals() else 50000
+            example_full = example_deal / 0.7 if comm_multiplier == 0.70 else example_deal
+            example_comm_base = example_full * comm_multiplier
+            
+            st.markdown("**💡 Example Calculation:**")
+            if comm_multiplier == 0.70:
+                st.caption(f"Deal: ${example_full:,.0f} → Upfront: ${example_comm_base:,.0f} (70%)")
+                st.caption(f"20% commission = ${example_comm_base * 0.20:,.0f} (paid from upfront cash)")
+            else:
+                st.caption(f"Deal: ${example_full:,.0f} → Commission base: ${example_comm_base:,.0f}")
+                st.caption(f"20% commission = ${example_comm_base * 0.20:,.0f} (paid from full deal)")
+        
+        st.markdown("---")
+        
         # Initialize roles_comp in session state if not exists
         if 'roles_comp_custom' not in st.session_state:
             st.session_state.roles_comp_custom = default_roles_comp.copy()
@@ -1183,20 +1223,35 @@ with tabs[0]:
                             help="Fixed monthly salary regardless of performance"
                         )
                         
-                        variable_comp = st.number_input(
-                            "Variable Comp ($)",
-                            min_value=0,
-                            max_value=300000,
-                            value=int(role_config.get('variable', 48000)),
-                            step=1000,
-                            key=f"{role_key}_variable",
-                            help="Monthly variable compensation at target (commissions, bonuses)"
+                        # Variable comp as percentage of revenue
+                        default_pct = role_config.get('commission_pct', 20.0 if role_key == 'closer' else 3.0 if role_key == 'setter' else 5.0)
+                        commission_pct = st.number_input(
+                            "Commission % of Revenue",
+                            min_value=0.0,
+                            max_value=50.0,
+                            value=float(default_pct),
+                            step=0.5,
+                            key=f"{role_key}_commission_pct",
+                            help=f"Percentage of {'upfront cash (70%)' if 'Upfront' in st.session_state.get('commission_base_policy', 'Upfront') else 'full deal value (100%)'} paid as commission"
                         )
+                        
+                        # Calculate variable comp based on projected revenue
+                        actual_revenue = gtm_metrics.get('monthly_revenue_immediate', monthly_revenue_immediate) if 'gtm_metrics' in locals() else monthly_revenue_immediate
+                        comm_multiplier = st.session_state.get('commission_multiplier', 0.70)
+                        
+                        # Commission base (either upfront or full)
+                        commission_base_amount = actual_revenue * comm_multiplier
+                        variable_comp = (commission_base_amount * (commission_pct / 100)) / max(1, st.session_state.get(f'num_{role_key}s_main', 1))
+                        
+                        # Show what this means
+                        st.caption(f"💰 Estimated: ${variable_comp:,.0f}/mo per person")
+                        st.caption(f"📊 From {commission_pct}% of {'upfront' if comm_multiplier == 0.70 else 'full'} revenue")
                         
                         ote = base_salary + variable_comp
                         
                         # Update role config
                         role_config['base'] = base_salary
+                        role_config['commission_pct'] = commission_pct
                         role_config['variable'] = variable_comp
                         role_config['ote'] = ote
                     
@@ -1303,27 +1358,35 @@ with tabs[0]:
             actual_revenue = gtm_metrics.get('monthly_revenue_immediate', monthly_revenue_immediate) if 'gtm_metrics' in locals() else monthly_revenue_immediate
             actual_sales_count = gtm_metrics.get('monthly_sales', monthly_sales) if 'gtm_metrics' in locals() else monthly_sales
             
-            # Calculate commission pools (use 20% and 3% as example rates - make these customizable)
-            closer_comm_rate = st.session_state.get('closer_comm_rate', 0.20)
-            setter_comm_rate = st.session_state.get('setter_comm_rate', 0.03)
+            # Get commission percentages from role configs
+            closer_comm_rate = roles_comp.get('closer', {}).get('commission_pct', 20.0) / 100
+            setter_comm_rate = roles_comp.get('setter', {}).get('commission_pct', 3.0) / 100
+            manager_comm_rate = roles_comp.get('manager', {}).get('commission_pct', 5.0) / 100
+            
+            # Get commission multiplier (upfront vs full)
+            comm_multiplier = st.session_state.get('commission_multiplier', 0.70)
             
             # Per-deal or monthly
             if "Per Deal" in flow_view:
                 # Unit case - per deal
                 revenue_per_deal = comp_immediate if 'comp_immediate' in locals() else (actual_revenue / actual_sales_count if actual_sales_count > 0 else 50000)
-                closer_pool = revenue_per_deal * closer_comm_rate
-                setter_pool = revenue_per_deal * setter_comm_rate  
-                manager_pool = revenue_per_deal * 0.05
+                # Apply commission multiplier to deal
+                deal_for_commission = revenue_per_deal * (1 / 0.7) * comm_multiplier  # Convert to full deal, then apply multiplier
+                closer_pool = deal_for_commission * closer_comm_rate
+                setter_pool = deal_for_commission * setter_comm_rate  
+                manager_pool = deal_for_commission * manager_comm_rate
                 stakeholder_pool = 0  # Stakeholders get EBITDA, not per-deal commission
-                title_text = f"Per Deal: ${revenue_per_deal:,.0f} → Commissions"
+                title_text = f"Per Deal: ${revenue_per_deal:,.0f} ({'Upfront' if comm_multiplier == 0.70 else 'Full'}) → Commissions"
             else:
                 # Monthly total
-                closer_pool = actual_revenue * closer_comm_rate
-                setter_pool = actual_revenue * setter_comm_rate
-                manager_pool = actual_revenue * 0.05  # 5% for managers
+                # Apply commission multiplier
+                revenue_for_commission = actual_revenue * (1 / 0.7) * comm_multiplier  # Convert to full revenue, then apply multiplier
+                closer_pool = revenue_for_commission * closer_comm_rate
+                setter_pool = revenue_for_commission * setter_comm_rate
+                manager_pool = revenue_for_commission * manager_comm_rate
                 # Calculate stakeholder pool from EBITDA (will calculate below)
                 stakeholder_pool = 0  # Placeholder
-                title_text = "Revenue → Pools → Per Person"
+                title_text = f"Revenue → Pools → Per Person ({'Upfront' if comm_multiplier == 0.70 else 'Full'} Base)"
             
             # Create flow diagram
             fig_flow = go.Figure()
@@ -1495,18 +1558,28 @@ with tabs[0]:
                 base_annual = base_monthly * 12
                 
                 # Commission (only for closer/setter/manager)
-                # Use the monthly pools calculated above
+                # Use the monthly pools calculated above with commission multiplier
                 if role_key == 'closer':
                     monthly_rev = gtm_metrics.get('monthly_revenue_immediate', actual_revenue) if 'gtm_metrics' in locals() else actual_revenue
-                    comm_pool_monthly = monthly_rev * closer_comm_rate
+                    # Get commission percentage from role config
+                    role_comm_pct = roles_comp.get('closer', {}).get('commission_pct', 20.0) / 100
+                    comm_multiplier = st.session_state.get('commission_multiplier', 0.70)
+                    revenue_for_commission = monthly_rev * (1 / 0.7) * comm_multiplier
+                    comm_pool_monthly = revenue_for_commission * role_comm_pct
                     comm_monthly = comm_pool_monthly / num_closers_calc if num_closers_calc > 0 else 0
                 elif role_key == 'setter':
                     monthly_rev = gtm_metrics.get('monthly_revenue_immediate', actual_revenue) if 'gtm_metrics' in locals() else actual_revenue
-                    comm_pool_monthly = monthly_rev * setter_comm_rate
+                    role_comm_pct = roles_comp.get('setter', {}).get('commission_pct', 3.0) / 100
+                    comm_multiplier = st.session_state.get('commission_multiplier', 0.70)
+                    revenue_for_commission = monthly_rev * (1 / 0.7) * comm_multiplier
+                    comm_pool_monthly = revenue_for_commission * role_comm_pct
                     comm_monthly = comm_pool_monthly / num_setters_calc if num_setters_calc > 0 else 0
                 elif role_key == 'manager':
                     monthly_rev = gtm_metrics.get('monthly_revenue_immediate', actual_revenue) if 'gtm_metrics' in locals() else actual_revenue
-                    comm_pool_monthly = monthly_rev * 0.05
+                    role_comm_pct = roles_comp.get('manager', {}).get('commission_pct', 5.0) / 100
+                    comm_multiplier = st.session_state.get('commission_multiplier', 0.70)
+                    revenue_for_commission = monthly_rev * (1 / 0.7) * comm_multiplier
+                    comm_pool_monthly = revenue_for_commission * role_comm_pct
                     comm_monthly = comm_pool_monthly / num_managers_calc if num_managers_calc > 0 else 0
                 else:
                     comm_monthly = 0
