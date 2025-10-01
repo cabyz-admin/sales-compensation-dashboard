@@ -987,7 +987,7 @@ with st.sidebar:
     # Save/Load Configuration
     st.markdown("### 💾 Save/Load Model")
     
-    # Collect current configuration
+    # Collect current configuration (including all new business-specific fields)
     current_config = {
         "revenue": {
             "monthly_target": monthly_target_display,
@@ -1003,6 +1003,40 @@ with st.sidebar:
             "model": comp_mode_display,
             "avg_premium_mxn": avg_pm_display,
             "contract_years": contract_years_display
+        },
+        "deal_economics": {
+            # Insurance fields
+            "monthly_premium_mxn": st.session_state.get('monthly_premium_mxn', 3000),
+            "insurance_contract_years": st.session_state.get('insurance_contract_years', 18),
+            "carrier_commission_rate": st.session_state.get('carrier_commission_rate', 2.7),
+            
+            # SaaS fields
+            "monthly_mrr": st.session_state.get('monthly_mrr', 5000),
+            "saas_contract_months": st.session_state.get('saas_contract_months', 12),
+            
+            # Consulting fields
+            "project_value": st.session_state.get('project_value', 50000),
+            "project_duration_months": st.session_state.get('project_duration_months', 3),
+            
+            # Agency/Retainer fields
+            "monthly_retainer": st.session_state.get('monthly_retainer', 10000),
+            "retainer_duration_months": st.session_state.get('retainer_duration_months', 6),
+            
+            # One-time sale fields
+            "sale_price": st.session_state.get('sale_price', 10000),
+            
+            # Universal fields
+            "avg_deal_value": st.session_state.get('avg_deal_value', 50000),
+            "contract_length_months": st.session_state.get('contract_length_months', 12),
+            "upfront_payment_pct": st.session_state.get('upfront_payment_pct', 70.0),
+            "deferred_timing_months": st.session_state.get('deferred_timing_months', 18),
+            
+            # Business type selection
+            "business_type": st.session_state.get('business_type_template_display', 'Custom')
+        },
+        "commission_policy": {
+            "commission_base_policy": st.session_state.get('commission_base_policy', 'Upfront Cash Only (70%)'),
+            "commission_multiplier": st.session_state.get('commission_multiplier', 0.70)
         },
         "financial": {
             "cash_balance": cash_balance_display
@@ -1055,6 +1089,36 @@ with st.sidebar:
                     st.session_state['avg_pm_main'] = loaded_config['compensation'].get('avg_premium_mxn', avg_pm)
                     st.session_state['contract_years_main'] = loaded_config['compensation'].get('contract_years', contract_years)
                 
+                # Load new deal economics fields
+                if 'deal_economics' in loaded_config:
+                    deal_econ = loaded_config['deal_economics']
+                    # Insurance
+                    st.session_state['monthly_premium_mxn'] = deal_econ.get('monthly_premium_mxn', 3000)
+                    st.session_state['insurance_contract_years'] = deal_econ.get('insurance_contract_years', 18)
+                    st.session_state['carrier_commission_rate'] = deal_econ.get('carrier_commission_rate', 2.7)
+                    # SaaS
+                    st.session_state['monthly_mrr'] = deal_econ.get('monthly_mrr', 5000)
+                    st.session_state['saas_contract_months'] = deal_econ.get('saas_contract_months', 12)
+                    # Consulting
+                    st.session_state['project_value'] = deal_econ.get('project_value', 50000)
+                    st.session_state['project_duration_months'] = deal_econ.get('project_duration_months', 3)
+                    # Agency
+                    st.session_state['monthly_retainer'] = deal_econ.get('monthly_retainer', 10000)
+                    st.session_state['retainer_duration_months'] = deal_econ.get('retainer_duration_months', 6)
+                    # One-time
+                    st.session_state['sale_price'] = deal_econ.get('sale_price', 10000)
+                    # Universal
+                    st.session_state['avg_deal_value'] = deal_econ.get('avg_deal_value', 50000)
+                    st.session_state['contract_length_months'] = deal_econ.get('contract_length_months', 12)
+                    st.session_state['upfront_payment_pct'] = deal_econ.get('upfront_payment_pct', 70.0)
+                    st.session_state['deferred_timing_months'] = deal_econ.get('deferred_timing_months', 18)
+                    st.session_state['business_type_template_display'] = deal_econ.get('business_type', 'Custom')
+                
+                # Load commission policy
+                if 'commission_policy' in loaded_config:
+                    st.session_state['commission_base_policy'] = loaded_config['commission_policy'].get('commission_base_policy', 'Upfront Cash Only (70%)')
+                    st.session_state['commission_multiplier'] = loaded_config['commission_policy'].get('commission_multiplier', 0.70)
+                
                 if 'financial' in loaded_config:
                     st.session_state['cash_balance_main'] = loaded_config['financial'].get('cash_balance', 0)
                 
@@ -1090,6 +1154,36 @@ with st.sidebar:
                 if 'compensation' in loaded_config:
                     st.session_state['avg_pm_main'] = loaded_config['compensation'].get('avg_premium_mxn', avg_pm)
                     st.session_state['contract_years_main'] = loaded_config['compensation'].get('contract_years', contract_years)
+                
+                # Load new deal economics fields
+                if 'deal_economics' in loaded_config:
+                    deal_econ = loaded_config['deal_economics']
+                    # Insurance
+                    st.session_state['monthly_premium_mxn'] = deal_econ.get('monthly_premium_mxn', 3000)
+                    st.session_state['insurance_contract_years'] = deal_econ.get('insurance_contract_years', 18)
+                    st.session_state['carrier_commission_rate'] = deal_econ.get('carrier_commission_rate', 2.7)
+                    # SaaS
+                    st.session_state['monthly_mrr'] = deal_econ.get('monthly_mrr', 5000)
+                    st.session_state['saas_contract_months'] = deal_econ.get('saas_contract_months', 12)
+                    # Consulting
+                    st.session_state['project_value'] = deal_econ.get('project_value', 50000)
+                    st.session_state['project_duration_months'] = deal_econ.get('project_duration_months', 3)
+                    # Agency
+                    st.session_state['monthly_retainer'] = deal_econ.get('monthly_retainer', 10000)
+                    st.session_state['retainer_duration_months'] = deal_econ.get('retainer_duration_months', 6)
+                    # One-time
+                    st.session_state['sale_price'] = deal_econ.get('sale_price', 10000)
+                    # Universal
+                    st.session_state['avg_deal_value'] = deal_econ.get('avg_deal_value', 50000)
+                    st.session_state['contract_length_months'] = deal_econ.get('contract_length_months', 12)
+                    st.session_state['upfront_payment_pct'] = deal_econ.get('upfront_payment_pct', 70.0)
+                    st.session_state['deferred_timing_months'] = deal_econ.get('deferred_timing_months', 18)
+                    st.session_state['business_type_template_display'] = deal_econ.get('business_type', 'Custom')
+                
+                # Load commission policy
+                if 'commission_policy' in loaded_config:
+                    st.session_state['commission_base_policy'] = loaded_config['commission_policy'].get('commission_base_policy', 'Upfront Cash Only (70%)')
+                    st.session_state['commission_multiplier'] = loaded_config['commission_policy'].get('commission_multiplier', 0.70)
                 
                 if 'financial' in loaded_config:
                     st.session_state['cash_balance_main'] = loaded_config['financial'].get('cash_balance', 0)
@@ -1583,6 +1677,41 @@ with tabs[0]:
                         st.metric(t('monthly_base_cost', lang), f"${monthly_base_cost:,.0f}")
                         st.metric(t('monthly_ote_cost', lang), f"${monthly_ote_cost:,.0f}")
                         st.metric(t('annual_ote_cost', lang), f"${annual_ote_cost:,.0f}")
+                    
+                    # Add per-deal commission preview
+                    st.markdown("---")
+                    st.markdown(f"**💰 {'Comisión por Negocio' if lang == 'es' else 'Per-Deal Commission'}**")
+                    
+                    per_deal_cols = st.columns(3)
+                    
+                    # Get deal economics
+                    avg_deal_value_calc = st.session_state.get('avg_deal_value', 50000)
+                    upfront_pct_calc = st.session_state.get('upfront_payment_pct', 70.0) / 100
+                    comm_mult_calc = st.session_state.get('commission_multiplier', 1.0)
+                    
+                    # Calculate commission base
+                    if comm_mult_calc < 1.0:
+                        # Commission on upfront only
+                        comm_base_per_deal = avg_deal_value_calc * upfront_pct_calc
+                    else:
+                        # Commission on full deal
+                        comm_base_per_deal = avg_deal_value_calc
+                    
+                    # Calculate this role's commission per deal
+                    role_comm_per_deal = comm_base_per_deal * (commission_pct / 100)
+                    
+                    with per_deal_cols[0]:
+                        st.metric("Deal Value" if lang == 'en' else "Valor del Negocio", f"${avg_deal_value_calc:,.0f}")
+                    with per_deal_cols[1]:
+                        st.metric("Commission Base" if lang == 'en' else "Base de Comisión", 
+                                 f"${comm_base_per_deal:,.0f}",
+                                 f"{int(upfront_pct_calc*100)}%" if comm_mult_calc < 1.0 else "100%")
+                    with per_deal_cols[2]:
+                        st.metric(f"{t(role_key+'s', lang)} Commission" if lang == 'en' else f"Comisión de {t(role_key+'s', lang)}", 
+                                 f"${role_comm_per_deal:,.0f}",
+                                 f"{commission_pct}%")
+                    
+                    st.caption(f"📊 Formula: ${comm_base_per_deal:,.0f} × {commission_pct}% = ${role_comm_per_deal:,.0f}")
         
         # Get stakeholder percentage
         stakeholder_pct = st.session_state.get('stakeholder_pct', 10.0)
@@ -1663,17 +1792,20 @@ with tabs[0]:
             upfront_pct_val = st.session_state.get('upfront_payment_pct', 70.0) / 100
             
             # Per-deal or monthly
-            if "Per Deal" in flow_view:
-                # Unit case - per deal
-                revenue_per_deal = comp_immediate if 'comp_immediate' in locals() else (actual_revenue / actual_sales_count if actual_sales_count > 0 else 50000)
+            if "Per Deal" in flow_view or "Por Negocio" in flow_view:
+                # Unit case - per deal (use the actual deal value from deal economics)
+                avg_deal_value_calculated = st.session_state.get('avg_deal_value', 50000)
+                
+                # Get upfront portion of the deal
+                revenue_per_deal = avg_deal_value_calculated * upfront_pct_val
                 
                 # Apply commission policy
                 if comm_multiplier < 1.0:
-                    # Upfront only - revenue_per_deal already represents upfront
+                    # Upfront only - commission on upfront cash only
                     deal_for_commission = revenue_per_deal
                 else:
-                    # Full deal - convert upfront to full deal value
-                    deal_for_commission = revenue_per_deal / upfront_pct_val if upfront_pct_val > 0 else revenue_per_deal
+                    # Full deal - commission on full deal value
+                    deal_for_commission = avg_deal_value_calculated
                 
                 closer_pool = deal_for_commission * closer_comm_rate
                 setter_pool = deal_for_commission * setter_comm_rate  
@@ -1681,7 +1813,7 @@ with tabs[0]:
                 stakeholder_pool = 0  # Stakeholders get EBITDA, not per-deal commission
                 
                 upfront_pct_display = int(st.session_state.get('upfront_payment_pct', 70.0))
-                title_text = f"Per Deal: ${revenue_per_deal:,.0f} ({'Upfront (' + str(upfront_pct_display) + '%)' if comm_multiplier < 1.0 else 'Full (100%)'}) → Commissions"
+                title_text = f"Per Deal: ${avg_deal_value_calculated:,.0f} ({'Upfront (' + str(upfront_pct_display) + '%)' if comm_multiplier < 1.0 else 'Full (100%)'}) → Commissions"
             else:
                 # Monthly total
                 if comm_multiplier < 1.0:
@@ -1703,16 +1835,25 @@ with tabs[0]:
             # Create flow diagram
             fig_flow = go.Figure()
             
-            # Revenue box
+            # Revenue box - show appropriate value based on view
+            if "Per Deal" in flow_view or "Por Negocio" in flow_view:
+                revenue_display = avg_deal_value_calculated
+                revenue_label = f"Deal Value<br>${avg_deal_value_calculated:,.0f}"
+                hover_label = 'Deal Value'
+            else:
+                revenue_display = actual_revenue
+                revenue_label = f"Revenue<br>${actual_revenue:,.0f}"
+                hover_label = 'Monthly Revenue'
+            
             fig_flow.add_trace(go.Scatter(
                 x=[1], y=[3],
                 mode='markers+text',
                 marker=dict(size=100, color='#3b82f6'),
-                text=[f"Revenue<br>${actual_revenue:,.0f}"],
+                text=[revenue_label],
                 textfont=dict(color='white', size=12),
                 textposition="middle center",
                 showlegend=False,
-                hovertemplate='<b>Monthly Revenue</b><br>$%{text}<extra></extra>'
+                hovertemplate=f'<b>{hover_label}</b><br>${revenue_display:,.0f}<extra></extra>'
             ))
             
             # Commission pools
@@ -1793,19 +1934,26 @@ with tabs[0]:
             st.plotly_chart(fig_flow, use_container_width=True, key="commission_flow")
         
         with flow_cols[1]:
-            if "Per Deal" in flow_view:
-                st.markdown("**🎯 Per Deal Economics**")
+            if "Per Deal" in flow_view or "Por Negocio" in flow_view:
+                st.markdown("**🎯 " + (t('per_deal', lang) if lang == 'es' else "Per Deal Economics") + "**")
                 total_commission = closer_pool + setter_pool + manager_pool
-                commission_rate = (total_commission/revenue_per_deal)*100 if revenue_per_deal > 0 else 0
+                commission_rate = (total_commission/deal_for_commission)*100 if deal_for_commission > 0 else 0
                 
-                st.metric("Deal Value", f"${revenue_per_deal:,.0f}")
-                st.metric("Total Commission", f"${total_commission:,.0f}")
-                st.metric("Commission Rate", f"{commission_rate:.1f}%")
+                st.metric("Deal Value" if lang == 'en' else "Valor del Negocio", f"${avg_deal_value_calculated:,.0f}")
+                st.metric(t('upfront_cash', lang), f"${revenue_per_deal:,.0f}", f"{int(upfront_pct_val*100)}%")
+                st.metric(t('total_commission', lang), f"${total_commission:,.0f}")
+                st.metric(t('commission_rate', lang), f"{commission_rate:.1f}%")
                 
-                # Show per-role breakdown
-                st.caption(f"💼 Closer: ${closer_pool:,.0f}")
-                st.caption(f"📞 Setter: ${setter_pool:,.0f}")
-                st.caption(f"👔 Manager: ${manager_pool:,.0f}")
+                st.markdown("---")
+                st.markdown("**" + ("Desglose por Rol" if lang == 'es' else "Per-Role Breakdown") + "**")
+                
+                # Show per-role breakdown with per-person amounts
+                if num_closers_calc > 0:
+                    st.caption(f"💼 {t('closers', lang)}: ${closer_pool:,.0f} total → ${closer_pool/num_closers_calc:,.0f} each ({num_closers_calc}x)")
+                if num_setters_calc > 0:
+                    st.caption(f"📞 {t('setters', lang)}: ${setter_pool:,.0f} total → ${setter_pool/num_setters_calc:,.0f} each ({num_setters_calc}x)")
+                if num_managers_calc > 0:
+                    st.caption(f"👔 {t('managers', lang)}: ${manager_pool:,.0f} total → ${manager_pool/num_managers_calc:,.0f} each ({num_managers_calc}x)")
             else:
                 st.markdown("**📊 Monthly Total**")
                 total_commission = closer_pool + setter_pool + manager_pool
