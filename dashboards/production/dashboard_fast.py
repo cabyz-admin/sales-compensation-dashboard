@@ -2326,12 +2326,23 @@ with tab5:
             return {
                 "deal_economics": {
                     "business_type": st.session_state.get('business_type', 'Custom'),
+                    "deal_calc_method": st.session_state.get('deal_calc_method', '💰 Direct Value'),
                     "avg_deal_value": st.session_state.avg_deal_value,
                     "contract_length_months": st.session_state.contract_length_months,
                     "upfront_payment_pct": st.session_state.upfront_payment_pct,
                     "deferred_timing_months": st.session_state.deferred_timing_months,
                     "commission_policy": st.session_state.commission_policy,
-                    "grr_rate": st.session_state.grr_rate
+                    "grr_rate": st.session_state.grr_rate,
+                    # Insurance calculation parameters
+                    "monthly_premium": st.session_state.get('monthly_premium', 3000),
+                    "insurance_commission_rate": st.session_state.get('insurance_commission_rate', 2.7),
+                    "insurance_contract_years": st.session_state.get('insurance_contract_years', 18),
+                    # Subscription parameters
+                    "mrr": st.session_state.get('mrr', 5000),
+                    "sub_term_months": st.session_state.get('sub_term_months', 12),
+                    # Commission-based parameters
+                    "total_contract_value": st.session_state.get('total_contract_value', 100000),
+                    "contract_commission_pct": st.session_state.get('contract_commission_pct', 10.0)
                 },
                 "team": {
                     "closers": st.session_state.num_closers_main,
@@ -2411,6 +2422,15 @@ with tab5:
                         st.session_state['deferred_timing_months'] = de.get('deferred_timing_months', 18)
                         st.session_state['commission_policy'] = de.get('commission_policy', 'upfront')
                         st.session_state['grr_rate'] = de.get('grr_rate', 0.9)
+                        # Deal calculation method parameters
+                        st.session_state['deal_calc_method'] = de.get('deal_calc_method', '💰 Direct Value')
+                        st.session_state['monthly_premium'] = de.get('monthly_premium', 3000)
+                        st.session_state['insurance_commission_rate'] = de.get('insurance_commission_rate', 2.7)
+                        st.session_state['insurance_contract_years'] = de.get('insurance_contract_years', 18)
+                        st.session_state['mrr'] = de.get('mrr', 5000)
+                        st.session_state['sub_term_months'] = de.get('sub_term_months', 12)
+                        st.session_state['total_contract_value'] = de.get('total_contract_value', 100000)
+                        st.session_state['contract_commission_pct'] = de.get('contract_commission_pct', 10.0)
                     
                     if 'team' in loaded_config:
                         t = loaded_config['team']
@@ -2471,6 +2491,15 @@ with tab5:
                         st.session_state['deferred_timing_months'] = de.get('deferred_timing_months', 18)
                         st.session_state['commission_policy'] = de.get('commission_policy', 'upfront')
                         st.session_state['grr_rate'] = de.get('grr_rate', 0.9)
+                        # Deal calculation method parameters
+                        st.session_state['deal_calc_method'] = de.get('deal_calc_method', '💰 Direct Value')
+                        st.session_state['monthly_premium'] = de.get('monthly_premium', 3000)
+                        st.session_state['insurance_commission_rate'] = de.get('insurance_commission_rate', 2.7)
+                        st.session_state['insurance_contract_years'] = de.get('insurance_contract_years', 18)
+                        st.session_state['mrr'] = de.get('mrr', 5000)
+                        st.session_state['sub_term_months'] = de.get('sub_term_months', 12)
+                        st.session_state['total_contract_value'] = de.get('total_contract_value', 100000)
+                        st.session_state['contract_commission_pct'] = de.get('contract_commission_pct', 10.0)
                     
                     if 'team' in loaded_config:
                         t = loaded_config['team']
