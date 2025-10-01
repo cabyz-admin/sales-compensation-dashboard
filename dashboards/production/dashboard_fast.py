@@ -1115,6 +1115,9 @@ with tab3:
     st.header("📊 Business Performance Command Center")
     st.caption("Comprehensive business metrics, P&L, unit economics, and channel performance")
     
+    # Get fresh deal economics for this tab
+    tab3_deal_econ = DealEconomicsManager.get_current_deal_economics()
+    
     # 1. 🎯 Key Performance Indicators (Top Row)
     st.markdown("### 🎯 Key Performance Indicators")
     kpi_cols = st.columns(6)
@@ -1163,7 +1166,7 @@ with tab3:
         st.metric("📅 Capacity Used", f"{capacity_util:.0%}", cap_status)
     with kpi_cols[5]:
         # Pipeline coverage
-        pipeline_value = current_meetings * deal_econ['upfront_cash']
+        pipeline_value = current_meetings * tab3_deal_econ['upfront_cash']
         pipeline_coverage = pipeline_value / monthly_revenue_target if monthly_revenue_target > 0 else 0
         pipeline_status = "Good" if pipeline_coverage >= 3 else "Low"
         st.metric("📊 Pipeline Coverage", f"{pipeline_coverage:.1f}x", pipeline_status)
@@ -1201,7 +1204,7 @@ with tab3:
     with unit_cols[3]:
         st.metric("⏱️ Payback", f"{unit_econ['payback_months']:.1f} mo", "Target: <12mo")
     with unit_cols[4]:
-        magic_number = (deal_econ['avg_deal_value'] / 12) / unit_econ['cac'] if unit_econ['cac'] > 0 else 0
+        magic_number = (tab3_deal_econ['avg_deal_value'] / 12) / unit_econ['cac'] if unit_econ['cac'] > 0 else 0
         st.metric("✨ Magic Number", f"{magic_number:.2f}", "Target: >0.75")
     
     st.markdown("---")
@@ -1234,7 +1237,7 @@ with tab3:
     finance_cols = st.columns(5)
     
     # Use cached cash splits calculation
-    cash_splits = calculate_deal_cash_splits(deal_econ['avg_deal_value'], deal_econ['upfront_pct'])
+    cash_splits = calculate_deal_cash_splits(tab3_deal_econ['avg_deal_value'], tab3_deal_econ['upfront_pct'])
     upfront_cash = cash_splits['upfront_cash']
     deferred_cash = cash_splits['deferred_cash']
     
@@ -1247,14 +1250,14 @@ with tab3:
         st.metric(
             "📈 Revenue (Upfront)",
             f"${gtm_metrics['monthly_revenue_immediate']:,.0f}",
-            f"{deal_econ['upfront_pct']:.0f}% split"
+            f"{tab3_deal_econ['upfront_pct']:.0f}% split"
         )
     with finance_cols[3]:
         deferred_revenue = gtm_metrics['monthly_sales'] * deferred_cash
         st.metric(
             "📅 Revenue (Deferred)",
             f"${deferred_revenue:,.0f}",
-            f"{100-deal_econ['upfront_pct']:.0f}% split"
+            f"{100-tab3_deal_econ['upfront_pct']:.0f}% split"
         )
     with finance_cols[4]:
         team_total = (st.session_state.num_closers_main + st.session_state.num_setters_main + 
@@ -1492,6 +1495,9 @@ with tab4:
     st.header("🔮 What-If Analysis")
     st.caption("Test different scenarios and see real-time impact")
     
+    # Get fresh deal economics for this tab
+    tab4_deal_econ = DealEconomicsManager.get_current_deal_economics()
+    
     # Baseline metrics
     baseline_sales = gtm_metrics['monthly_sales']
     baseline_revenue = gtm_metrics['monthly_revenue_immediate']
@@ -1553,7 +1559,7 @@ with tab4:
         
         # Calculate new metrics
         new_team_cost = team_base * team_multiplier
-        new_deal_value = deal_econ['avg_deal_value'] * deal_multiplier
+        new_deal_value = tab4_deal_econ['avg_deal_value'] * deal_multiplier
         new_marketing = marketing_spend * marketing_multiplier
         new_close_rate = min(1.0, max(0.0, gtm_metrics['blended_close_rate'] + (close_rate_delta / 100)))
         
@@ -1563,7 +1569,7 @@ with tab4:
         new_sales = baseline_sales * lead_impact * close_impact
         
         # New revenue (use cached calculation)
-        new_cash_splits = calculate_deal_cash_splits(new_deal_value, deal_econ['upfront_pct'])
+        new_cash_splits = calculate_deal_cash_splits(new_deal_value, tab4_deal_econ['upfront_pct'])
         new_revenue = new_sales * new_cash_splits['upfront_cash']
         
         # Recalculate commissions
