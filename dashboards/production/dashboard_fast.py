@@ -166,6 +166,7 @@ def initialize_session_state():
         'contract_length_months': 12,
         'deferred_timing_months': 18,
         'commission_policy': 'upfront',
+        'government_cost_pct': 10.0,  # Government fees/taxes
         
         # Team
         'num_closers_main': 8,
@@ -1954,6 +1955,19 @@ with tab5:
             
             st.caption(f"**Commission Base:** ${comm_base:,.0f}")
             
+            # Government costs
+            st.markdown("**Government Costs**")
+            gov_cost = st.slider(
+                "Gov Fees/Taxes (%)",
+                0.0,
+                20.0,
+                st.session_state.get('government_cost_pct', 10.0),
+                0.5,
+                key="government_cost_pct",
+                help="Government fees, taxes, regulatory costs (% of revenue)",
+                format="%.1f%%"
+            )
+            
             # Show GRR/NRR settings
             st.markdown("**Revenue Retention**")
             grr = st.slider(
@@ -2406,6 +2420,7 @@ with tab5:
                     "upfront_payment_pct": st.session_state.upfront_payment_pct,
                     "deferred_timing_months": st.session_state.deferred_timing_months,
                     "commission_policy": st.session_state.commission_policy,
+                    "government_cost_pct": st.session_state.get('government_cost_pct', 10.0),
                     "grr_rate": st.session_state.grr_rate,
                     # Insurance calculation parameters
                     "monthly_premium": st.session_state.get('monthly_premium', 3000),
@@ -2495,6 +2510,7 @@ with tab5:
                         st.session_state['upfront_payment_pct'] = de.get('upfront_payment_pct', 70.0)
                         st.session_state['deferred_timing_months'] = de.get('deferred_timing_months', 18)
                         st.session_state['commission_policy'] = de.get('commission_policy', 'upfront')
+                        st.session_state['government_cost_pct'] = de.get('government_cost_pct', 10.0)
                         st.session_state['grr_rate'] = de.get('grr_rate', 0.9)
                         # Deal calculation method parameters
                         st.session_state['deal_calc_method'] = de.get('deal_calc_method', '💰 Direct Value')
@@ -2564,6 +2580,7 @@ with tab5:
                         st.session_state['upfront_payment_pct'] = de.get('upfront_payment_pct', 70.0)
                         st.session_state['deferred_timing_months'] = de.get('deferred_timing_months', 18)
                         st.session_state['commission_policy'] = de.get('commission_policy', 'upfront')
+                        st.session_state['government_cost_pct'] = de.get('government_cost_pct', 10.0)
                         st.session_state['grr_rate'] = de.get('grr_rate', 0.9)
                         # Deal calculation method parameters
                         st.session_state['deal_calc_method'] = de.get('deal_calc_method', '💰 Direct Value')
