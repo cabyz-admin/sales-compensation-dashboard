@@ -899,16 +899,10 @@ with tab2:
     st.header("💰 Compensation Structure")
     st.caption("Commission flow, earnings preview, and team compensation")
     
-    # Get fresh deal economics for this tab (in case changed in Configuration)
-    tab2_deal_econ = DealEconomicsManager.get_current_deal_economics()
-    
-    # Commission Flow Fragment
+    # Commission Flow Fragment (pass deal_econ to avoid reruns)
     @st.fragment
-    def render_commission_flow():
+    def render_commission_flow(deal_econ_data):
         st.subheader("💸 Commission Flow Visualization")
-        
-        # Get FRESH deal economics inside fragment to ensure latest values
-        current_deal_econ = DealEconomicsManager.get_current_deal_economics()
         
         flow_view = st.radio(
             "View",
@@ -940,17 +934,17 @@ with tab2:
         
         # Calculate commission data based on view
         if "Per Deal" in flow_view:
-            per_deal_comm = DealEconomicsManager.calculate_per_deal_commission(roles_comp, current_deal_econ)
+            per_deal_comm = DealEconomicsManager.calculate_per_deal_commission(roles_comp, deal_econ_data)
             closer_pool = per_deal_comm['closer_pool']
             setter_pool = per_deal_comm['setter_pool']
             manager_pool = per_deal_comm['manager_pool']
-            revenue_display = current_deal_econ['avg_deal_value']
+            revenue_display = deal_econ_data['avg_deal_value']
             title_text = f"Per Deal: ${revenue_display:,.0f} → Commissions"
         else:
             monthly_comm = calculate_commission_data_cached(
                 gtm_metrics['monthly_sales'],
                 json.dumps(roles_comp),
-                json.dumps(current_deal_econ)
+                json.dumps(deal_econ_data)
             )
             closer_pool = monthly_comm['closer_pool']
             setter_pool = monthly_comm['setter_pool']
@@ -1055,7 +1049,9 @@ with tab2:
         
         st.plotly_chart(fig_flow, use_container_width=True, key="commission_flow_viz")
     
-    render_commission_flow()
+    # Get fresh deal economics and pass to fragment
+    tab2_deal_econ = DealEconomicsManager.get_current_deal_economics()
+    render_commission_flow(tab2_deal_econ)
     
     st.markdown("---")
     
