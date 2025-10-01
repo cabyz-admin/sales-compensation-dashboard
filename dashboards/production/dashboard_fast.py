@@ -1246,6 +1246,66 @@ with tab2:
                 use_container_width=True,
                 hide_index=True
             )
+            
+            # Daily Activity Targets
+            st.markdown("---")
+            st.markdown("### 🎯 Daily Activity Targets to Hit Earnings")
+            st.caption("Based on current conversion rates and team size")
+            
+            # Calculate daily targets
+            working_days = st.session_state.working_days
+            monthly_sales = gtm_metrics['monthly_sales']
+            
+            # Get blended conversion rates from channels
+            total_leads = 0
+            total_contacts = 0
+            total_meetings = 0
+            for ch in st.session_state.gtm_channels:
+                if ch.get('enabled', True):
+                    leads = ch.get('monthly_leads', 0)
+                    contacts = leads * ch.get('contact_rate', 0.6)
+                    meetings = contacts * ch.get('meeting_rate', 0.3)
+                    total_leads += leads
+                    total_contacts += contacts
+                    total_meetings += meetings
+            
+            # Daily metrics
+            daily_leads = total_leads / working_days if working_days > 0 else 0
+            daily_contacts = total_contacts / working_days if working_days > 0 else 0
+            daily_meetings = total_meetings / working_days if working_days > 0 else 0
+            daily_sales = monthly_sales / working_days if working_days > 0 else 0
+            
+            # Per person daily targets
+            num_closers = st.session_state.num_closers_main if st.session_state.num_closers_main > 0 else 1
+            num_setters = st.session_state.num_setters_main if st.session_state.num_setters_main > 0 else 1
+            
+            activity_cols = st.columns(3)
+            
+            with activity_cols[0]:
+                st.markdown("#### 📞 Setter Activities")
+                st.metric("Leads to Contact/Day", f"{daily_leads / num_setters:.1f} per person")
+                st.metric("Contacts Made/Day", f"{daily_contacts / num_setters:.1f} per person")
+                st.metric("Meetings Scheduled/Day", f"{daily_meetings / num_setters:.1f} per person")
+                st.caption(f"💡 **Team Total**: {daily_contacts:.0f} contacts, {daily_meetings:.0f} meetings/day")
+            
+            with activity_cols[1]:
+                st.markdown("#### 🎯 Closer Activities")
+                st.metric("Meetings to Run/Day", f"{daily_meetings / num_closers:.1f} per person")
+                st.metric("Deals to Close/Day", f"{daily_sales / num_closers:.1f} per person")
+                deals_per_week = (daily_sales / num_closers) * 5
+                st.metric("Deals/Week Target", f"{deals_per_week:.1f} per person")
+                st.caption(f"💡 **Team Total**: {daily_meetings:.0f} meetings, {daily_sales:.1f} closes/day")
+            
+            with activity_cols[2]:
+                st.markdown("#### 📊 Performance Ratios")
+                contact_to_meeting = (daily_meetings / daily_contacts * 100) if daily_contacts > 0 else 0
+                meeting_to_close = (daily_sales / daily_meetings * 100) if daily_meetings > 0 else 0
+                lead_to_close = (daily_sales / daily_leads * 100) if daily_leads > 0 else 0
+                
+                st.metric("Contact → Meeting", f"{contact_to_meeting:.1f}%")
+                st.metric("Meeting → Close", f"{meeting_to_close:.1f}%")
+                st.metric("Lead → Close", f"{lead_to_close:.1f}%")
+                st.caption(f"💡 **Overall Efficiency**: {lead_to_close:.2f}% conversion")
     
     render_period_earnings()
 
