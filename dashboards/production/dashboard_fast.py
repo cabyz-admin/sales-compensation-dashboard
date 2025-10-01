@@ -1479,18 +1479,174 @@ with tab5:
             else:
                 st.caption(f"✅ Target exceeded by ${current_revenue - monthly_revenue_target:,.0f}")
     
-    # Team Configuration
-    with st.expander("👥 Team Configuration", expanded=False):
-        team_cols = st.columns(4)
+    # Team Configuration with Capacity Analysis
+    with st.expander("👥 Team Configuration & Capacity", expanded=False):
+        st.info("💡 Configure team size and capacity settings - affects all calculations")
+        
+        team_cols = st.columns(3)
         
         with team_cols[0]:
-            st.number_input("Closers", 1, 50, st.session_state.num_closers_main, key="num_closers_main")
+            st.markdown("**Team Size**")
+            num_closers = st.number_input("Closers", 1, 50, st.session_state.num_closers_main, key="num_closers_main")
+            num_setters = st.number_input("Setters", 0, 50, st.session_state.num_setters_main, key="num_setters_main")
+            num_managers = st.number_input("Managers", 0, 20, st.session_state.num_managers_main, key="num_managers_main")
+            num_bench = st.number_input("Bench", 0, 20, st.session_state.num_benchs_main, key="num_benchs_main")
+            
+            st.markdown("**Capacity Settings**")
+            meetings_per_closer = st.number_input(
+                "Meetings/Closer/Day",
+                min_value=0.1,
+                max_value=10.0,
+                value=st.session_state.get('meetings_per_closer', 3.0),
+                step=0.5,
+                key="meetings_per_closer",
+                help="Average meetings each closer can run per working day"
+            )
+            working_days = st.number_input(
+                "Working Days/Month",
+                min_value=10,
+                max_value=26,
+                value=st.session_state.get('working_days', 20),
+                step=1,
+                key="working_days",
+                help="Number of active selling days per month"
+            )
+            meetings_per_setter = st.number_input(
+                "Meetings Booked/Setter/Day",
+                min_value=0.1,
+                max_value=20.0,
+                value=st.session_state.get('meetings_per_setter', 2.0),
+                step=0.5,
+                key="meetings_per_setter",
+                help="Average meetings each setter confirms and books per day"
+            )
+        
         with team_cols[1]:
-            st.number_input("Setters", 0, 50, st.session_state.num_setters_main, key="num_setters_main")
+            st.markdown("**Team Metrics**")
+            team_total = num_closers + num_setters + num_managers + num_bench
+            active_ratio = (num_closers + num_setters) / max(1, team_total)
+            setter_closer_ratio = num_setters / max(1, num_closers)
+            
+            st.metric("Total Team", f"{team_total}")
+            st.metric("Active Ratio", f"{active_ratio:.0%}", help="% of team in revenue-generating roles")
+            st.metric("Setter:Closer Ratio", f"{setter_closer_ratio:.1f}:1")
+            
+            st.markdown("**Capacity Utilization**")
+            monthly_closer_capacity = num_closers * meetings_per_closer * working_days
+            monthly_setter_capacity = num_setters * meetings_per_setter * working_days
+            
+            current_meetings = gtm_metrics.get('monthly_meetings_held', 0)
+            current_bookings = gtm_metrics.get('monthly_meetings_scheduled', 0)
+            
+            closer_util = (current_meetings / monthly_closer_capacity * 100) if monthly_closer_capacity > 0 else 0
+            setter_util = (current_bookings / monthly_setter_capacity * 100) if monthly_setter_capacity > 0 else 0
+            
+            # Closer utilization
+            closer_color = "normal" if closer_util < 75 else "inverse"
+            st.metric(
+                "Closer Utilization",
+                f"{closer_util:.0f}%",
+                delta="Healthy" if closer_util < 75 else "High" if closer_util < 90 else "OVERLOAD",
+                delta_color=closer_color
+            )
+            
+            # Setter utilization
+            setter_color = "normal" if setter_util < 75 else "inverse"
+            st.metric(
+                "Setter Utilization",
+                f"{setter_util:.0f}%",
+                delta="Healthy" if setter_util < 75 else "High" if setter_util < 90 else "OVERLOAD",
+                delta_color=setter_color
+            )
+        
         with team_cols[2]:
-            st.number_input("Managers", 0, 20, st.session_state.num_managers_main, key="num_managers_main")
-        with team_cols[3]:
-            st.number_input("Bench", 0, 20, st.session_state.num_benchs_main, key="num_benchs_main")
+            st.markdown("**Capacity Analysis Chart**")
+            
+            # Calculate capacity metrics
+            closer_headroom = monthly_closer_capacity - current_meetings
+            setter_headroom = monthly_setter_capacity - current_bookings
+            
+            # Determine status colors
+            closer_status_color = "#22c55e" if closer_util < 75 else "#f59e0b" if closer_util < 90 else "#ef4444"
+            setter_status_color = "#22c55e" if setter_util < 75 else "#f59e0b" if setter_util < 90 else "#ef4444"
+            
+            # Create capacity chart
+            fig_capacity = go.Figure()
+            
+            # Closers - Stacked bar
+            fig_capacity.add_trace(go.Bar(
+                name='Used',
+                x=['Closers'],
+                y=[current_meetings],
+                text=[f"{current_meetings:.0f}"],
+                textposition='inside',
+                marker_color='#3b82f6',
+                hovertemplate='<b>Current Load</b><br>%{y:.0f} meetings<extra></extra>'
+            ))
+            
+            fig_capacity.add_trace(go.Bar(
+                name='Available',
+                x=['Closers'],
+                y=[closer_headroom if closer_headroom > 0 else 0],
+                text=[f"{closer_headroom:.0f}" if closer_headroom > 0 else "OVERLOAD"],
+                textposition='inside',
+                marker_color=closer_status_color,
+                hovertemplate='<b>Headroom</b><br>%{y:.0f} meetings<extra></extra>'
+            ))
+            
+            # Setters - Stacked bar
+            fig_capacity.add_trace(go.Bar(
+                name='Used',
+                x=['Setters'],
+                y=[current_bookings],
+                text=[f"{current_bookings:.0f}"],
+                textposition='inside',
+                marker_color='#3b82f6',
+                showlegend=False,
+                hovertemplate='<b>Current Load</b><br>%{y:.0f} bookings<extra></extra>'
+            ))
+            
+            fig_capacity.add_trace(go.Bar(
+                name='Available',
+                x=['Setters'],
+                y=[setter_headroom if setter_headroom > 0 else 0],
+                text=[f"{setter_headroom:.0f}" if setter_headroom > 0 else "OVERLOAD"],
+                textposition='inside',
+                marker_color=setter_status_color,
+                showlegend=False,
+                hovertemplate='<b>Headroom</b><br>%{y:.0f} bookings<extra></extra>'
+            ))
+            
+            fig_capacity.update_layout(
+                barmode='stack',
+                title=dict(
+                    text='Team Capacity vs Current Load',
+                    font=dict(size=14)
+                ),
+                height=350,
+                margin=dict(t=50, b=30, l=20, r=20),
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                showlegend=True,
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+            
+            st.plotly_chart(fig_capacity, use_container_width=True, key="capacity_chart")
+            
+            # Capacity insights
+            if closer_util >= 90:
+                st.error("🚨 Closers at critical capacity! Consider hiring.")
+            elif closer_util >= 75:
+                st.warning("⚠️ Closer capacity high. Plan for expansion.")
+            else:
+                st.success("✅ Closer capacity healthy")
+            
+            if setter_util >= 90:
+                st.error("🚨 Setters overloaded! Need more setters.")
+            elif setter_util >= 75:
+                st.warning("⚠️ Setter capacity stretched.")
+            else:
+                st.success("✅ Setter capacity healthy")
     
     # Compensation Configuration
     with st.expander("💵 Compensation Configuration", expanded=False):
