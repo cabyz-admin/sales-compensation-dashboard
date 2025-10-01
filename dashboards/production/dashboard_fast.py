@@ -2260,7 +2260,7 @@ with tab5:
     
     # Compensation Configuration
     with st.expander("💵 Compensation Configuration", expanded=False):
-        st.info("💡 **3-Tier Comp Model**: Base (guaranteed) + Variable (at 100% quota) + Commission (unlimited). OTE = Base + Variable")
+        st.info("💡 **2-Tier Comp Model**: Base Salary (guaranteed) + Commission % (unlimited upside)")
         
         comp_cols = st.columns(3)
         
@@ -2270,13 +2270,7 @@ with tab5:
                 "Base Salary (Annual $)", 
                 0, 200000, st.session_state.closer_base, 1000, 
                 key="closer_base",
-                help="Guaranteed annual salary, paid regardless of performance"
-            )
-            st.number_input(
-                "Variable Bonus (Annual $)", 
-                0, 200000, st.session_state.closer_variable, 1000, 
-                key="closer_variable",
-                help="Annual performance bonus earned at 100% quota. OTE = Base + Variable"
+                help="Annual salary + commission on deals"
             )
             st.number_input(
                 "Commission % (Per Deal)", 
@@ -2284,8 +2278,7 @@ with tab5:
                 key="closer_commission_pct",
                 help="Percentage of each deal value (unlimited upside)"
             )
-            closer_ote = st.session_state.closer_base + st.session_state.closer_variable
-            st.caption(f"💎 **OTE**: ${closer_ote:,.0f}/year (${closer_ote/12:,.0f}/month)")
+            st.caption(f"💰 **Base**: ${st.session_state.closer_base:,.0f}/year + Commission")
         
         with comp_cols[1]:
             st.markdown("**📞 Setter**")
@@ -2293,13 +2286,7 @@ with tab5:
                 "Base Salary (Annual $)", 
                 0, 200000, st.session_state.setter_base, 1000, 
                 key="setter_base",
-                help="Guaranteed annual salary, paid regardless of performance"
-            )
-            st.number_input(
-                "Variable Bonus (Annual $)", 
-                0, 200000, st.session_state.setter_variable, 1000, 
-                key="setter_variable",
-                help="Annual performance bonus earned at 100% quota. OTE = Base + Variable"
+                help="Annual salary + commission on deals"
             )
             st.number_input(
                 "Commission % (Per Deal)", 
@@ -2307,8 +2294,7 @@ with tab5:
                 key="setter_commission_pct",
                 help="Percentage of each deal value (unlimited upside)"
             )
-            setter_ote = st.session_state.setter_base + st.session_state.setter_variable
-            st.caption(f"💎 **OTE**: ${setter_ote:,.0f}/year (${setter_ote/12:,.0f}/month)")
+            st.caption(f"💰 **Base**: ${st.session_state.setter_base:,.0f}/year + Commission")
         
         with comp_cols[2]:
             st.markdown("**👔 Manager**")
@@ -2316,13 +2302,7 @@ with tab5:
                 "Base Salary (Annual $)", 
                 0, 300000, st.session_state.manager_base, 1000, 
                 key="manager_base",
-                help="Guaranteed annual salary, paid regardless of performance"
-            )
-            st.number_input(
-                "Variable Bonus (Annual $)", 
-                0, 300000, st.session_state.manager_variable, 1000, 
-                key="manager_variable",
-                help="Annual performance bonus earned at 100% quota. OTE = Base + Variable"
+                help="Annual salary + team override commission"
             )
             st.number_input(
                 "Commission % (Per Deal)", 
@@ -2330,8 +2310,7 @@ with tab5:
                 key="manager_commission_pct",
                 help="Percentage of each deal value (team override)"
             )
-            manager_ote = st.session_state.manager_base + st.session_state.manager_variable
-            st.caption(f"💎 **OTE**: ${manager_ote:,.0f}/year (${manager_ote/12:,.0f}/month)")
+            st.caption(f"💰 **Base**: ${st.session_state.manager_base:,.0f}/year + Commission")
     
     # Operating Costs
     with st.expander("🏢 Operating Costs", expanded=False):
