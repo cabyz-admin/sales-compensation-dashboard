@@ -1295,20 +1295,79 @@ with tab3:
     
     st.markdown("---")
     
-    # 2. 💰 Quick P&L Overview (Compact)
-    st.markdown("### 💰 Quick P&L Overview")
-    pnl_quick_cols = st.columns(5)
+    # 2. 💰 P&L Waterfall Visualization
+    st.markdown("### 💰 P&L Waterfall Visualization")
     
-    with pnl_quick_cols[0]:
-        st.metric("Revenue", f"${pnl_data['gross_revenue']:,.0f}")
-    with pnl_quick_cols[1]:
-        st.metric("COGS", f"${pnl_data['cogs']:,.0f}", f"{pnl_data['cogs']/pnl_data['gross_revenue']*100:.1f}%")
-    with pnl_quick_cols[2]:
-        st.metric("Gross Profit", f"${pnl_data['gross_profit']:,.0f}", f"{pnl_data['gross_margin']:.1f}%")
-    with pnl_quick_cols[3]:
-        st.metric("OpEx", f"${pnl_data['total_opex']:,.0f}")
-    with pnl_quick_cols[4]:
-        st.metric("EBITDA", f"${pnl_data['ebitda']:,.0f}", f"{pnl_data['ebitda_margin']:.1f}%")
+    viz_cols = st.columns([2, 1])
+    
+    with viz_cols[0]:
+        # Create waterfall chart
+        fig_waterfall = go.Figure(go.Waterfall(
+            name="P&L",
+            orientation="v",
+            measure=["relative", "relative", "total", "relative", "total"],
+            x=["Revenue", "COGS", "Gross Profit", "OpEx", "EBITDA"],
+            textposition="outside",
+            text=[f"${pnl_data['gross_revenue']:,.0f}",
+                  f"-${pnl_data['cogs']:,.0f}",
+                  f"${pnl_data['gross_profit']:,.0f}",
+                  f"-${pnl_data['total_opex']:,.0f}",
+                  f"${pnl_data['ebitda']:,.0f}"],
+            y=[pnl_data['gross_revenue'],
+               -pnl_data['cogs'],
+               0,
+               -pnl_data['total_opex'],
+               0],
+            connector={"line": {"color": "rgb(63, 63, 63)"}},
+            decreasing={"marker": {"color": "#EF4444"}},
+            increasing={"marker": {"color": "#3B82F6"}},
+            totals={"marker": {"color": "#10B981"}}
+        ))
+        
+        fig_waterfall.update_layout(
+            title="Monthly P&L Flow",
+            showlegend=False,
+            height=400,
+            yaxis_title="Amount ($)",
+            xaxis_title=""
+        )
+        
+        st.plotly_chart(fig_waterfall, use_container_width=True, key="pnl_waterfall")
+    
+    with viz_cols[1]:
+        st.markdown("#### 📊 Key Metrics")
+        
+        # Margins card
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 10px; margin-bottom: 15px;">
+            <h4 style="margin: 0; color: white;">Gross Margin</h4>
+            <h1 style="margin: 10px 0; color: white;">{pnl_data['gross_margin']:.1f}%</h1>
+            <p style="margin: 0; color: rgba(255,255,255,0.8);">Target: >60%</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # EBITDA Margin card
+        ebitda_color = "#10B981" if pnl_data['ebitda_margin'] > 20 else "#EF4444"
+        st.markdown(f"""
+        <div style="background: {ebitda_color}; padding: 20px; border-radius: 10px; margin-bottom: 15px;">
+            <h4 style="margin: 0; color: white;">EBITDA Margin</h4>
+            <h1 style="margin: 10px 0; color: white;">{pnl_data['ebitda_margin']:.1f}%</h1>
+            <p style="margin: 0; color: rgba(255,255,255,0.8);">Target: >20%</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Unit Economics
+        cost_per_sale = gtm_metrics.get('cost_per_sale', 0)
+        revenue_per_sale = pnl_data['gross_revenue'] / gtm_metrics['monthly_sales'] if gtm_metrics['monthly_sales'] > 0 else 0
+        st.markdown(f"""
+        <div style="background: #1F2937; padding: 15px; border-radius: 10px; border-left: 4px solid #3B82F6;">
+            <p style="margin: 0; color: #9CA3AF; font-size: 0.875rem;">PER SALE</p>
+            <p style="margin: 5px 0; color: #10B981; font-size: 1.25rem; font-weight: bold;">Revenue: ${revenue_per_sale:,.0f}</p>
+            <p style="margin: 5px 0; color: #EF4444; font-size: 1.25rem; font-weight: bold;">Cost: ${cost_per_sale:,.0f}</p>
+            <p style="margin: 5px 0; color: #3B82F6; font-size: 1.25rem; font-weight: bold;">Net: ${revenue_per_sale - cost_per_sale:,.0f}</p>
+            <p style="margin: 5px 0 0 0; color: #9CA3AF; font-size: 0.875rem;">Sales: {gtm_metrics['monthly_sales']:.0f}/mo</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     st.markdown("---")
     
