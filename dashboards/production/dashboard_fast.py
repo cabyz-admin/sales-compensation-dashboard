@@ -788,9 +788,9 @@ with tab1:
                     cpl = total_budget / leads if leads > 0 else 0
                     st.info(f"📊 Effective CPL: ${cpl:.2f}")
                 
-                # Store the calculated values
-                st.session_state.gtm_channels[idx]['monthly_leads'] = leads
-                st.session_state.gtm_channels[idx]['cpl'] = cpl
+                # Store the calculated values (convert to int to avoid type mismatch)
+                st.session_state.gtm_channels[idx]['monthly_leads'] = int(leads)
+                st.session_state.gtm_channels[idx]['cpl'] = int(cpl)
             
             with cfg_cols[2]:
                 st.markdown("**Channel Performance**")
