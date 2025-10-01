@@ -102,6 +102,10 @@ st.markdown("""
         padding: 12px;
         margin: 8px 0;
         border-radius: 4px;
+        color: #991b1b;
+    }
+    .alert-critical strong {
+        color: #7f1d1d;
     }
     .alert-warning {
         background-color: #fef3c7;
@@ -109,6 +113,10 @@ st.markdown("""
         padding: 12px;
         margin: 8px 0;
         border-radius: 4px;
+        color: #92400e;
+    }
+    .alert-warning strong {
+        color: #78350f;
     }
     .alert-success {
         background-color: #d1fae5;
@@ -116,6 +124,10 @@ st.markdown("""
         padding: 12px;
         margin: 8px 0;
         border-radius: 4px;
+        color: #065f46;
+    }
+    .alert-success strong {
+        color: #064e3b;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -1197,21 +1209,87 @@ with tab5:
     st.header("⚙️ Configuration")
     st.caption("Configure deal economics, team, compensation, and operating costs")
     
-    # Deal Economics
+    # Deal Economics - Enhanced
     with st.expander("💰 Deal Economics & Payment Terms", expanded=True):
         st.info("💡 Configure your deal structure - applies to all calculations")
+        
+        # Business Type Selector
+        biz_type_col, template_col = st.columns([2, 1])
+        
+        with biz_type_col:
+            business_type = st.selectbox(
+                "Business Type",
+                ["Custom", "SaaS/Subscription", "Consulting/Services", "Agency/Retainer", "One-Time Sale"],
+                index=0,
+                key="business_type",
+                help="Select a business type for pre-configured deal economics"
+            )
+        
+        with template_col:
+            if business_type != "Custom" and st.button("📋 Apply Template", use_container_width=True):
+                # Apply business type templates
+                templates = {
+                    "SaaS/Subscription": {
+                        'avg_deal_value': 60000,
+                        'upfront_payment_pct': 100.0,
+                        'contract_length_months': 12,
+                        'deferred_timing_months': 0
+                    },
+                    "Consulting/Services": {
+                        'avg_deal_value': 50000,
+                        'upfront_payment_pct': 50.0,
+                        'contract_length_months': 3,
+                        'deferred_timing_months': 3
+                    },
+                    "Agency/Retainer": {
+                        'avg_deal_value': 72000,
+                        'upfront_payment_pct': 100.0,
+                        'contract_length_months': 12,
+                        'deferred_timing_months': 0
+                    },
+                    "One-Time Sale": {
+                        'avg_deal_value': 10000,
+                        'upfront_payment_pct': 100.0,
+                        'contract_length_months': 1,
+                        'deferred_timing_months': 0
+                    }
+                }
+                
+                if business_type in templates:
+                    template = templates[business_type]
+                    for key, value in template.items():
+                        st.session_state[key] = value
+                    st.success(f"✅ Applied {business_type} template!")
+                    st.rerun()
+        
+        st.markdown("---")
         
         deal_cols = st.columns(3)
         
         with deal_cols[0]:
-            st.markdown("**Deal Value**")
+            st.markdown("**Deal Structure**")
             avg_deal_value = st.number_input(
                 "Average Deal Value ($)",
                 min_value=0,
                 value=st.session_state.avg_deal_value,
                 step=1000,
-                key="avg_deal_value"
+                key="avg_deal_value",
+                help="Total contract value"
             )
+            
+            contract_length = st.number_input(
+                "Contract Length (months)",
+                min_value=1,
+                max_value=60,
+                value=st.session_state.contract_length_months,
+                step=1,
+                key="contract_length_months",
+                help="Duration of the contract"
+            )
+            
+            # Show calculated values
+            monthly_value = avg_deal_value / contract_length if contract_length > 0 else 0
+            st.caption(f"💡 Monthly: ${monthly_value:,.0f}")
         
         with deal_cols[1]:
             st.markdown("**Payment Terms**")
@@ -1220,24 +1298,76 @@ with tab5:
                 0.0,
                 100.0,
                 st.session_state.upfront_payment_pct,
-                1.0,
-                key="upfront_payment_pct"
+                5.0,
+                key="upfront_payment_pct",
+                help="Percentage paid upfront"
             )
-            st.caption(f"Deferred: {100-upfront_pct:.0f}%")
+            
+            deferred_pct = 100 - upfront_pct
+            upfront_cash = avg_deal_value * (upfront_pct / 100)
+            deferred_cash = avg_deal_value * (deferred_pct / 100)
+            
+            st.caption(f"**Upfront:** ${upfront_cash:,.0f} ({upfront_pct:.0f}%)")
+            st.caption(f"**Deferred:** ${deferred_cash:,.0f} ({deferred_pct:.0f}%)")
+            
+            if deferred_pct > 0:
+                deferred_timing = st.number_input(
+                    "Deferred Payment Month",
+                    min_value=1,
+                    max_value=60,
+                    value=st.session_state.deferred_timing_months,
+                    step=1,
+                    key="deferred_timing_months",
+                    help="Month when deferred payment is received"
+                )
         
         with deal_cols[2]:
             st.markdown("**Commission Policy**")
             commission_policy = st.radio(
-                "Pay Commissions From:",
+                "Calculate Commissions From:",
                 ["Upfront Cash Only", "Full Deal Value"],
                 index=0 if st.session_state.commission_policy == 'upfront' else 1,
-                key="commission_policy_selector"
+                key="commission_policy_selector",
+                help="Choose what amount to use as commission base"
             )
             
             if "Upfront" in commission_policy:
                 st.session_state.commission_policy = 'upfront'
+                comm_base = upfront_cash
             else:
                 st.session_state.commission_policy = 'full'
+                comm_base = avg_deal_value
+            
+            st.caption(f"**Commission Base:** ${comm_base:,.0f}")
+            
+            # Show GRR/NRR settings
+            st.markdown("**Revenue Retention**")
+            grr = st.slider(
+                "GRR (Gross Revenue Retention)",
+                0.0,
+                1.5,
+                st.session_state.grr_rate,
+                0.05,
+                key="grr_rate",
+                help="Expected revenue retention rate",
+                format="%.0f%%"
+            )
+        
+        # Deal Economics Summary
+        st.markdown("---")
+        st.markdown("**📊 Deal Economics Summary**")
+        summary_cols = st.columns(5)
+        
+        with summary_cols[0]:
+            st.metric("Total Contract", f"${avg_deal_value:,.0f}")
+        with summary_cols[1]:
+            st.metric("Upfront Cash", f"${upfront_cash:,.0f}")
+        with summary_cols[2]:
+            st.metric("Deferred Cash", f"${deferred_cash:,.0f}")
+        with summary_cols[3]:
+            st.metric("Commission Base", f"${comm_base:,.0f}")
+        with summary_cols[4]:
+            st.metric("Monthly Value", f"${monthly_value:,.0f}")
     
     # Team Configuration
     with st.expander("👥 Team Configuration", expanded=False):
@@ -1284,6 +1414,204 @@ with tab5:
             st.number_input("Software ($)", 0, 50000, st.session_state.software_costs, 100, key="software_costs")
         with ops_cols[2]:
             st.number_input("Other OpEx ($)", 0, 100000, st.session_state.other_opex, 500, key="other_opex")
+    
+    # JSON Export/Import - Smart & Fast
+    st.markdown("---")
+    st.markdown("### 📋 Configuration Export/Import")
+    st.info("💡 Save and load your complete dashboard configuration in seconds")
+    
+    export_col, import_col = st.columns(2)
+    
+    with export_col:
+        st.markdown("**📤 Export Configuration**")
+        
+        # Build configuration dictionary from session state
+        def build_config():
+            return {
+                "deal_economics": {
+                    "business_type": st.session_state.get('business_type', 'Custom'),
+                    "avg_deal_value": st.session_state.avg_deal_value,
+                    "contract_length_months": st.session_state.contract_length_months,
+                    "upfront_payment_pct": st.session_state.upfront_payment_pct,
+                    "deferred_timing_months": st.session_state.deferred_timing_months,
+                    "commission_policy": st.session_state.commission_policy,
+                    "grr_rate": st.session_state.grr_rate
+                },
+                "team": {
+                    "closers": st.session_state.num_closers_main,
+                    "setters": st.session_state.num_setters_main,
+                    "managers": st.session_state.num_managers_main,
+                    "bench": st.session_state.num_benchs_main
+                },
+                "compensation": {
+                    "closer": {
+                        "base": st.session_state.closer_base,
+                        "variable": st.session_state.closer_variable,
+                        "commission_pct": st.session_state.closer_commission_pct
+                    },
+                    "setter": {
+                        "base": st.session_state.setter_base,
+                        "variable": st.session_state.setter_variable,
+                        "commission_pct": st.session_state.setter_commission_pct
+                    },
+                    "manager": {
+                        "base": st.session_state.manager_base,
+                        "variable": st.session_state.manager_variable,
+                        "commission_pct": st.session_state.manager_commission_pct
+                    },
+                    "bench": {
+                        "base": st.session_state.bench_base,
+                        "variable": st.session_state.bench_variable
+                    }
+                },
+                "operating_costs": {
+                    "office_rent": st.session_state.office_rent,
+                    "software_costs": st.session_state.software_costs,
+                    "other_opex": st.session_state.other_opex
+                },
+                "gtm_channels": st.session_state.gtm_channels,
+                "timestamp": datetime.now().isoformat(),
+                "version": "1.0"
+            }
+        
+        config_json = json.dumps(build_config(), indent=2)
+        
+        # Download button
+        st.download_button(
+            label="📥 Download Config",
+            data=config_json,
+            file_name=f"dashboard_config_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+            mime="application/json",
+            use_container_width=True
+        )
+        
+        # Copy to clipboard option
+        if st.button("📋 Show Config (Copy/Paste)", use_container_width=True):
+            st.code(config_json, language="json")
+            st.success("✅ Copy the JSON above to share or save")
+    
+    with import_col:
+        st.markdown("**📥 Import Configuration**")
+        
+        # File upload
+        uploaded_file = st.file_uploader(
+            "Upload JSON config file",
+            type=['json'],
+            help="Upload a previously saved configuration",
+            label_visibility="visible"
+        )
+        
+        if uploaded_file is not None:
+            try:
+                loaded_config = json.load(uploaded_file)
+                
+                if st.button("✅ Apply Uploaded Config", use_container_width=True):
+                    # Apply loaded configuration
+                    if 'deal_economics' in loaded_config:
+                        de = loaded_config['deal_economics']
+                        st.session_state['avg_deal_value'] = de.get('avg_deal_value', 50000)
+                        st.session_state['contract_length_months'] = de.get('contract_length_months', 12)
+                        st.session_state['upfront_payment_pct'] = de.get('upfront_payment_pct', 70.0)
+                        st.session_state['deferred_timing_months'] = de.get('deferred_timing_months', 18)
+                        st.session_state['commission_policy'] = de.get('commission_policy', 'upfront')
+                        st.session_state['grr_rate'] = de.get('grr_rate', 0.9)
+                    
+                    if 'team' in loaded_config:
+                        t = loaded_config['team']
+                        st.session_state['num_closers_main'] = t.get('closers', 8)
+                        st.session_state['num_setters_main'] = t.get('setters', 4)
+                        st.session_state['num_managers_main'] = t.get('managers', 2)
+                        st.session_state['num_benchs_main'] = t.get('bench', 2)
+                    
+                    if 'compensation' in loaded_config:
+                        c = loaded_config['compensation']
+                        if 'closer' in c:
+                            st.session_state['closer_base'] = c['closer'].get('base', 32000)
+                            st.session_state['closer_variable'] = c['closer'].get('variable', 48000)
+                            st.session_state['closer_commission_pct'] = c['closer'].get('commission_pct', 20.0)
+                        if 'setter' in c:
+                            st.session_state['setter_base'] = c['setter'].get('base', 16000)
+                            st.session_state['setter_variable'] = c['setter'].get('variable', 24000)
+                            st.session_state['setter_commission_pct'] = c['setter'].get('commission_pct', 3.0)
+                        if 'manager' in c:
+                            st.session_state['manager_base'] = c['manager'].get('base', 72000)
+                            st.session_state['manager_variable'] = c['manager'].get('variable', 48000)
+                            st.session_state['manager_commission_pct'] = c['manager'].get('commission_pct', 5.0)
+                    
+                    if 'operating_costs' in loaded_config:
+                        oc = loaded_config['operating_costs']
+                        st.session_state['office_rent'] = oc.get('office_rent', 20000)
+                        st.session_state['software_costs'] = oc.get('software_costs', 10000)
+                        st.session_state['other_opex'] = oc.get('other_opex', 5000)
+                    
+                    if 'gtm_channels' in loaded_config:
+                        st.session_state['gtm_channels'] = loaded_config['gtm_channels']
+                    
+                    st.success("✅ Configuration loaded successfully!")
+                    st.rerun()
+            
+            except Exception as e:
+                st.error(f"❌ Error loading config: {str(e)}")
+        
+        # Paste JSON option
+        with st.expander("📝 Or Paste JSON"):
+            pasted_config = st.text_area(
+                "Paste configuration JSON here",
+                height=150,
+                placeholder='{"deal_economics": {...}, "team": {...}}',
+                key="pasted_json_config"
+            )
+            
+            if st.button("✅ Apply Pasted Config") and pasted_config:
+                try:
+                    loaded_config = json.loads(pasted_config)
+                    
+                    # Apply same logic as file upload
+                    if 'deal_economics' in loaded_config:
+                        de = loaded_config['deal_economics']
+                        st.session_state['avg_deal_value'] = de.get('avg_deal_value', 50000)
+                        st.session_state['contract_length_months'] = de.get('contract_length_months', 12)
+                        st.session_state['upfront_payment_pct'] = de.get('upfront_payment_pct', 70.0)
+                        st.session_state['deferred_timing_months'] = de.get('deferred_timing_months', 18)
+                        st.session_state['commission_policy'] = de.get('commission_policy', 'upfront')
+                        st.session_state['grr_rate'] = de.get('grr_rate', 0.9)
+                    
+                    if 'team' in loaded_config:
+                        t = loaded_config['team']
+                        st.session_state['num_closers_main'] = t.get('closers', 8)
+                        st.session_state['num_setters_main'] = t.get('setters', 4)
+                        st.session_state['num_managers_main'] = t.get('managers', 2)
+                        st.session_state['num_benchs_main'] = t.get('bench', 2)
+                    
+                    if 'compensation' in loaded_config:
+                        c = loaded_config['compensation']
+                        if 'closer' in c:
+                            st.session_state['closer_base'] = c['closer'].get('base', 32000)
+                            st.session_state['closer_variable'] = c['closer'].get('variable', 48000)
+                            st.session_state['closer_commission_pct'] = c['closer'].get('commission_pct', 20.0)
+                        if 'setter' in c:
+                            st.session_state['setter_base'] = c['setter'].get('base', 16000)
+                            st.session_state['setter_variable'] = c['setter'].get('variable', 24000)
+                            st.session_state['setter_commission_pct'] = c['setter'].get('commission_pct', 3.0)
+                        if 'manager' in c:
+                            st.session_state['manager_base'] = c['manager'].get('base', 72000)
+                            st.session_state['manager_variable'] = c['manager'].get('variable', 48000)
+                            st.session_state['manager_commission_pct'] = c['manager'].get('commission_pct', 5.0)
+                    
+                    if 'operating_costs' in loaded_config:
+                        oc = loaded_config['operating_costs']
+                        st.session_state['office_rent'] = oc.get('office_rent', 20000)
+                        st.session_state['software_costs'] = oc.get('software_costs', 10000)
+                        st.session_state['other_opex'] = oc.get('other_opex', 5000)
+                    
+                    if 'gtm_channels' in loaded_config:
+                        st.session_state['gtm_channels'] = loaded_config['gtm_channels']
+                    
+                    st.success("✅ Configuration applied successfully!")
+                    st.rerun()
+                
+                except Exception as e:
+                    st.error(f"❌ Error parsing JSON: {str(e)}")
 
 # ============= FOOTER =============
 st.markdown("---")
