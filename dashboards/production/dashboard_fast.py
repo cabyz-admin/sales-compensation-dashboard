@@ -954,22 +954,31 @@ with tab1:
                     textinfo="value+percent initial"
                 ))
             
-            # Add aggregated "All Channels" funnel
-            funnel_fig.add_trace(go.Funnel(
-                name='🎯 All Channels (Total)',
-                y=['Leads', 'Contacts', 'Meetings Scheduled', 'Meetings Held', 'Sales'],
-                x=[total_leads, total_contacts, total_meetings_scheduled, total_meetings_held, total_sales],
-                textinfo="value+percent initial",
-                marker=dict(color='rgba(0,128,0,0.6)')  # Green color for total
-            ))
-            
             funnel_fig.update_layout(
-                title="Multi-Channel Funnel Flow",
-                height=450,
+                title="Individual Channel Funnels",
+                height=400,
                 showlegend=True
             )
             
             st.plotly_chart(funnel_fig, use_container_width=True, key="gtm_channel_funnel")
+            
+            # Separate chart for aggregated total
+            st.markdown("#### 🎯 Aggregated Total")
+            
+            total_fig = go.Figure(go.Funnel(
+                y=['Leads', 'Contacts', 'Meetings Scheduled', 'Meetings Held', 'Sales'],
+                x=[total_leads, total_contacts, total_meetings_scheduled, total_meetings_held, total_sales],
+                textinfo="value+percent initial",
+                marker=dict(color='#F59E0B', line=dict(width=2, color='#D97706'))  # Amber/gold color
+            ))
+            
+            total_fig.update_layout(
+                title="All Channels Combined",
+                height=300,
+                showlegend=False
+            )
+            
+            st.plotly_chart(total_fig, use_container_width=True, key="gtm_total_funnel")
         
         with chart_cols[1]:
             st.markdown("#### 💰 Revenue Contribution")
@@ -1650,22 +1659,31 @@ with tab3:
                     textinfo="value+percent initial"
                 ))
             
-            # Add aggregated "All Channels" funnel
-            funnel_fig.add_trace(go.Funnel(
-                name='🎯 All Channels (Total)',
-                y=['Leads', 'Contacts', 'Meetings Scheduled', 'Meetings Held', 'Sales'],
-                x=[total_leads, total_contacts, total_meetings_scheduled, total_meetings_held, total_sales],
-                textinfo="value+percent initial",
-                marker=dict(color='rgba(0,128,0,0.6)')  # Green color for total
-            ))
-            
             funnel_fig.update_layout(
-                title="Multi-Channel Funnel Flow",
-                height=450,
+                title="Individual Channel Funnels",
+                height=400,
                 showlegend=True
             )
             
             st.plotly_chart(funnel_fig, use_container_width=True, key="channel_funnel")
+            
+            # Separate chart for aggregated total
+            st.markdown("#### 🎯 Aggregated Total")
+            
+            total_fig = go.Figure(go.Funnel(
+                y=['Leads', 'Contacts', 'Meetings Scheduled', 'Meetings Held', 'Sales'],
+                x=[total_leads, total_contacts, total_meetings_scheduled, total_meetings_held, total_sales],
+                textinfo="value+percent initial",
+                marker=dict(color='#F59E0B', line=dict(width=2, color='#D97706'))  # Amber/gold color
+            ))
+            
+            total_fig.update_layout(
+                title="All Channels Combined",
+                height=300,
+                showlegend=False
+            )
+            
+            st.plotly_chart(total_fig, use_container_width=True, key="total_funnel")
         
         with chart_cols[1]:
             st.markdown("#### 💰 Revenue Contribution")
