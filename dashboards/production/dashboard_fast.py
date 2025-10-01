@@ -476,13 +476,17 @@ comm_calc = DealEconomicsManager.calculate_monthly_commission(
 marketing_spend = sum(ch.get('monthly_leads', 0) * ch.get('cpl', 50) 
                      for ch in st.session_state.gtm_channels if ch.get('enabled', True))
 
+# Calculate government costs (% of gross revenue)
+gov_cost_pct = st.session_state.get('government_cost_pct', 10.0) / 100
+gov_fees = gtm_metrics['monthly_revenue_immediate'] * gov_cost_pct
+
 pnl_data = calculate_pnl_cached(
     gtm_metrics['monthly_revenue_immediate'],
     team_base,
     comm_calc['total_commission'],
     marketing_spend,
     st.session_state.office_rent + st.session_state.software_costs + st.session_state.other_opex,
-    0
+    gov_fees  # Now includes actual government costs
 )
 
 unit_econ = calculate_unit_economics_cached(
@@ -575,13 +579,17 @@ with tab1:
     marketing_spend = sum(ch.get('monthly_leads', 0) * ch.get('cpl', 50) 
                          for ch in st.session_state.gtm_channels if ch.get('enabled', True))
     
+    # Calculate government costs (% of gross revenue)
+    gov_cost_pct = st.session_state.get('government_cost_pct', 10.0) / 100
+    gov_fees = gtm_metrics['monthly_revenue_immediate'] * gov_cost_pct
+    
     pnl_data = calculate_pnl_cached(
         gtm_metrics['monthly_revenue_immediate'],
         team_base,
         comm_calc['total_commission'],
         marketing_spend,
         st.session_state.office_rent + st.session_state.software_costs + st.session_state.other_opex,
-        0  # gov fees
+        gov_fees  # Now includes actual government costs
     )
     
     # Dynamic Alerts
