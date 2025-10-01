@@ -899,10 +899,16 @@ with tab2:
     st.header("💰 Compensation Structure")
     st.caption("Commission flow, earnings preview, and team compensation")
     
+    # Get fresh deal economics for this tab (in case changed in Configuration)
+    tab2_deal_econ = DealEconomicsManager.get_current_deal_economics()
+    
     # Commission Flow Fragment
     @st.fragment
     def render_commission_flow():
         st.subheader("💸 Commission Flow Visualization")
+        
+        # Get FRESH deal economics inside fragment to ensure latest values
+        current_deal_econ = DealEconomicsManager.get_current_deal_economics()
         
         flow_view = st.radio(
             "View",
@@ -931,8 +937,6 @@ with tab2:
         num_closers = st.session_state.num_closers_main
         num_setters = st.session_state.num_setters_main
         num_managers = st.session_state.num_managers_main
-        
-        current_deal_econ = DealEconomicsManager.get_current_deal_economics()
         
         # Calculate commission data based on view
         if "Per Deal" in flow_view:
