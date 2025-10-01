@@ -38,8 +38,27 @@ for path in [MODULES_DIR, PROJECT_ROOT, CURRENT_DIR]:
     if path not in sys.path:
         sys.path.insert(0, path)
 
+# ============= TRANSLATIONS =============
+TRANSLATIONS = {
+    'en': {
+        'language': '🌐 Language',
+        'english': '🇺🇸 English',
+        'spanish': '🇪🇸 Español',
+    },
+    'es': {
+        'language': '🌐 Idioma',
+        'english': '🇺🇸 English',
+        'spanish': '🇪🇸 Español',
+    }
+}
+
+def t(key, lang='en'):
+    """Translation function"""
+    return TRANSLATIONS.get(lang, TRANSLATIONS['en']).get(key, key)
+
 # Import modules
 try:
+    from deal_economics_manager import DealEconomicsManager
     from modules.calculations_improved import (
         ImprovedCostCalculator,
         ImprovedCompensationCalculator,
@@ -506,13 +525,25 @@ with kpi_row2[5]:
 
 st.markdown("---")
 
+# ============= LANGUAGE SELECTOR (SIDEBAR) =============
+with st.sidebar:
+    st.markdown("### 🌐 Language / Idioma")
+    lang = st.selectbox(
+        "",
+        options=['en', 'es'],
+        format_func=lambda x: t('english', x) if x == 'en' else t('spanish', x),
+        key='language_selector',
+        label_visibility='collapsed'
+    )
+    st.markdown("---")
+
 # ============= TABS =============
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "🎯 GTM Command Center",
-    "💰 Compensation Structure", 
-    "📊 Business Performance",
-    "🔮 What-If Analysis",
-    "⚙️ Configuration"
+    "🎯 GTM Command Center" if lang == 'en' else "🎯 Centro GTM",
+    "💰 Compensation Structure" if lang == 'en' else "💰 Estructura de Compensación", 
+    "📊 Business Performance" if lang == 'en' else "📊 Desempeño del Negocio",
+    "🔮 What-If Analysis" if lang == 'en' else "🔮 Análisis Hipotético",
+    "⚙️ Configuration" if lang == 'en' else "⚙️ Configuración"
 ])
 
 # ============= TAB 1: GTM COMMAND CENTER =============
