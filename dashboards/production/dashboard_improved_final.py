@@ -1289,11 +1289,41 @@ with tabs[0]:
                     st.metric("Monthly OTE Cost", f"${monthly_ote_cost:,.0f}")
                     st.metric("Annual OTE Cost", f"${annual_ote_cost:,.0f}")
         
+        # Stakeholders Configuration
+        st.markdown("---")
+        st.markdown("### 👔 Stakeholders (% of EBITDA)")
+        
+        stake_cols = st.columns([2, 1, 1])
+        
+        with stake_cols[0]:
+            stakeholder_pct = st.slider(
+                "Stakeholder Profit Share (%)",
+                min_value=0.0,
+                max_value=50.0,
+                value=st.session_state.get('stakeholder_pct', 10.0),
+                step=0.5,
+                help="Percentage of EBITDA distributed to stakeholders/owners"
+            )
+            st.session_state['stakeholder_pct'] = stakeholder_pct
+        
+        with stake_cols[1]:
+            # Calculate stakeholder payout (need to get EBITDA)
+            if 'monthly_ebitda' in locals() and monthly_ebitda > 0:
+                stakeholder_monthly = monthly_ebitda * (stakeholder_pct / 100)
+                st.metric("Monthly Distribution", f"${stakeholder_monthly:,.0f}")
+                st.metric("Annual Distribution", f"${stakeholder_monthly * 12:,.0f}")
+            else:
+                st.caption("EBITDA calculations will show here")
+        
+        with stake_cols[2]:
+            st.caption("📊 This comes from EBITDA after all team costs and OpEx")
+            st.caption("💡 Remaining EBITDA stays in business")
+        
         # Summary section
         st.markdown("---")
-        st.markdown("### 📊 Total Team Compensation")
+        st.markdown("### 📊 Total Compensation Summary")
         
-        summary_cols = st.columns(4)
+        summary_cols = st.columns(5)
         
         # Calculate totals
         total_monthly_base = sum([
@@ -1321,12 +1351,245 @@ with tabs[0]:
             st.metric("Expected Monthly", f"${expected_monthly_total:,.0f}", "80% attainment")
         with summary_cols[3]:
             st.metric("Annual OTE", f"${total_annual_ote:,.0f}")
+        with summary_cols[4]:
+            if 'monthly_ebitda' in locals() and monthly_ebitda > 0:
+                stakeholder_annual = monthly_ebitda * (stakeholder_pct / 100) * 12
+                st.metric("Stakeholder Annual", f"${stakeholder_annual:,.0f}", f"{stakeholder_pct}% EBITDA")
+            else:
+                st.metric("Stakeholder Share", f"{stakeholder_pct}%")
         
         # Show EBITDA impact
         st.markdown("**💰 EBITDA Impact:**")
         if 'monthly_revenue_total' in locals():
             comp_as_pct_revenue = (total_monthly_ote / monthly_revenue_total * 100) if monthly_revenue_total > 0 else 0
             st.caption(f"Team comp is **{comp_as_pct_revenue:.1f}%** of revenue (target: <40% for healthy margins)")
+        
+        # Commission Flow Visualization
+        st.markdown("---")
+        st.markdown("### 💸 Commission Flow Visualization")
+        
+        import plotly.graph_objects as go
+        
+        flow_cols = st.columns([2, 1])
+        
+        with flow_cols[0]:
+            # Get actual revenue and calculate pools
+            actual_revenue = gtm_metrics.get('monthly_revenue_immediate', monthly_revenue_immediate) if 'gtm_metrics' in locals() else monthly_revenue_immediate
+            
+            # Calculate commission pools (use 20% and 3% as example rates - make these customizable)
+            closer_comm_rate = st.session_state.get('closer_comm_rate', 0.20)
+            setter_comm_rate = st.session_state.get('setter_comm_rate', 0.03)
+            
+            closer_pool = actual_revenue * closer_comm_rate
+            setter_pool = actual_revenue * setter_comm_rate
+            manager_pool = actual_revenue * 0.05  # 5% for managers
+            
+            # Create flow diagram
+            fig_flow = go.Figure()
+            
+            # Revenue box
+            fig_flow.add_trace(go.Scatter(
+                x=[1], y=[3],
+                mode='markers+text',
+                marker=dict(size=100, color='#3b82f6'),
+                text=[f"Revenue<br>${actual_revenue:,.0f}"],
+                textfont=dict(color='white', size=12),
+                textposition="middle center",
+                showlegend=False,
+                hovertemplate='<b>Monthly Revenue</b><br>$%{text}<extra></extra>'
+            ))
+            
+            # Commission pools
+            fig_flow.add_trace(go.Scatter(
+                x=[2.5, 2.5, 2.5], y=[4, 3, 2],
+                mode='markers+text',
+                marker=dict(size=[80, 80, 70], color='#f59e0b'),
+                text=[f"Closer Pool<br>${closer_pool:,.0f}", 
+                      f"Setter Pool<br>${setter_pool:,.0f}",
+                      f"Manager Pool<br>${manager_pool:,.0f}"],
+                textfont=dict(color='white', size=10),
+                textposition="middle center",
+                showlegend=False
+            ))
+            
+            # Per-person amounts
+            num_closers_calc = st.session_state.get('num_closers_main', num_closers)
+            num_setters_calc = st.session_state.get('num_setters_main', num_setters)
+            num_managers_calc = st.session_state.get('num_managers_main', num_managers)
+            
+            if num_closers_calc > 0:
+                fig_flow.add_trace(go.Scatter(
+                    x=[4], y=[4],
+                    mode='markers+text',
+                    marker=dict(size=60, color='#22c55e'),
+                    text=[f"Per Closer<br>${closer_pool/num_closers_calc:,.0f}"],
+                    textfont=dict(color='white', size=10),
+                    textposition="middle center",
+                    showlegend=False
+                ))
+            
+            if num_setters_calc > 0:
+                fig_flow.add_trace(go.Scatter(
+                    x=[4], y=[3],
+                    mode='markers+text',
+                    marker=dict(size=60, color='#22c55e'),
+                    text=[f"Per Setter<br>${setter_pool/num_setters_calc:,.0f}"],
+                    textfont=dict(color='white', size=10),
+                    textposition="middle center",
+                    showlegend=False
+                ))
+            
+            if num_managers_calc > 0:
+                fig_flow.add_trace(go.Scatter(
+                    x=[4], y=[2],
+                    mode='markers+text',
+                    marker=dict(size=60, color='#22c55e'),
+                    text=[f"Per Manager<br>${manager_pool/num_managers_calc:,.0f}"],
+                    textfont=dict(color='white', size=10),
+                    textposition="middle center",
+                    showlegend=False
+                ))
+            
+            # Add arrows
+            for y_pos in [4, 3, 2]:
+                fig_flow.add_annotation(
+                    x=2, y=y_pos, ax=1.3, ay=3,
+                    xref="x", yref="y", axref="x", ayref="y",
+                    arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="#94a3b8"
+                )
+                fig_flow.add_annotation(
+                    x=3.5, y=y_pos, ax=2.8, ay=y_pos,
+                    xref="x", yref="y", axref="x", ayref="y",
+                    arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="#94a3b8"
+                )
+            
+            fig_flow.update_layout(
+                height=350,
+                showlegend=False,
+                xaxis=dict(visible=False, range=[0, 5]),
+                yaxis=dict(visible=False, range=[1.5, 4.5]),
+                margin=dict(l=0, r=0, t=20, b=0),
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                title=dict(text="Revenue → Pools → Per Person", font=dict(size=14, color='#e2e8f0'))
+            )
+            
+            st.plotly_chart(fig_flow, use_container_width=True, key="commission_flow")
+        
+        with flow_cols[1]:
+            total_commission = closer_pool + setter_pool + manager_pool
+            commission_rate = (total_commission/actual_revenue)*100 if actual_revenue > 0 else 0
+            
+            st.metric("Total Commission", f"${total_commission:,.0f}")
+            st.metric("Commission Rate", f"{commission_rate:.1f}%")
+            st.metric("Commission/Employee", 
+                     f"${total_commission/(num_closers_calc+num_setters_calc+num_managers_calc):,.0f}" 
+                     if (num_closers_calc+num_setters_calc+num_managers_calc) > 0 else "$0")
+        
+        # Period-Based Earnings Preview
+        st.markdown("---")
+        st.markdown("### 📅 Period-Based Earnings Preview")
+        
+        working_days = st.session_state.get('working_days', 20)
+        
+        period_data = []
+        for role_key in ['closer', 'setter', 'manager', 'bench']:
+            role_count = st.session_state.get(f'num_{role_key}s_main', 0)
+            if role_count > 0:
+                role_config = roles_comp[role_key]
+                
+                base_monthly = role_config['base']
+                base_daily = base_monthly / 30
+                base_weekly = base_monthly / 4.33
+                base_annual = base_monthly * 12
+                
+                # Commission (only for closer/setter/manager)
+                if role_key == 'closer':
+                    comm_monthly = closer_pool / num_closers_calc if num_closers_calc > 0 else 0
+                elif role_key == 'setter':
+                    comm_monthly = setter_pool / num_setters_calc if num_setters_calc > 0 else 0
+                elif role_key == 'manager':
+                    comm_monthly = manager_pool / num_managers_calc if num_managers_calc > 0 else 0
+                else:
+                    comm_monthly = 0
+                
+                comm_daily = comm_monthly / working_days
+                comm_weekly = comm_monthly / 4.33
+                comm_annual = comm_monthly * 12
+                
+                period_data.append({
+                    'Role': role_key.capitalize(),
+                    'Count': role_count,
+                    'Daily': f"${base_daily + comm_daily:,.0f}",
+                    'Weekly': f"${base_weekly + comm_weekly:,.0f}",
+                    'Monthly': f"${base_monthly + comm_monthly:,.0f}",
+                    'Annual': f"${base_annual + comm_annual:,.0f}",
+                    'vs OTE': f"{((base_monthly + comm_monthly)/role_config['ote']*100):.0f}%" if role_config['ote'] > 0 else "N/A"
+                })
+        
+        if period_data:
+            st.dataframe(
+                pd.DataFrame(period_data), 
+                use_container_width=True, 
+                hide_index=True,
+                column_config={
+                    "Role": st.column_config.TextColumn("Role", width="small"),
+                    "Count": st.column_config.NumberColumn("Count", width="small"),
+                    "vs OTE": st.column_config.TextColumn("vs OTE", width="small")
+                }
+            )
+        
+        # Visual Daily Activity Requirements per Role
+        st.markdown("---")
+        st.markdown("### 📊 Daily Activity Requirements (Visual)")
+        
+        daily_leads = gtm_monthly_leads / working_days if working_days > 0 and 'gtm_monthly_leads' in locals() else 0
+        daily_contacts = daily_leads * gtm_blended_contact_rate if 'gtm_blended_contact_rate' in locals() else 0
+        daily_meetings_sched = gtm_monthly_meetings_scheduled / working_days if working_days > 0 and 'gtm_monthly_meetings_scheduled' in locals() else 0
+        daily_meetings = gtm_monthly_meetings / working_days if working_days > 0 and 'gtm_monthly_meetings' in locals() else 0
+        daily_sales = gtm_monthly_sales / working_days if working_days > 0 and 'gtm_monthly_sales' in locals() else 0
+        
+        # Create bar chart per role
+        fig_daily = go.Figure()
+        
+        roles_visual = []
+        leads_per_role = []
+        contacts_per_role = []
+        meetings_per_role = []
+        sales_per_role = []
+        
+        if num_setters_calc > 0:
+            roles_visual.append('Setters')
+            leads_per_role.append(daily_leads / num_setters_calc)
+            contacts_per_role.append(daily_contacts / num_setters_calc)
+            meetings_per_role.append(daily_meetings_sched / num_setters_calc)
+            sales_per_role.append(0)
+        
+        if num_closers_calc > 0:
+            roles_visual.append('Closers')
+            leads_per_role.append(0)
+            contacts_per_role.append(0)
+            meetings_per_role.append(daily_meetings / num_closers_calc)
+            sales_per_role.append(daily_sales / num_closers_calc)
+        
+        fig_daily.add_trace(go.Bar(name='Leads', x=roles_visual, y=leads_per_role, marker_color='#3b82f6'))
+        fig_daily.add_trace(go.Bar(name='Contacts', x=roles_visual, y=contacts_per_role, marker_color='#8b5cf6'))
+        fig_daily.add_trace(go.Bar(name='Meetings', x=roles_visual, y=meetings_per_role, marker_color='#f59e0b'))
+        fig_daily.add_trace(go.Bar(name='Sales', x=roles_visual, y=sales_per_role, marker_color='#22c55e'))
+        
+        fig_daily.update_layout(
+            title="Daily Activities per Person by Role",
+            barmode='group',
+            height=300,
+            xaxis_title="Role",
+            yaxis_title="Activities per Day",
+            legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='#e2e8f0')
+        )
+        
+        st.plotly_chart(fig_daily, use_container_width=True, key="daily_activities")
         
         # Save to session state
         st.session_state.roles_comp_custom = roles_comp
