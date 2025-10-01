@@ -938,8 +938,12 @@ with tab2:
             closer_pool = per_deal_comm['closer_pool']
             setter_pool = per_deal_comm['setter_pool']
             manager_pool = per_deal_comm['manager_pool']
-            revenue_display = deal_econ_data['avg_deal_value']
-            title_text = f"Per Deal: ${revenue_display:,.0f} → Commissions"
+            
+            # Show commission base (based on policy), not full deal value
+            commission_base = per_deal_comm['commission_base']
+            policy = DealEconomicsManager.get_commission_policy()
+            policy_label = "Upfront" if policy == 'upfront' else "Full"
+            title_text = f"Per Deal: ${commission_base:,.0f} ({policy_label}) → Commissions"
         else:
             monthly_comm = calculate_commission_data_cached(
                 gtm_metrics['monthly_sales'],
