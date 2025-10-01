@@ -1369,6 +1369,116 @@ with tab5:
         with summary_cols[4]:
             st.metric("Monthly Value", f"${monthly_value:,.0f}")
     
+    # Revenue Targets
+    with st.expander("🎯 Revenue Targets", expanded=False):
+        st.info("💡 Set your revenue goals - converts between periods automatically")
+        
+        rev_cols = st.columns(3)
+        
+        with rev_cols[0]:
+            st.markdown("**Input Period**")
+            target_period = st.selectbox(
+                "Choose Period",
+                ["Annual", "Monthly", "Weekly", "Daily"],
+                index=1,
+                key="target_period",
+                help="Select your preferred way to input revenue targets"
+            )
+            
+            # Get current target or default
+            current_monthly_target = st.session_state.get('monthly_revenue_target', 500000)
+            
+            if target_period == "Annual":
+                default_annual = st.session_state.get('rev_annual', current_monthly_target * 12)
+                revenue_input = st.number_input(
+                    "Annual Target ($)",
+                    min_value=0,
+                    value=int(default_annual),
+                    step=1000000,
+                    key="rev_annual"
+                )
+                monthly_revenue_target = revenue_input / 12
+            elif target_period == "Monthly":
+                default_monthly = st.session_state.get('rev_monthly', current_monthly_target)
+                revenue_input = st.number_input(
+                    "Monthly Target ($)",
+                    min_value=0,
+                    value=int(default_monthly),
+                    step=100000,
+                    key="rev_monthly"
+                )
+                monthly_revenue_target = revenue_input
+            elif target_period == "Weekly":
+                default_weekly = st.session_state.get('rev_weekly', current_monthly_target / 4.33)
+                revenue_input = st.number_input(
+                    "Weekly Target ($)",
+                    min_value=0,
+                    value=int(default_weekly),
+                    step=25000,
+                    key="rev_weekly"
+                )
+                monthly_revenue_target = revenue_input * 4.33
+            else:  # Daily
+                default_daily = st.session_state.get('rev_daily', current_monthly_target / 21.67)
+                revenue_input = st.number_input(
+                    "Daily Target ($)",
+                    min_value=0,
+                    value=int(default_daily),
+                    step=5000,
+                    key="rev_daily"
+                )
+                monthly_revenue_target = revenue_input * 21.67
+            
+            # Store in session state
+            st.session_state['monthly_revenue_target'] = monthly_revenue_target
+        
+        with rev_cols[1]:
+            st.markdown("**📊 Revenue Breakdown**")
+            annual_revenue = monthly_revenue_target * 12
+            weekly_revenue = monthly_revenue_target / 4.33
+            daily_revenue = monthly_revenue_target / 21.67
+            
+            st.metric("Annual", f"${annual_revenue:,.0f}")
+            st.metric("Monthly", f"${monthly_revenue_target:,.0f}")
+            st.metric("Weekly", f"${weekly_revenue:,.0f}")
+            st.metric("Daily", f"${daily_revenue:,.0f}")
+        
+        with rev_cols[2]:
+            st.markdown("**🎯 Required Performance**")
+            
+            # Calculate sales needed based on current deal economics
+            current_revenue = gtm_metrics['monthly_revenue_immediate']
+            sales_needed = monthly_revenue_target / deal_econ['upfront_cash'] if deal_econ['upfront_cash'] > 0 else 0
+            current_sales = gtm_metrics['monthly_sales']
+            
+            st.metric(
+                "Sales Needed",
+                f"{sales_needed:.0f}/mo",
+                help="Monthly deals required to hit target"
+            )
+            st.metric(
+                "Revenue per Sale",
+                f"${deal_econ['upfront_cash']:,.0f}"
+            )
+            
+            # Achievement percentage
+            achievement = (current_revenue / monthly_revenue_target * 100) if monthly_revenue_target > 0 else 0
+            color = "normal" if achievement >= 100 else "inverse"
+            st.metric(
+                "Target Achievement",
+                f"{achievement:.0f}%",
+                delta=f"{achievement - 100:.0f}%",
+                delta_color=color
+            )
+            
+            # Gap analysis
+            if achievement < 100:
+                gap = monthly_revenue_target - current_revenue
+                sales_gap = gap / deal_econ['upfront_cash'] if deal_econ['upfront_cash'] > 0 else 0
+                st.caption(f"⚠️ Need {sales_gap:.0f} more sales to hit target")
+            else:
+                st.caption(f"✅ Target exceeded by ${current_revenue - monthly_revenue_target:,.0f}")
+    
     # Team Configuration
     with st.expander("👥 Team Configuration", expanded=False):
         team_cols = st.columns(4)
