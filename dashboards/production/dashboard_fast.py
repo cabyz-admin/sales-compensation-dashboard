@@ -1322,8 +1322,17 @@ with tab3:
         per_closer_sales = gtm_metrics['monthly_sales'] / st.session_state.num_closers_main if st.session_state.num_closers_main > 0 else 0
         st.metric("✅ Monthly Sales", f"{gtm_metrics['monthly_sales']:.0f}", f"{per_closer_sales:.1f} per closer")
     with activity_cols[3]:
-        show_up_rate = 0.75  # Default - could be calculated from GTM metrics
-        st.metric("📈 Close Rate", f"{gtm_metrics['blended_close_rate']:.0%}", f"Show-up: {show_up_rate:.0%}")
+        # Calculate blended show-up rate from enabled channels
+        total_show_up_weighted = 0
+        total_meetings = 0
+        for ch in st.session_state.gtm_channels:
+            if ch.get('enabled', True):
+                meetings = ch.get('monthly_leads', 0) * ch.get('contact_rate', 0.6) * ch.get('meeting_rate', 0.3)
+                show_up = ch.get('show_up_rate', 0.7)
+                total_show_up_weighted += meetings * show_up
+                total_meetings += meetings
+        blended_show_up = total_show_up_weighted / total_meetings if total_meetings > 0 else 0.7
+        st.metric("📈 Close Rate", f"{gtm_metrics['blended_close_rate']:.0%}", f"Show-up: {blended_show_up:.0%}")
     with activity_cols[4]:
         sales_cycle_days = 30  # Could be configuration
         velocity = gtm_metrics['monthly_sales'] / sales_cycle_days * 30 if sales_cycle_days > 0 else 0
@@ -1370,11 +1379,11 @@ with tab3:
     st.markdown("### 🔄 Sales Process & Pipeline Stages")
     st.caption("Track your complete sales funnel from lead to close")
     
-    # Timeline visualization
+    # Timeline visualization (use actual data from gtm_metrics)
     timeline_data = [
         {"stage": "Lead Generated", "day": 0, "icon": "👥", "count": gtm_metrics['monthly_leads']},
-        {"stage": "First Contact", "day": 1, "icon": "📞", "count": gtm_metrics.get('monthly_contacts', gtm_metrics['monthly_leads'] * 0.6)},
-        {"stage": "Meeting Scheduled", "day": 3, "icon": "📅", "count": gtm_metrics.get('monthly_meetings_scheduled', current_meetings * 1.3)},
+        {"stage": "First Contact", "day": 1, "icon": "📞", "count": gtm_metrics.get('monthly_contacts', gtm_metrics['monthly_leads'])},
+        {"stage": "Meeting Scheduled", "day": 3, "icon": "📅", "count": gtm_metrics.get('monthly_meetings_scheduled', gtm_metrics['monthly_meetings_held'])},
         {"stage": "Meeting Held", "day": 5, "icon": "🤝", "count": current_meetings},
         {"stage": "Deal Closed", "day": sales_cycle_days, "icon": "✅", "count": gtm_metrics['monthly_sales']},
     ]
