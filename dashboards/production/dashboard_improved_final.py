@@ -909,12 +909,15 @@ with tabs[0]:
     gtm_monthly_revenue_immediate = gtm_metrics.get('monthly_revenue_immediate', monthly_revenue_immediate)
     gtm_blended_contact_rate = gtm_metrics.get('blended_contact_rate', contact_rate)
 
-    # Team Structure Configuration
-    # Initialize expander state if not exists
-    if 'team_structure_expanded' not in st.session_state:
-        st.session_state.team_structure_expanded = True
+    # Multi-Channel GTM is now the primary funnel configuration
+    # Legacy conversion funnel removed - all configuration happens through channels
     
-    with st.expander("👥 **Team Structure**", expanded=st.session_state.team_structure_expanded):
+    # Compensation Structure Configuration - Fully Customizable (with Team Structure integrated)
+    with st.expander("💵 **Team & Compensation Structure**", expanded=True):
+        st.info("💡 Configure team size, capacity, and compensation per role. Changes affect all calculations.")
+        
+        # Team Structure Section (moved from above)
+        st.markdown("### 👥 Team Configuration")
         team_col1, team_col2, team_col3 = st.columns(3)
         
         with team_col1:
@@ -948,7 +951,7 @@ with tabs[0]:
             )
         
         with team_col2:
-            st.markdown("**Team Metrics**")
+            st.markdown("**Team Metrics")
             team_total_main = num_closers_main + num_setters_main + num_bench_main + num_managers_main
             active_ratio_main = (num_closers_main + num_setters_main) / max(1, team_total_main)
             setter_closer_ratio_main = num_setters_main / max(1, num_closers_main)
@@ -957,7 +960,7 @@ with tabs[0]:
             st.metric("S:C Ratio", f"{setter_closer_ratio_main:.1f}:1")
         
         with team_col3:
-            st.markdown("**Capacity Analysis**")
+            st.markdown("**Capacity Analysis")
             monthly_closer_capacity = num_closers_main * meetings_per_closer * working_days
             capacity_util_main = gtm_monthly_meetings / monthly_closer_capacity if monthly_closer_capacity > 0 else 0
             monthly_setter_capacity = num_setters_main * meetings_per_setter * working_days
@@ -1101,114 +1104,10 @@ with tabs[0]:
                 'monthly_closer_capacity': monthly_closer_capacity,
                 'monthly_setter_capacity': monthly_setter_capacity
             }
-
-        # ENHANCED COMPENSATION STRUCTURE V2
-        if create_compensation_structure:
-            # Prepare data for the compensation module
-            team_metrics = {
-                'num_closers': num_closers_main,
-                'num_setters': num_setters_main,
-                'num_managers': num_managers_main,
-                'num_bench': num_bench_main
-            }
-            
-            # Get deal economics values
-            comp_immediate_use = comp_immediate_val if 'comp_immediate_val' in locals() else comp_immediate
-            
-            # Calculate monthly opex
-            if 'office_rent_main' in locals():
-                monthly_opex_calc = office_rent_main + software_costs_main + other_opex_main
-            else:
-                monthly_opex_calc = office_rent + software_costs + other_opex
-            
-            deal_economics = {
-                'comp_immediate': comp_immediate_use,
-                'monthly_opex': monthly_opex_calc,
-                'monthly_marketing': cost_breakdown.get('total_marketing_spend', monthly_marketing) if 'cost_breakdown' in locals() else monthly_marketing,
-                'gov_fee_pct': gov_fee_pct,
-                'close_rate': close_rate
-            }
-            
-            # Use actual GTM revenue if available
-            actual_revenue = gtm_metrics.get('monthly_revenue_immediate', monthly_revenue_immediate)
-            actual_sales = gtm_metrics.get('monthly_sales', monthly_sales)
-            
-            # Call the enhanced compensation module
-            comp_structure_result, closer_comm_pct, setter_comm_pct = create_compensation_structure(
-                team_metrics=team_metrics,
-                gtm_metrics=gtm_metrics,
-                deal_economics=deal_economics,
-                actual_monthly_revenue=actual_revenue,
-                actual_monthly_sales=actual_sales
-            )
-            
-            # Store results in session state
-            if comp_structure_result:
-                st.session_state['team_compensation_structure'] = {
-                    'comp_structure': comp_structure_result,
-                    'closer_comm_pct': closer_comm_pct,
-                    'setter_comm_pct': setter_comm_pct
-                }
-                comp_structure = comp_structure_result
-        else:
-            st.warning("⚠️ Enhanced compensation module not available. Please check installation.")
-            # Use default values
-            closer_comm_pct = 0.20
-            setter_comm_pct = 0.03
-            comp_structure = None
         
-        # Daily Activities Section within Team Structure
-        st.markdown("**Daily Activity Requirements**")
-        daily_col1, daily_col2, daily_col3 = st.columns(3)
-        
-        daily_leads = gtm_monthly_leads / working_days if working_days > 0 else 0
-        daily_contacts = daily_leads * gtm_blended_contact_rate
-        daily_meetings_scheduled = gtm_monthly_meetings_scheduled / working_days if working_days > 0 else 0
-        daily_meetings = gtm_monthly_meetings / working_days if working_days > 0 else 0
-        daily_sales = gtm_monthly_sales / working_days if working_days > 0 else 0
-        daily_revenue = gtm_monthly_revenue_immediate / working_days if working_days > 0 else 0
-        
-        with daily_col1:
-            st.markdown("**Per Setter:**")
-            if num_setters_main > 0:
-                setter_metrics = {
-                    "Leads to process": f"{daily_leads/num_setters_main:.1f}",
-                    "Contacts to make": f"{daily_contacts/num_setters_main:.1f}",
-                    "Meetings to book": f"{daily_meetings_scheduled/num_setters_main:.1f}",
-                    "Capacity target": f"{meetings_per_setter:.1f} bookings"
-                }
-                for metric, value in setter_metrics.items():
-                    st.write(f"🔹 {metric}: {value}")
-        
-        with daily_col2:
-            st.markdown("**Per Closer:**")
-            if num_closers_main > 0:
-                closer_metrics = {
-                    "Meetings to run": f"{daily_meetings/num_closers_main:.1f}",
-                    "Capacity target": f"{meetings_per_closer:.1f} meetings",
-                    "Sales to close": f"{daily_sales/num_closers_main:.2f}",
-                    "Revenue to generate": f"${(daily_revenue)/num_closers_main:,.0f}"
-                }
-                for metric, value in closer_metrics.items():
-                    st.write(f"🔹 {metric}: {value}")
-        
-        with daily_col3:
-            st.markdown("**Team Totals:**")
-            team_metrics = {
-                "Total leads/day": f"{daily_leads:.0f}",
-                "Total meetings/day": f"{daily_meetings:.1f}",
-                "Total sales/day": f"{daily_sales:.1f}",
-                "Revenue/day": f"${daily_revenue:,.0f}"
-            }
-            for metric, value in team_metrics.items():
-                st.write(f"🔹 {metric}: {value}")
-    
-    # Multi-Channel GTM is now the primary funnel configuration
-    # Legacy conversion funnel removed - all configuration happens through channels
-    
-    # Compensation Structure Configuration - Fully Customizable
-    with st.expander("💵 **Compensation Structure** (Custom Base/Variable per Role)", expanded=False):
-        st.info("💡 Customize base salary and variable comp for each role. Changes affect EBITDA calculations.")
+        # Compensation Configuration Section
+        st.markdown("---")
+        st.markdown("### 💵 Compensation Configuration")
         
         # Initialize roles_comp in session state if not exists
         if 'roles_comp_custom' not in st.session_state:
@@ -1389,19 +1288,42 @@ with tabs[0]:
         
         import plotly.graph_objects as go
         
+        # Toggle between monthly and per-deal view
+        flow_view = st.radio(
+            "View",
+            ["📊 Monthly Total", "🎯 Per Deal (Unit Case)"],
+            horizontal=True,
+            key="commission_flow_view"
+        )
+        
         flow_cols = st.columns([2, 1])
         
         with flow_cols[0]:
             # Get actual revenue and calculate pools
             actual_revenue = gtm_metrics.get('monthly_revenue_immediate', monthly_revenue_immediate) if 'gtm_metrics' in locals() else monthly_revenue_immediate
+            actual_sales_count = gtm_metrics.get('monthly_sales', monthly_sales) if 'gtm_metrics' in locals() else monthly_sales
             
             # Calculate commission pools (use 20% and 3% as example rates - make these customizable)
             closer_comm_rate = st.session_state.get('closer_comm_rate', 0.20)
             setter_comm_rate = st.session_state.get('setter_comm_rate', 0.03)
             
-            closer_pool = actual_revenue * closer_comm_rate
-            setter_pool = actual_revenue * setter_comm_rate
-            manager_pool = actual_revenue * 0.05  # 5% for managers
+            # Per-deal or monthly
+            if "Per Deal" in flow_view:
+                # Unit case - per deal
+                revenue_per_deal = comp_immediate if 'comp_immediate' in locals() else (actual_revenue / actual_sales_count if actual_sales_count > 0 else 50000)
+                closer_pool = revenue_per_deal * closer_comm_rate
+                setter_pool = revenue_per_deal * setter_comm_rate  
+                manager_pool = revenue_per_deal * 0.05
+                stakeholder_pool = 0  # Stakeholders get EBITDA, not per-deal commission
+                title_text = f"Per Deal: ${revenue_per_deal:,.0f} → Commissions"
+            else:
+                # Monthly total
+                closer_pool = actual_revenue * closer_comm_rate
+                setter_pool = actual_revenue * setter_comm_rate
+                manager_pool = actual_revenue * 0.05  # 5% for managers
+                # Calculate stakeholder pool from EBITDA (will calculate below)
+                stakeholder_pool = 0  # Placeholder
+                title_text = "Revenue → Pools → Per Person"
             
             # Create flow diagram
             fig_flow = go.Figure()
@@ -1490,20 +1412,35 @@ with tabs[0]:
                 margin=dict(l=0, r=0, t=20, b=0),
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)',
-                title=dict(text="Revenue → Pools → Per Person", font=dict(size=14, color='#e2e8f0'))
+                title=dict(text=title_text, font=dict(size=14, color='#e2e8f0'))
             )
             
             st.plotly_chart(fig_flow, use_container_width=True, key="commission_flow")
         
         with flow_cols[1]:
-            total_commission = closer_pool + setter_pool + manager_pool
-            commission_rate = (total_commission/actual_revenue)*100 if actual_revenue > 0 else 0
-            
-            st.metric("Total Commission", f"${total_commission:,.0f}")
-            st.metric("Commission Rate", f"{commission_rate:.1f}%")
-            st.metric("Commission/Employee", 
-                     f"${total_commission/(num_closers_calc+num_setters_calc+num_managers_calc):,.0f}" 
-                     if (num_closers_calc+num_setters_calc+num_managers_calc) > 0 else "$0")
+            if "Per Deal" in flow_view:
+                st.markdown("**🎯 Per Deal Economics**")
+                total_commission = closer_pool + setter_pool + manager_pool
+                commission_rate = (total_commission/revenue_per_deal)*100 if revenue_per_deal > 0 else 0
+                
+                st.metric("Deal Value", f"${revenue_per_deal:,.0f}")
+                st.metric("Total Commission", f"${total_commission:,.0f}")
+                st.metric("Commission Rate", f"{commission_rate:.1f}%")
+                
+                # Show per-role breakdown
+                st.caption(f"💼 Closer: ${closer_pool:,.0f}")
+                st.caption(f"📞 Setter: ${setter_pool:,.0f}")
+                st.caption(f"👔 Manager: ${manager_pool:,.0f}")
+            else:
+                st.markdown("**📊 Monthly Total**")
+                total_commission = closer_pool + setter_pool + manager_pool
+                commission_rate = (total_commission/actual_revenue)*100 if actual_revenue > 0 else 0
+                
+                st.metric("Total Commission", f"${total_commission:,.0f}")
+                st.metric("Commission Rate", f"{commission_rate:.1f}%")
+                st.metric("Commission/Employee", 
+                         f"${total_commission/(num_closers_calc+num_setters_calc+num_managers_calc):,.0f}" 
+                         if (num_closers_calc+num_setters_calc+num_managers_calc) > 0 else "$0")
         
         # Period-Based Earnings Preview
         st.markdown("---")
@@ -1512,7 +1449,42 @@ with tabs[0]:
         working_days = st.session_state.get('working_days', 20)
         
         period_data = []
-        for role_key in ['closer', 'setter', 'manager', 'bench']:
+        
+        # Add stakeholder to the mix
+        all_roles = ['closer', 'setter', 'manager', 'bench', 'stakeholder']
+        
+        for role_key in all_roles:
+            if role_key == 'stakeholder':
+                # Stakeholders get EBITDA distribution, not salary
+                stakeholder_pct = st.session_state.get('stakeholder_pct', 10.0)
+                
+                # Calculate EBITDA for stakeholder distribution
+                # Need to calculate this properly - for now use placeholder
+                if 'gtm_metrics' in locals():
+                    monthly_rev = gtm_metrics.get('monthly_revenue_immediate', actual_revenue)
+                    total_comm = (monthly_rev * closer_comm_rate) + (monthly_rev * setter_comm_rate) + (monthly_rev * 0.05)
+                    cogs = total_monthly_base + total_comm
+                    gross_profit = monthly_rev - cogs
+                    monthly_opex = st.session_state.get('monthly_opex', 100000)
+                    ebitda = gross_profit - monthly_opex
+                    
+                    if ebitda > 0:
+                        stake_monthly = ebitda * (stakeholder_pct / 100)
+                        stake_daily = stake_monthly / 30
+                        stake_weekly = stake_monthly / 4.33
+                        stake_annual = stake_monthly * 12
+                        
+                        period_data.append({
+                            'Role': 'Stakeholders',
+                            'Count': 1,
+                            'Daily': f"${stake_daily:,.0f}",
+                            'Weekly': f"${stake_weekly:,.0f}",
+                            'Monthly': f"${stake_monthly:,.0f}",
+                            'Annual': f"${stake_annual:,.0f}",
+                            'vs OTE': f"{stakeholder_pct:.1f}% EBITDA"
+                        })
+                continue
+                
             role_count = st.session_state.get(f'num_{role_key}s_main', 0)
             if role_count > 0:
                 role_config = roles_comp[role_key]
@@ -1523,12 +1495,19 @@ with tabs[0]:
                 base_annual = base_monthly * 12
                 
                 # Commission (only for closer/setter/manager)
+                # Use the monthly pools calculated above
                 if role_key == 'closer':
-                    comm_monthly = closer_pool / num_closers_calc if num_closers_calc > 0 else 0
+                    monthly_rev = gtm_metrics.get('monthly_revenue_immediate', actual_revenue) if 'gtm_metrics' in locals() else actual_revenue
+                    comm_pool_monthly = monthly_rev * closer_comm_rate
+                    comm_monthly = comm_pool_monthly / num_closers_calc if num_closers_calc > 0 else 0
                 elif role_key == 'setter':
-                    comm_monthly = setter_pool / num_setters_calc if num_setters_calc > 0 else 0
+                    monthly_rev = gtm_metrics.get('monthly_revenue_immediate', actual_revenue) if 'gtm_metrics' in locals() else actual_revenue
+                    comm_pool_monthly = monthly_rev * setter_comm_rate
+                    comm_monthly = comm_pool_monthly / num_setters_calc if num_setters_calc > 0 else 0
                 elif role_key == 'manager':
-                    comm_monthly = manager_pool / num_managers_calc if num_managers_calc > 0 else 0
+                    monthly_rev = gtm_metrics.get('monthly_revenue_immediate', actual_revenue) if 'gtm_metrics' in locals() else actual_revenue
+                    comm_pool_monthly = monthly_rev * 0.05
+                    comm_monthly = comm_pool_monthly / num_managers_calc if num_managers_calc > 0 else 0
                 else:
                     comm_monthly = 0
                 
