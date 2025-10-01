@@ -1000,7 +1000,15 @@ with tab2:
         
         for pool, count, label, y_pos in team_data:
             if count > 0:
-                per_person = pool / count
+                # Per Deal: ONE person gets FULL pool (not divided)
+                # Monthly: Pool divided among team
+                if "Per Deal" in flow_view:
+                    per_person = pool  # ONE person closes ONE deal = gets full commission
+                    hover_text = f'<b>{label}</b><br>${per_person:,.0f} (full commission)<extra></extra>'
+                else:
+                    per_person = pool / count  # Monthly pool split among team
+                    hover_text = f'<b>{label}</b><br>${per_person:,.0f} ({count} people)<extra></extra>'
+                
                 fig_flow.add_trace(go.Scatter(
                     x=[4], y=[y_pos],
                     mode='markers+text',
@@ -1009,7 +1017,7 @@ with tab2:
                     textfont=dict(color='white', size=10),
                     textposition="middle center",
                     showlegend=False,
-                    hovertemplate=f'<b>{label}</b><br>${per_person:,.0f} ({count} people)<extra></extra>'
+                    hovertemplate=hover_text
                 ))
         
         # Add connecting arrows
