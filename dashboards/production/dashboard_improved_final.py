@@ -2062,13 +2062,16 @@ with tabs[0]:
                 st.markdown("---")
                 st.markdown("**" + ("Desglose por Rol" if lang == 'es' else "Per-Role Breakdown") + "**")
                 
-                # Show per-role breakdown with per-person amounts
+                # Show per-role breakdown with per-person amounts in formatted markdown
+                breakdown_text = ""
                 if num_closers_calc > 0:
-                    st.caption(f"💼 {t('closers', lang)}: ${closer_pool:,.0f} total → ${closer_pool/num_closers_calc:,.0f} each ({num_closers_calc}x)")
+                    breakdown_text += f"💼 **{t('closers', lang)}**: ${closer_pool:,.0f} total  \n→ ${closer_pool/num_closers_calc:,.0f} each ({num_closers_calc}x)  \n\n"
                 if num_setters_calc > 0:
-                    st.caption(f"📞 {t('setters', lang)}: ${setter_pool:,.0f} total → ${setter_pool/num_setters_calc:,.0f} each ({num_setters_calc}x)")
+                    breakdown_text += f"📞 **{t('setters', lang)}**: ${setter_pool:,.0f} total  \n→ ${setter_pool/num_setters_calc:,.0f} each ({num_setters_calc}x)  \n\n"
                 if num_managers_calc > 0:
-                    st.caption(f"👔 {t('managers', lang)}: ${manager_pool:,.0f} total → ${manager_pool/num_managers_calc:,.0f} each ({num_managers_calc}x)")
+                    breakdown_text += f"👔 **{t('managers', lang)}**: ${manager_pool:,.0f} total  \n→ ${manager_pool/num_managers_calc:,.0f} each ({num_managers_calc}x)"
+                
+                st.markdown(breakdown_text)
             else:
                 st.markdown("**📊 Monthly Total**")
                 total_commission = closer_pool + setter_pool + manager_pool
