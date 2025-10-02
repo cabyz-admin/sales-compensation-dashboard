@@ -2426,9 +2426,9 @@ with tab5:
                 avg_deal_value = st.number_input(
                     "Average Deal Value ($)",
                     min_value=0,
-                    value=st.session_state.avg_deal_value,
+                    value=st.session_state.get('avg_deal_value', 50000),
                     step=1000,
-                    key="avg_deal_value",
+                    key="direct_deal_value_input",
                     help="Total contract value"
                 )
             with calc_cols[1]:
@@ -2436,15 +2436,17 @@ with tab5:
                     "Contract Length (Months)",
                     min_value=1,
                     max_value=60,
-                    value=st.session_state.contract_length_months,
+                    value=st.session_state.get('contract_length_months', 12),
                     step=1,
-                    key="contract_length_months"
+                    key="direct_contract_length_input"
                 )
             with calc_cols[2]:
                 monthly_value = avg_deal_value / contract_length if contract_length > 0 else 0
                 st.metric("Monthly Value", f"${monthly_value:,.0f}")
             
-            # Direct Value mode uses widget keys directly (already saved via key= parameter)
+            # Store to the ACTUAL keys the engine uses (consistent with other calculators)
+            st.session_state['avg_deal_value'] = avg_deal_value
+            st.session_state['contract_length_months'] = contract_length
         
         st.markdown("---")
         
