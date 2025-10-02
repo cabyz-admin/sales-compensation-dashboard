@@ -2961,7 +2961,7 @@ with tab5:
     with st.expander("💵 Compensation Configuration", expanded=False):
         st.info("💡 **2-Tier Comp Model**: Base Salary (guaranteed) + Commission % (unlimited upside) • Changes apply immediately")
         
-        comp_cols = st.columns(3)
+        comp_cols = st.columns(4)
         
         with comp_cols[0]:
             st.markdown("**🎯 Closer**")
@@ -3007,6 +3007,16 @@ with tab5:
                 key="manager_commission_pct",
                 help="Percentage of each deal value (team override)"
             )
+        
+        with comp_cols[3]:
+            st.markdown("**🔧 Bench**")
+            bench_base = st.number_input(
+                "Base Salary (Annual $)", 
+                0, 200000, st.session_state.get('bench_base', 12500), 1000, 
+                key="bench_base",
+                help="Annual salary for bench/training roles"
+            )
+            st.caption("💡 Bench typically has no commission")
     
     # Operating Costs
     with st.expander("🏢 Operating Costs", expanded=False):
