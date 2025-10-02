@@ -480,13 +480,7 @@ st.title("💎 ULTIMATE Sales Compensation Dashboard")
 st.caption("⚡ 10X Faster • 📊 Full Features • 🎯 Accurate Calculations")
 
 # New architecture indicator
-col_indicator1, col_indicator2 = st.columns([3, 1])
-with col_indicator1:
-    st.info("✨ **New Architecture Active**: All calculations now use the single-source-of-truth engine with type-safe models, 19 passing tests, and smart caching. [See traceability below](#traceability-inspector)")
-with col_indicator2:
-    if st.button("🧪 Run Tests", help="Run the test suite to verify all calculations"):
-        st.code("./run_tests.sh", language="bash")
-        st.caption("Run this command in your terminal to verify the engine")
+st.success("✨ **New Architecture Active**: All calculations use the single-source-of-truth engine with type-safe models, 19 passing tests, and smart caching. Click **Traceability Inspector** below to see how your inputs flow to outputs.", icon="✅")
 
 # ============= ✨ NEW ARCHITECTURE - Single Source of Truth =============
 # All calculations now go through the engine for consistency and performance
