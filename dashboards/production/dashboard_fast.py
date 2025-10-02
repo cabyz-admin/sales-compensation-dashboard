@@ -2336,9 +2336,9 @@ with tab5:
             avg_deal_value = total_premium * (commission_rate / 100)
             contract_length = contract_years * 12
             
-            # Store calculated value for other components to use
-            st.session_state['calculated_deal_value'] = avg_deal_value
-            st.session_state['calculated_contract_length'] = contract_length
+            # Store to the ACTUAL keys the engine uses
+            st.session_state['avg_deal_value'] = avg_deal_value
+            st.session_state['contract_length_months'] = contract_length
             
             st.success(f"💰 **Your Commission**: ${avg_deal_value:,.0f}")
             st.caption(f"💡 ${monthly_premium:,.0f}/mo × 12 × {contract_years}y × {commission_rate}% = ${avg_deal_value:,.0f}")
@@ -2368,9 +2368,9 @@ with tab5:
             avg_deal_value = mrr * sub_term
             contract_length = sub_term
             
-            # Store calculated value for other components to use
-            st.session_state['calculated_deal_value'] = avg_deal_value
-            st.session_state['calculated_contract_length'] = contract_length
+            # Store to the ACTUAL keys the engine uses
+            st.session_state['avg_deal_value'] = avg_deal_value
+            st.session_state['contract_length_months'] = contract_length
             
             st.caption(f"💡 ${mrr:,.0f}/mo × {sub_term} months = ${avg_deal_value:,.0f}")
             
@@ -2405,9 +2405,9 @@ with tab5:
             
             avg_deal_value = total_contract * (commission_pct / 100)
             
-            # Store calculated value for other components to use
-            st.session_state['calculated_deal_value'] = avg_deal_value
-            st.session_state['calculated_contract_length'] = contract_length
+            # Store to the ACTUAL keys the engine uses
+            st.session_state['avg_deal_value'] = avg_deal_value
+            st.session_state['contract_length_months'] = contract_length
             
             st.caption(f"💡 ${total_contract:,.0f} × {commission_pct}% = ${avg_deal_value:,.0f}")
             
@@ -2434,9 +2434,7 @@ with tab5:
                 monthly_value = avg_deal_value / contract_length if contract_length > 0 else 0
                 st.metric("Monthly Value", f"${monthly_value:,.0f}")
             
-            # Store values (Direct Value mode uses widget values directly)
-            st.session_state['calculated_deal_value'] = avg_deal_value
-            st.session_state['calculated_contract_length'] = contract_length
+            # Direct Value mode uses widget keys directly (already saved via key= parameter)
         
         st.markdown("---")
         
@@ -2961,88 +2959,71 @@ with tab5:
     
     # Compensation Configuration
     with st.expander("💵 Compensation Configuration", expanded=False):
-        st.info("💡 **2-Tier Comp Model**: Base Salary (guaranteed) + Commission % (unlimited upside)")
+        st.info("💡 **2-Tier Comp Model**: Base Salary (guaranteed) + Commission % (unlimited upside) • Changes apply immediately")
         
-        with st.form("compensation_form"):
-            comp_cols = st.columns(3)
-            
-            with comp_cols[0]:
-                st.markdown("**🎯 Closer**")
-                closer_base_input = st.number_input(
-                    "Base Salary (Annual $)", 
-                    0, 200000, st.session_state.get('closer_base', 32000), 1000, 
-                    key="closer_base_input",
-                    help="Annual salary + commission on deals"
-                )
-                closer_comm_input = st.number_input(
-                    "Commission % (Per Deal)", 
-                    0.0, 50.0, st.session_state.get('closer_commission_pct', 20.0), 0.5, 
-                    key="closer_commission_input",
-                    help="Percentage of each deal value (unlimited upside)"
-                )
-            
-            with comp_cols[1]:
-                st.markdown("**📞 Setter**")
-                setter_base_input = st.number_input(
-                    "Base Salary (Annual $)", 
-                    0, 200000, st.session_state.get('setter_base', 16000), 1000, 
-                    key="setter_base_input",
-                    help="Annual salary + commission on deals"
-                )
-                setter_comm_input = st.number_input(
-                    "Commission % (Per Deal)", 
-                    0.0, 50.0, st.session_state.get('setter_commission_pct', 3.0), 0.5, 
-                    key="setter_commission_input",
-                    help="Percentage of each deal value (unlimited upside)"
-                )
-            
-            with comp_cols[2]:
-                st.markdown("**👔 Manager**")
-                manager_base_input = st.number_input(
-                    "Base Salary (Annual $)", 
-                    0, 300000, st.session_state.get('manager_base', 72000), 1000, 
-                    key="manager_base_input",
-                    help="Annual salary + team override commission"
-                )
-                manager_comm_input = st.number_input(
-                    "Commission % (Per Deal)", 
-                    0.0, 50.0, st.session_state.get('manager_commission_pct', 5.0), 0.5, 
-                    key="manager_commission_input",
-                    help="Percentage of each deal value (team override)"
-                )
-            
-            submitted = st.form_submit_button("✅ Apply Compensation Changes", use_container_width=True, type="primary")
-            
-            if submitted:
-                st.session_state['closer_base'] = closer_base_input
-                st.session_state['closer_commission_pct'] = closer_comm_input
-                st.session_state['setter_base'] = setter_base_input
-                st.session_state['setter_commission_pct'] = setter_comm_input
-                st.session_state['manager_base'] = manager_base_input
-                st.session_state['manager_commission_pct'] = manager_comm_input
-                st.success("✅ Compensation updated!")
-                st.rerun()
+        comp_cols = st.columns(3)
+        
+        with comp_cols[0]:
+            st.markdown("**🎯 Closer**")
+            closer_base = st.number_input(
+                "Base Salary (Annual $)", 
+                0, 200000, st.session_state.get('closer_base', 32000), 1000, 
+                key="closer_base",
+                help="Annual salary + commission on deals"
+            )
+            closer_comm = st.number_input(
+                "Commission % (Per Deal)", 
+                0.0, 50.0, st.session_state.get('closer_commission_pct', 20.0), 0.5, 
+                key="closer_commission_pct",
+                help="Percentage of each deal value (unlimited upside)"
+            )
+        
+        with comp_cols[1]:
+            st.markdown("**📞 Setter**")
+            setter_base = st.number_input(
+                "Base Salary (Annual $)", 
+                0, 200000, st.session_state.get('setter_base', 16000), 1000, 
+                key="setter_base",
+                help="Annual salary + commission on deals"
+            )
+            setter_comm = st.number_input(
+                "Commission % (Per Deal)", 
+                0.0, 50.0, st.session_state.get('setter_commission_pct', 3.0), 0.5, 
+                key="setter_commission_pct",
+                help="Percentage of each deal value (unlimited upside)"
+            )
+        
+        with comp_cols[2]:
+            st.markdown("**👔 Manager**")
+            manager_base = st.number_input(
+                "Base Salary (Annual $)", 
+                0, 300000, st.session_state.get('manager_base', 72000), 1000, 
+                key="manager_base",
+                help="Annual salary + team override commission"
+            )
+            manager_comm = st.number_input(
+                "Commission % (Per Deal)", 
+                0.0, 50.0, st.session_state.get('manager_commission_pct', 5.0), 0.5, 
+                key="manager_commission_pct",
+                help="Percentage of each deal value (team override)"
+            )
     
     # Operating Costs
     with st.expander("🏢 Operating Costs", expanded=False):
-        with st.form("operating_costs_form"):
-            ops_cols = st.columns(3)
-            
-            with ops_cols[0]:
-                rent_input = st.number_input("Office Rent ($)", 0, 100000, st.session_state.get('office_rent', 20000), 500, key="office_rent_input")
-            with ops_cols[1]:
-                software_input = st.number_input("Software ($)", 0, 50000, st.session_state.get('software_costs', 10000), 100, key="software_costs_input")
-            with ops_cols[2]:
-                opex_input = st.number_input("Other OpEx ($)", 0, 100000, st.session_state.get('other_opex', 5000), 500, key="other_opex_input")
-            
-            submitted = st.form_submit_button("✅ Apply Operating Costs", use_container_width=True, type="primary")
-            
-            if submitted:
-                st.session_state['office_rent'] = rent_input
-                st.session_state['software_costs'] = software_input
-                st.session_state['other_opex'] = opex_input
-                st.success("✅ Operating costs updated!")
-                st.rerun()
+        st.info("💡 Monthly operating expenses • Changes apply immediately")
+        
+        ops_cols = st.columns(3)
+        
+        with ops_cols[0]:
+            rent = st.number_input("Office Rent ($)", 0, 100000, st.session_state.get('office_rent', 20000), 500, key="office_rent")
+        with ops_cols[1]:
+            software = st.number_input("Software ($)", 0, 50000, st.session_state.get('software_costs', 10000), 100, key="software_costs")
+        with ops_cols[2]:
+            opex = st.number_input("Other OpEx ($)", 0, 100000, st.session_state.get('other_opex', 5000), 500, key="other_opex")
+        
+        # Show total
+        total_opex = rent + software + opex
+        st.metric("**Total Monthly OpEx**", f"${total_opex:,.0f}")
     
     # Profit Distribution (Stakeholders)
     with st.expander("💰 Profit Distribution (Stakeholders)", expanded=False):
