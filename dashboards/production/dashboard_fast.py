@@ -819,13 +819,28 @@ with tab1:
                     )
                 
                 st.markdown("**Cost Input Method**")
+                cost_methods = ["Cost per Lead", "Cost per Contact", "Cost per Meeting", "Cost per Sale", "Total Budget"]
+                current_method = channel.get('cost_method', 'Cost per Lead')
+                try:
+                    method_index = cost_methods.index(current_method)
+                except ValueError:
+                    method_index = 0  # Default to Cost per Lead if not found
+                
                 cost_point = st.selectbox(
                     "Cost Input Point",
-                    ["Cost per Lead", "Cost per Contact", "Cost per Meeting", "Cost per Sale", "Total Budget"],
-                    index=0,
+                    cost_methods,
+                    index=method_index,
                     key=f"ch_cost_point_{channel['id']}",
                     help="Choose how you want to input marketing costs"
                 )
+                
+                # Initialize cost variables (prevent NameError)
+                cpl = 0
+                cost_per_contact = 0
+                cost_per_meeting = 0
+                cost_per_sale = 0
+                total_budget = 0
+                leads = 0
                 
                 # Dynamic inputs based on cost point
                 if cost_point == "Cost per Lead":
