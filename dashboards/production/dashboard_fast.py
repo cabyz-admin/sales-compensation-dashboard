@@ -803,20 +803,20 @@ with tab1:
     # Configure each channel in expanders
     for idx, channel in enumerate(st.session_state.gtm_channels):
         with st.expander(f"📊 **{channel['name']}** ({channel['segment']})", expanded=(idx == 0)):
-            cfg_cols = st.columns(3)
-            
-            with cfg_cols[0]:
-                st.markdown("**Channel Info**")
-                name = st.text_input("Name", value=channel['name'], key=f"ch_name_{channel['id']}")
-                st.session_state.gtm_channels[idx]['name'] = name
+            # Use form to batch changes
+            with st.form(key=f"channel_form_{channel['id']}"):
+                cfg_cols = st.columns(3)
                 
-                segment = st.selectbox(
-                    "Segment",
-                    ['SMB', 'MID', 'ENT', 'Custom'],
-                    index=['SMB', 'MID', 'ENT', 'Custom'].index(channel.get('segment', 'SMB')),
-                    key=f"ch_segment_{channel['id']}"
-                )
-                st.session_state.gtm_channels[idx]['segment'] = segment
+                with cfg_cols[0]:
+                    st.markdown("**Channel Info**")
+                    name = st.text_input("Name", value=channel['name'], key=f"ch_name_{channel['id']}")
+                    
+                    segment = st.selectbox(
+                        "Segment",
+                        ['SMB', 'MID', 'ENT', 'Custom'],
+                        index=['SMB', 'MID', 'ENT', 'Custom'].index(channel.get('segment', 'SMB')),
+                        key=f"ch_segment_{channel['id']}"
+                    )
                 
                 st.markdown("**Cost Input Method**")
                 cost_point = st.selectbox(
@@ -916,43 +916,39 @@ with tab1:
                     )
                     cpl = total_budget / leads if leads > 0 else 0
             
-            with cfg_cols[1]:
-                st.markdown("**Conversion Rates**")
-                contact_rate = st.slider(
-                    "Contact %",
-                    0, 100,
-                    int(channel.get('contact_rate', 0.6) * 100),
-                    5,
-                    key=f"ch_contact_{channel['id']}"
-                ) / 100
-                st.session_state.gtm_channels[idx]['contact_rate'] = contact_rate
-                
-                meeting_rate = st.slider(
-                    "Meeting %",
-                    0, 100,
-                    int(channel.get('meeting_rate', 0.3) * 100),
-                    5,
-                    key=f"ch_meeting_{channel['id']}"
-                ) / 100
-                st.session_state.gtm_channels[idx]['meeting_rate'] = meeting_rate
-                
-                show_up_rate = st.slider(
-                    "Show-up %",
-                    0, 100,
-                    int(channel.get('show_up_rate', 0.7) * 100),
-                    5,
-                    key=f"ch_showup_{channel['id']}"
-                ) / 100
-                st.session_state.gtm_channels[idx]['show_up_rate'] = show_up_rate
-                
-                close_rate = st.slider(
-                    "Close %",
-                    0, 100,
-                    int(channel.get('close_rate', 0.25) * 100),
-                    5,
-                    key=f"ch_close_{channel['id']}"
-                ) / 100
-                st.session_state.gtm_channels[idx]['close_rate'] = close_rate
+                with cfg_cols[1]:
+                    st.markdown("**Conversion Rates**")
+                    contact_rate = st.slider(
+                        "Contact %",
+                        0, 100,
+                        int(channel.get('contact_rate', 0.6) * 100),
+                        5,
+                        key=f"ch_contact_{channel['id']}"
+                    ) / 100
+                    
+                    meeting_rate = st.slider(
+                        "Meeting %",
+                        0, 100,
+                        int(channel.get('meeting_rate', 0.3) * 100),
+                        5,
+                        key=f"ch_meeting_{channel['id']}"
+                    ) / 100
+                    
+                    show_up_rate = st.slider(
+                        "Show-up %",
+                        0, 100,
+                        int(channel.get('show_up_rate', 0.7) * 100),
+                        5,
+                        key=f"ch_showup_{channel['id']}"
+                    ) / 100
+                    
+                    close_rate = st.slider(
+                        "Close %",
+                        0, 100,
+                        int(channel.get('close_rate', 0.25) * 100),
+                        5,
+                        key=f"ch_close_{channel['id']}"
+                    ) / 100
                 
                 # Reverse calculate leads based on cost point and conversion rates
                 if cost_point == "Cost per Contact":
@@ -979,95 +975,77 @@ with tab1:
                     cpl = total_budget / leads if leads > 0 else 0
                     st.info(f"📊 Effective CPL: ${cpl:.2f}")
                 
-                # Store the cost method and specific cost values
-                st.session_state.gtm_channels[idx]['cost_method'] = cost_point
-                
-                # Store specific cost values based on method
-                if cost_point == "Cost per Contact":
-                    st.session_state.gtm_channels[idx]['cost_per_contact'] = cost_per_contact
-                elif cost_point == "Cost per Meeting":
-                    st.session_state.gtm_channels[idx]['cost_per_meeting'] = cost_per_meeting
-                elif cost_point == "Cost per Sale":
-                    st.session_state.gtm_channels[idx]['cost_per_sale'] = cost_per_sale
-                elif cost_point == "Total Budget":
-                    st.session_state.gtm_channels[idx]['monthly_budget'] = total_budget
-                
-                # Store the calculated values (keep full precision, format on display)
-                st.session_state.gtm_channels[idx]['monthly_leads'] = float(leads)
-                
-                # Only store 'cpl' for CPL mode; otherwise store 'effective_cpl' for display
-                if cost_point == "Cost per Lead":
-                    st.session_state.gtm_channels[idx]['cpl'] = float(cpl)
-                else:
-                    # Don't pollute 'cpl' - it's used elsewhere for CPL calculations
-                    st.session_state.gtm_channels[idx]['effective_cpl'] = float(cpl)
-                    st.session_state.gtm_channels[idx].pop('cpl', None)
+                # Don't store yet - will be stored when form is submitted
             
-            with cfg_cols[2]:
-                st.markdown("**Channel Performance**")
-                
-                # Calculate this channel's metrics (using fresh deal economics)
-                contacts = leads * contact_rate
-                meetings_sched = contacts * meeting_rate
-                meetings_held = meetings_sched * show_up_rate
-                sales = meetings_held * close_rate
-                revenue = sales * tab1_deal_econ['upfront_cash']  # Use fresh deal economics
-                
-                # Calculate spend using convergent cost model - READ FROM CONFIG, NOT LOCALS
-                cfg = st.session_state.gtm_channels[idx]
-                
-                if cost_point == "Cost per Sale":
-                    spend = sales * cfg.get('cost_per_sale', 0.0)
-                    cost_formula = f"{sales:.1f} sales × ${cfg.get('cost_per_sale', 0):,.0f} CPA"
-                elif cost_point == "Cost per Meeting":
-                    spend = meetings_held * cfg.get('cost_per_meeting', 0.0)
-                    cost_formula = f"{meetings_held:.1f} meetings × ${cfg.get('cost_per_meeting', 0):,.0f} CPM"
-                elif cost_point == "Cost per Contact":
-                    spend = contacts * cfg.get('cost_per_contact', 0.0)
-                    cost_formula = f"{contacts:.1f} contacts × ${cfg.get('cost_per_contact', 0):,.0f} CPC"
-                elif cost_point == "Total Budget":
-                    spend = cfg.get('monthly_budget', 0.0)
-                    cost_formula = "Fixed budget"
-                else:  # Cost per Lead
-                    spend = leads * cfg.get('cpl', 0.0)
-                    cost_formula = f"{leads:.0f} leads × ${cfg.get('cpl', 0):,.0f} CPL"
-                
-                st.metric("💼 Sales", f"{sales:.1f}")
-                st.metric("💰 Revenue", f"${revenue:,.0f}")
-                st.metric("📣 Spend", f"${spend:,.0f}")
-                roas = revenue / spend if spend > 0 else 0
-                st.metric("📊 ROAS", f"{roas:.1f}x")
-                
-                # Cost breakdown expander
-                with st.expander("💡 Cost Calculation Breakdown"):
-                    st.markdown(f"**Active Method**: {cost_point}")
-                    st.markdown(f"**Formula**: `{cost_formula}`")
-                    st.markdown(f"**Result**: ${spend:,.0f}")
+                with cfg_cols[2]:
+                    st.markdown("**Channel Performance**")
                     
-                    st.markdown("---")
-                    st.caption("**Full Funnel:**")
-                    st.caption(f"• {leads:.0f} Leads → {contacts:.0f} Contacts ({contact_rate:.0%})")
-                    st.caption(f"• {contacts:.0f} Contacts → {meetings_sched:.0f} Meetings Scheduled ({meeting_rate:.0%})")
-                    st.caption(f"• {meetings_sched:.0f} Scheduled → {meetings_held:.0f} Held ({show_up_rate:.0%})")
-                    st.caption(f"• {meetings_held:.0f} Meetings → {sales:.1f} Sales ({close_rate:.0%})")
+                    # Calculate this channel's metrics (using fresh deal economics)
+                    contacts = leads * contact_rate
+                    meetings_sched = contacts * meeting_rate
+                    meetings_held = meetings_sched * show_up_rate
+                    sales = meetings_held * close_rate
+                    revenue = sales * tab1_deal_econ['upfront_cash']  # Use fresh deal economics
                     
-                    st.markdown("---")
-                    st.caption("**Cost Per Stage:**")
-                    st.caption(f"• CPL: ${cpl:,.0f} {'✅ (Active)' if cost_point == 'Cost per Lead' else '⚪ (Blocked)'}")
-                    cpc_calc = spend / contacts if contacts > 0 else 0
-                    st.caption(f"• CPC: ${cpc_calc:,.0f} {'✅ (Active)' if cost_point == 'Cost per Contact' else '⚪ (Blocked)'}")
-                    cpm_calc = spend / meetings_held if meetings_held > 0 else 0
-                    st.caption(f"• CPM: ${cpm_calc:,.0f} {'✅ (Active)' if cost_point == 'Cost per Meeting' else '⚪ (Blocked)'}")
-                    cpa_calc = spend / sales if sales > 0 else 0
-                    st.caption(f"• CPA: ${cpa_calc:,.0f} {'✅ (Active)' if cost_point == 'Cost per Sale' else '⚪ (Blocked)'}")
+                    # Calculate spend based on cost point
+                    if cost_point == "Cost per Sale":
+                        spend = sales * cost_per_sale if 'cost_per_sale' in locals() else 0
+                    elif cost_point == "Cost per Meeting":
+                        spend = meetings_held * cost_per_meeting if 'cost_per_meeting' in locals() else 0
+                    elif cost_point == "Cost per Contact":
+                        spend = contacts * cost_per_contact if 'cost_per_contact' in locals() else 0
+                    elif cost_point == "Total Budget":
+                        spend = total_budget if 'total_budget' in locals() else 0
+                    else:  # Cost per Lead
+                        spend = leads * cpl
+                    
+                    st.metric("💼 Sales", f"{sales:.1f}")
+                    st.metric("💰 Revenue", f"${revenue:,.0f}")
+                    st.metric("📣 Spend", f"${spend:,.0f}")
+                    roas = revenue / spend if spend > 0 else 0
+                    st.metric("📊 ROAS", f"{roas:.1f}x")
+                    
+                    # Enabled toggle
+                    enabled = st.checkbox(
+                        "✅ Channel Enabled",
+                        value=channel.get('enabled', True),
+                        key=f"ch_enabled_{channel['id']}"
+                    )
                 
-                # Enabled toggle
-                enabled = st.checkbox(
-                    "✅ Channel Enabled",
-                    value=channel.get('enabled', True),
-                    key=f"ch_enabled_{channel['id']}"
-                )
-                st.session_state.gtm_channels[idx]['enabled'] = enabled
+                # Submit button at bottom of form
+                st.markdown("---")
+                submitted = st.form_submit_button("✅ Apply Channel Changes", use_container_width=True, type="primary")
+                
+                # Only update session_state when form is submitted
+                if submitted:
+                    st.session_state.gtm_channels[idx]['name'] = name
+                    st.session_state.gtm_channels[idx]['segment'] = segment
+                    st.session_state.gtm_channels[idx]['contact_rate'] = contact_rate
+                    st.session_state.gtm_channels[idx]['meeting_rate'] = meeting_rate
+                    st.session_state.gtm_channels[idx]['show_up_rate'] = show_up_rate
+                    st.session_state.gtm_channels[idx]['close_rate'] = close_rate
+                    st.session_state.gtm_channels[idx]['cost_method'] = cost_point
+                    st.session_state.gtm_channels[idx]['monthly_leads'] = float(leads)
+                    st.session_state.gtm_channels[idx]['enabled'] = enabled
+                    
+                    # Store specific cost values based on method
+                    if cost_point == "Cost per Contact":
+                        st.session_state.gtm_channels[idx]['cost_per_contact'] = cost_per_contact
+                        st.session_state.gtm_channels[idx].pop('cpl', None)
+                    elif cost_point == "Cost per Meeting":
+                        st.session_state.gtm_channels[idx]['cost_per_meeting'] = cost_per_meeting
+                        st.session_state.gtm_channels[idx].pop('cpl', None)
+                    elif cost_point == "Cost per Sale":
+                        st.session_state.gtm_channels[idx]['cost_per_sale'] = cost_per_sale
+                        st.session_state.gtm_channels[idx].pop('cpl', None)
+                    elif cost_point == "Total Budget":
+                        st.session_state.gtm_channels[idx]['monthly_budget'] = total_budget
+                        st.session_state.gtm_channels[idx].pop('cpl', None)
+                    else:  # Cost per Lead
+                        st.session_state.gtm_channels[idx]['cpl'] = float(cpl)
+                    
+                    st.success("✅ Channel settings updated!")
+                    st.rerun()
     
     # Channel Performance Comparison
     if gtm_metrics.get('channels_breakdown'):
