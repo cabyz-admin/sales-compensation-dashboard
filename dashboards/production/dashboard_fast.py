@@ -1696,24 +1696,45 @@ with tab3:
     
     # 3. 💵 Unit Economics (Expanded)
     st.markdown("### 💵 Unit Economics")
-    unit_cols = st.columns(6)
     
-    with unit_cols[0]:
+    # First row - Core metrics
+    unit_row1 = st.columns(6)
+    
+    with unit_row1[0]:
         st.metric("💎 LTV", f"${unit_econ['ltv']:,.0f}")
-    with unit_cols[1]:
+    with unit_row1[1]:
         st.metric("💰 CAC", f"${unit_econ['cac']:,.0f}")
-    with unit_cols[2]:
-        # Cost per showed up meeting
-        cost_per_meeting = marketing_spend / current_meetings if current_meetings > 0 else 0
-        st.metric("🤝 Cost/Meeting", f"${cost_per_meeting:,.0f}", "Showed up")
-    with unit_cols[3]:
+    with unit_row1[2]:
         color = "normal" if unit_econ['ltv_cac'] >= 3 else "inverse"
         st.metric("🎯 LTV:CAC", f"{unit_econ['ltv_cac']:.1f}:1", delta_color=color)
-    with unit_cols[4]:
+    with unit_row1[3]:
         st.metric("⏱️ Payback", f"{unit_econ['payback_months']:.1f} mo", "Target: <12mo")
-    with unit_cols[5]:
+    with unit_row1[4]:
         magic_number = (tab3_deal_econ['avg_deal_value'] / 12) / unit_econ['cac'] if unit_econ['cac'] > 0 else 0
         st.metric("✨ Magic Number", f"{magic_number:.2f}", "Target: >0.75")
+    with unit_row1[5]:
+        # Cost per sale (already calculated)
+        st.metric("💵 Cost/Sale", f"${gtm_metrics.get('cost_per_sale', 0):,.0f}")
+    
+    # Second row - Meeting costs (both scheduled and showed up)
+    unit_row2 = st.columns(6)
+    
+    with unit_row2[0]:
+        # Cost per scheduled meeting
+        meetings_scheduled = gtm_metrics.get('monthly_meetings_scheduled', 0)
+        cost_per_scheduled = marketing_spend / meetings_scheduled if meetings_scheduled > 0 else 0
+        st.metric("📅 Cost/Scheduled Mtg", f"${cost_per_scheduled:,.0f}", "All booked")
+    
+    with unit_row2[1]:
+        # Cost per showed up meeting
+        cost_per_showed_up = marketing_spend / current_meetings if current_meetings > 0 else 0
+        st.metric("🤝 Cost/Showed Up Mtg", f"${cost_per_showed_up:,.0f}", "Actually held")
+    
+    with unit_row2[2]:
+        # No-show impact
+        no_show_cost = cost_per_showed_up - cost_per_scheduled
+        show_up_rate = current_meetings / meetings_scheduled if meetings_scheduled > 0 else 0
+        st.metric("⚠️ No-Show Impact", f"+${no_show_cost:,.0f}", f"{show_up_rate:.0%} show-up rate")
     
     st.markdown("---")
     
