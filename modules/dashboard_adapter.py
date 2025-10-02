@@ -134,7 +134,7 @@ class DashboardAdapter:
         opex = DashboardAdapter.session_to_operating_costs()
         
         # Compute GTM metrics
-        per_channel_metrics, gtm_total = compute_gtm_aggregate(channels, deal)
+        per_channel, gtm_total = compute_gtm_aggregate(channels, deal)
         
         # Compute unit economics
         unit_econ = calculate_unit_economics(deal, gtm_total.cost_per_sale)
@@ -165,6 +165,21 @@ class DashboardAdapter:
             st.session_state.get('working_days', 20)
         )
         
+        # Build channels breakdown
+        channels_breakdown = []
+        for i, m in enumerate(per_channel):
+            channels_breakdown.append({
+                'name': channels[i].name,
+                'segment': channels[i].segment.value,
+                'leads': m.leads,
+                'sales': m.sales,
+                'revenue': m.revenue_upfront,
+                'spend': m.spend,
+                'cpa': m.cost_per_sale,
+                'roas': m.roas,
+                'close_rate': channels[i].close_rate
+            })
+        
         # Return backward-compatible dict
         return {
             # GTM metrics (flattened for compatibility)
@@ -179,20 +194,7 @@ class DashboardAdapter:
             'blended_close_rate': gtm_total.blended_close_rate,
             
             # Per-channel breakdown
-            'channels_breakdown': [
-                {
-                    'name': channels[i].name,
-                    'segment': channels[i].segment.value,
-                    'leads': m.leads,
-                    'sales': m.sales,
-                    'revenue': m.revenue_upfront,
-                    'spend': m.spend,
-                    'cpa': m.cost_per_sale,
-                    'roas': m.roas,
-                    'close_rate': channels[i].close_rate
-                }
-                for i, m in enumerate(per_channel_metrics)
-            ],
+            'channels_breakdown': channels_breakdown,
             
             # Unit economics
             'unit_economics': {
