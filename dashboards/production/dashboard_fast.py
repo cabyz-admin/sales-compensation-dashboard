@@ -2661,6 +2661,13 @@ with tab5:
     with st.expander("👥 Team Configuration & Capacity", expanded=False):
         st.info("💡 Configure team size and capacity settings - affects all calculations")
         
+        # Calculate GTM demand metrics for constraint analysis
+        total_leads = gtm_metrics.get('monthly_leads', 0)
+        total_contacts = gtm_metrics.get('monthly_contacts', 0)
+        total_meetings_scheduled = gtm_metrics.get('monthly_meetings_scheduled', 0)
+        total_meetings_held = gtm_metrics.get('monthly_meetings_held', 0)
+        total_sales = gtm_metrics.get('monthly_sales', 0)
+        
         team_cols = st.columns(3)
         
         with team_cols[0]:
@@ -2844,6 +2851,113 @@ with tab5:
                 st.warning("⚠️ Setter capacity stretched.")
             else:
                 st.success("✅ Setter capacity healthy")
+        
+        # ===== NEW: Demand vs Supply Constraint Analysis =====
+        st.markdown("---")
+        st.markdown("### 🎯 Demand vs Supply Analysis")
+        
+        constraint_cols = st.columns(3)
+        
+        with constraint_cols[0]:
+            st.markdown("**📊 GTM Demand (What Funnel Generates)**")
+            st.metric("Leads", f"{total_leads:,.0f}")
+            st.metric("Contacts", f"{total_contacts:,.0f}")
+            st.metric("Meetings Scheduled", f"{total_meetings_scheduled:,.0f}")
+            st.metric("Meetings Held", f"{total_meetings_held:,.0f}")
+            st.metric("Sales", f"{total_sales:.1f}")
+            
+            # Calculate no-show impact
+            no_shows = total_meetings_scheduled - total_meetings_held
+            if no_shows > 0:
+                show_up_rate = total_meetings_held / total_meetings_scheduled if total_meetings_scheduled > 0 else 0
+                lost_sales = no_shows * (total_sales / max(1, total_meetings_held))
+                lost_revenue = lost_sales * deal_econ.get('avg_deal_value', 50000)
+                st.warning(f"⚠️ {no_shows:.0f} no-shows ({show_up_rate:.0%} show-up)")
+                st.caption(f"Opportunity cost: ~${lost_revenue:,.0f}/mo")
+        
+        with constraint_cols[1]:
+            st.markdown("**👥 Team Supply (What Team Can Handle)**")
+            st.metric("Closer Capacity", f"{monthly_closer_capacity:,.0f} meetings")
+            st.metric("Setter Capacity", f"{monthly_setter_capacity:,.0f} contacts")
+            st.metric("Closer Utilization", f"{closer_util:.0f}%")
+            st.metric("Setter Utilization", f"{setter_util:.0f}%")
+            
+            # Headroom analysis
+            closer_headroom = monthly_closer_capacity - total_meetings_held
+            if closer_headroom > 0:
+                potential_sales = closer_headroom * (total_sales / max(1, total_meetings_held))
+                potential_revenue = potential_sales * deal_econ.get('avg_deal_value', 50000)
+                st.info(f"📈 Headroom: {closer_headroom:.0f} meetings")
+                st.caption(f"Potential: +${potential_revenue:,.0f}/mo")
+            else:
+                st.error(f"🚨 Overload by {abs(closer_headroom):.0f} meetings")
+        
+        with constraint_cols[2]:
+            st.markdown("**🔍 Constraint Detection**")
+            
+            # Detect primary bottleneck
+            constraints_found = []
+            
+            # Check if team is constraining
+            if closer_util >= 75:
+                constraints_found.append({
+                    'type': 'TEAM_CAPACITY',
+                    'severity': 'high' if closer_util >= 90 else 'medium',
+                    'message': f"Closers at {closer_util:.0f}% utilization"
+                })
+            
+            # Check if demand is low (oversized team)
+            if closer_util < 50 and monthly_closer_capacity > 0:
+                wasted_capacity = monthly_closer_capacity - total_meetings_held
+                closers_excess = int(wasted_capacity / (meetings_per_closer * working_days))
+                if closers_excess > 0:
+                    savings = closers_excess * st.session_state.get('closer_base', 32000)
+                    constraints_found.append({
+                        'type': 'OVERSIZED',
+                        'severity': 'medium',
+                        'message': f"Team oversized: {closers_excess} excess closers",
+                        'action': f"Could save ${savings:,.0f}/year"
+                    })
+            
+            # Check no-show rate
+            if total_meetings_scheduled > 0:
+                show_up_rate = total_meetings_held / total_meetings_scheduled
+                if show_up_rate < 0.80:
+                    no_shows = total_meetings_scheduled - total_meetings_held
+                    lost_sales = no_shows * (total_sales / max(1, total_meetings_held))
+                    lost_revenue = lost_sales * deal_econ.get('avg_deal_value', 50000)
+                    constraints_found.append({
+                        'type': 'PROCESS',
+                        'severity': 'high',
+                        'message': f"Low show-up rate ({show_up_rate:.0%})",
+                        'action': f"Fix to capture ${lost_revenue:,.0f}/mo"
+                    })
+            
+            # Display constraints
+            if constraints_found:
+                st.markdown("**🚨 Issues Detected:**")
+                for c in constraints_found:
+                    if c['severity'] == 'high':
+                        st.error(f"{c['message']}")
+                    else:
+                        st.warning(f"{c['message']}")
+                    if 'action' in c:
+                        st.caption(f"→ {c['action']}")
+            else:
+                st.success("✅ No constraints detected")
+                st.caption("Team properly sized for demand")
+            
+            # Recommendations
+            st.markdown("**💡 Recommendations:**")
+            if closer_util < 50:
+                st.caption("• Consider downsizing or scaling GTM")
+            elif closer_util >= 75:
+                st.caption("• Plan to hire more closers")
+            
+            if total_meetings_scheduled > 0:
+                show_up_rate = total_meetings_held / total_meetings_scheduled
+                if show_up_rate < 0.85:
+                    st.caption(f"• Improve show-up rate to 85%+")
     
     # Compensation Configuration
     with st.expander("💵 Compensation Configuration", expanded=False):
