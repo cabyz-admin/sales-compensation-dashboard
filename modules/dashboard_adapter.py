@@ -191,7 +191,7 @@ class DashboardAdapter:
                     'roas': m.roas,
                     'close_rate': channels[i].close_rate
                 }
-                for i, m in enumerate(per_channel)
+                for i, m in enumerate(per_channel_metrics)
             ],
             
             # Unit economics
