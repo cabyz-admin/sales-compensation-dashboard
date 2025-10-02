@@ -1029,6 +1029,30 @@ with tab1:
                 
                 # Submit button at bottom of form
                 st.markdown("---")
+                
+                # Show what will be saved (for transparency)
+                with st.expander("🔍 View Changes Before Applying"):
+                    st.caption("**Values that will be saved:**")
+                    st.caption(f"• Name: {name}")
+                    st.caption(f"• Segment: {segment}")
+                    st.caption(f"• Cost Method: {cost_point}")
+                    st.caption(f"• Monthly Leads: {leads:,.0f}")
+                    if cost_point == "Cost per Lead":
+                        st.caption(f"• CPL: ${cpl:,.2f}")
+                    elif cost_point == "Cost per Contact":
+                        st.caption(f"• Cost Per Contact: ${cost_per_contact:,.2f}")
+                    elif cost_point == "Cost per Meeting":
+                        st.caption(f"• Cost Per Meeting: ${cost_per_meeting:,.2f}")
+                    elif cost_point == "Cost per Sale":
+                        st.caption(f"• Cost Per Sale: ${cost_per_sale:,.2f}")
+                    elif cost_point == "Total Budget":
+                        st.caption(f"• Monthly Budget: ${total_budget:,.2f}")
+                    st.caption(f"• Contact Rate: {contact_rate:.1%}")
+                    st.caption(f"• Meeting Rate: {meeting_rate:.1%}")
+                    st.caption(f"• Show-up Rate: {show_up_rate:.1%}")
+                    st.caption(f"• Close Rate: {close_rate:.1%}")
+                    st.caption(f"• Enabled: {enabled}")
+                
                 submitted = st.form_submit_button("✅ Apply Channel Changes", use_container_width=True, type="primary")
                 
                 # Only update session_state when form is submitted
