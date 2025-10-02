@@ -18,15 +18,11 @@ class DealEconomicsManager:
         Get current deal economics from session state.
         Returns a dictionary with all deal-related values.
         
-        CONVERGENT SOURCE: Checks for calculated values first (from modular calculators),
-        then falls back to direct widget values.
+        SINGLE SOURCE: All calculators now write directly to avg_deal_value and contract_length_months.
         """
-        # Check for calculated values from modular deal calculator (Insurance, Subscription, etc.)
-        # These take precedence over widget values for consistency
-        avg_deal_value = st.session_state.get('calculated_deal_value', 
-                                               st.session_state.get('avg_deal_value', 50000))
-        contract_length_months = st.session_state.get('calculated_contract_length',
-                                                       st.session_state.get('contract_length_months', 12))
+        # All calculators (Insurance, Subscription, Commission, Direct) now write to the same keys
+        avg_deal_value = st.session_state.get('avg_deal_value', 50000)
+        contract_length_months = st.session_state.get('contract_length_months', 12)
         
         upfront_pct = st.session_state.get('upfront_payment_pct', 70.0)
         deferred_pct = 100.0 - upfront_pct

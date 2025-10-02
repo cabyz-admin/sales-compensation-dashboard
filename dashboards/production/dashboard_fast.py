@@ -223,6 +223,12 @@ def initialize_session_state():
 
 initialize_session_state()
 
+# Clean up old deprecated keys from previous versions
+if 'calculated_deal_value' in st.session_state:
+    del st.session_state['calculated_deal_value']
+if 'calculated_contract_length' in st.session_state:
+    del st.session_state['calculated_contract_length']
+
 # ============= CACHED CALCULATIONS =============
 
 @st.cache_data(ttl=300)
