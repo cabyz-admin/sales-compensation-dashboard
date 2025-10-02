@@ -1057,6 +1057,9 @@ with tab1:
                 
                 # Only update session_state when form is submitted
                 if submitted:
+                    # Debug: Show what's being saved
+                    st.info(f"📝 Saving: leads={leads}, cpl={cpl}, cost_point={cost_point}")
+                    
                     st.session_state.gtm_channels[idx]['name'] = name
                     st.session_state.gtm_channels[idx]['segment'] = segment
                     st.session_state.gtm_channels[idx]['contact_rate'] = contact_rate
@@ -1069,21 +1072,21 @@ with tab1:
                     
                     # Store specific cost values based on method
                     if cost_point == "Cost per Contact":
-                        st.session_state.gtm_channels[idx]['cost_per_contact'] = cost_per_contact
+                        st.session_state.gtm_channels[idx]['cost_per_contact'] = float(cost_per_contact)
                         st.session_state.gtm_channels[idx].pop('cpl', None)
                     elif cost_point == "Cost per Meeting":
-                        st.session_state.gtm_channels[idx]['cost_per_meeting'] = cost_per_meeting
+                        st.session_state.gtm_channels[idx]['cost_per_meeting'] = float(cost_per_meeting)
                         st.session_state.gtm_channels[idx].pop('cpl', None)
                     elif cost_point == "Cost per Sale":
-                        st.session_state.gtm_channels[idx]['cost_per_sale'] = cost_per_sale
+                        st.session_state.gtm_channels[idx]['cost_per_sale'] = float(cost_per_sale)
                         st.session_state.gtm_channels[idx].pop('cpl', None)
                     elif cost_point == "Total Budget":
-                        st.session_state.gtm_channels[idx]['monthly_budget'] = total_budget
+                        st.session_state.gtm_channels[idx]['monthly_budget'] = float(total_budget)
                         st.session_state.gtm_channels[idx].pop('cpl', None)
                     else:  # Cost per Lead
                         st.session_state.gtm_channels[idx]['cpl'] = float(cpl)
                     
-                    st.success("✅ Channel settings updated!")
+                    st.success(f"✅ Channel settings updated! CPL=${cpl}, Leads={leads}")
                     st.rerun()
     
     # Channel Performance Comparison
