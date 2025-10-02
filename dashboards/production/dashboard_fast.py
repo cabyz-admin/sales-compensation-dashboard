@@ -499,7 +499,8 @@ gtm_metrics = {
     'monthly_revenue_immediate': metrics['monthly_revenue_immediate'],
     'total_marketing_spend': metrics['total_marketing_spend'],  # ✅ Respects cost method!
     'cost_per_sale': metrics['cost_per_sale'],
-    'blended_close_rate': metrics['blended_close_rate']
+    'blended_close_rate': metrics['blended_close_rate'],
+    'channels_breakdown': metrics['channels_breakdown']  # ✅ For funnel charts
 }
 
 comm_calc = {
