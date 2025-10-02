@@ -2447,7 +2447,7 @@ with tab5:
                 avg_deal_value = st.number_input(
                     "Average Deal Value ($)",
                     min_value=0,
-                    value=st.session_state.get('avg_deal_value', 50000),
+                    value=int(st.session_state.get('avg_deal_value', 50000)),
                     step=1000,
                     key="direct_deal_value_input",
                     help="Total contract value"
@@ -2457,7 +2457,7 @@ with tab5:
                     "Contract Length (Months)",
                     min_value=1,
                     max_value=60,
-                    value=st.session_state.get('contract_length_months', 12),
+                    value=int(st.session_state.get('contract_length_months', 12)),
                     step=1,
                     key="direct_contract_length_input"
                 )
