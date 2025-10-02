@@ -248,7 +248,30 @@ class DashboardAdapter:
     
     @staticmethod
     def get_cache_key() -> str:
-        """Generate cache key from current session state"""
+        """
+        Generate cache key from current session state.
+        Key changes when any relevant input changes, invalidating cache.
+        """
+        # For channels, extract only the fields that affect calculations
+        # This ensures changes are properly detected
+        channels_for_hash = []
+        for ch in st.session_state.get('gtm_channels', []):
+            channels_for_hash.append({
+                'id': ch.get('id'),
+                'enabled': ch.get('enabled', True),
+                'monthly_leads': ch.get('monthly_leads'),
+                'cpl': ch.get('cpl'),
+                'cost_per_contact': ch.get('cost_per_contact'),
+                'cost_per_meeting': ch.get('cost_per_meeting'),
+                'cost_per_sale': ch.get('cost_per_sale'),
+                'monthly_budget': ch.get('monthly_budget'),
+                'cost_method': ch.get('cost_method'),
+                'contact_rate': ch.get('contact_rate'),
+                'meeting_rate': ch.get('meeting_rate'),
+                'show_up_rate': ch.get('show_up_rate'),
+                'close_rate': ch.get('close_rate'),
+            })
+        
         relevant_state = {
             'deal': {
                 'avg_deal_value': st.session_state.get('avg_deal_value'),
@@ -257,7 +280,7 @@ class DashboardAdapter:
                 'gov_pct': st.session_state.get('government_cost_pct'),
                 'policy': st.session_state.get('commission_policy')
             },
-            'channels': st.session_state.get('gtm_channels', []),
+            'channels': channels_for_hash,  # Use extracted fields
             'team': {
                 'counts': [
                     st.session_state.get('num_closers_main'),
