@@ -242,7 +242,7 @@ class DashboardAdapter:
                 'team': team,
                 'opex': opex,
                 'gtm_total': gtm_total,
-                'per_channel': per_channel_metrics
+                'per_channel': per_channel
             }
         }
     
