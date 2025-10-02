@@ -1696,18 +1696,22 @@ with tab3:
     
     # 3. 💵 Unit Economics (Expanded)
     st.markdown("### 💵 Unit Economics")
-    unit_cols = st.columns(5)
+    unit_cols = st.columns(6)
     
     with unit_cols[0]:
         st.metric("💎 LTV", f"${unit_econ['ltv']:,.0f}")
     with unit_cols[1]:
         st.metric("💰 CAC", f"${unit_econ['cac']:,.0f}")
     with unit_cols[2]:
+        # Cost per showed up meeting
+        cost_per_meeting = marketing_spend / current_meetings if current_meetings > 0 else 0
+        st.metric("🤝 Cost/Meeting", f"${cost_per_meeting:,.0f}", "Showed up")
+    with unit_cols[3]:
         color = "normal" if unit_econ['ltv_cac'] >= 3 else "inverse"
         st.metric("🎯 LTV:CAC", f"{unit_econ['ltv_cac']:.1f}:1", delta_color=color)
-    with unit_cols[3]:
-        st.metric("⏱️ Payback", f"{unit_econ['payback_months']:.1f} mo", "Target: <12mo")
     with unit_cols[4]:
+        st.metric("⏱️ Payback", f"{unit_econ['payback_months']:.1f} mo", "Target: <12mo")
+    with unit_cols[5]:
         magic_number = (tab3_deal_econ['avg_deal_value'] / 12) / unit_econ['cac'] if unit_econ['cac'] > 0 else 0
         st.metric("✨ Magic Number", f"{magic_number:.2f}", "Target: >0.75")
     
