@@ -491,9 +491,9 @@ with col_status:
     st.info("⚙️ **Calculation Engine v1.0** • Math verified with 19 passing tests • Changes apply immediately")
 with col_refresh:
     if st.button("🔄 Refresh Metrics", use_container_width=True, help="Force recalculation if values don't update"):
-        # Debug: Show what we're refreshing with
-        st.toast(f"🔍 Refreshing with {st.session_state.get('num_closers_main', 8)} closers", icon="🔄")
+        # Clear cache but DON'T reset session state values
         st.cache_data.clear()
+        st.toast("✅ Metrics refreshed! Values preserved.", icon="🔄")
         st.rerun()
 
 # ============= ✨ NEW ARCHITECTURE - Single Source of Truth =============
@@ -2703,10 +2703,10 @@ with tab5:
         
         with team_cols[0]:
             st.markdown("**Team Size**")
-            num_closers = st.number_input("Closers", 1, 50, st.session_state.num_closers_main, key="num_closers_main")
-            num_setters = st.number_input("Setters", 0, 50, st.session_state.num_setters_main, key="num_setters_main")
-            num_managers = st.number_input("Managers", 0, 20, st.session_state.num_managers_main, key="num_managers_main")
-            num_bench = st.number_input("Bench", 0, 20, st.session_state.num_benchs_main, key="num_benchs_main")
+            num_closers = st.number_input("Closers", 1, 50, st.session_state.get('num_closers_main', 8), key="num_closers_main")
+            num_setters = st.number_input("Setters", 0, 50, st.session_state.get('num_setters_main', 4), key="num_setters_main")
+            num_managers = st.number_input("Managers", 0, 20, st.session_state.get('num_managers_main', 2), key="num_managers_main")
+            num_bench = st.number_input("Bench", 0, 20, st.session_state.get('num_benchs_main', 2), key="num_benchs_main")
             
             st.markdown("**Capacity Settings**")
             meetings_per_closer = st.number_input(
