@@ -485,6 +485,8 @@ with col_status:
     st.info("⚙️ **Calculation Engine v1.0** • Math verified with 19 passing tests • Changes apply immediately")
 with col_refresh:
     if st.button("🔄 Refresh Metrics", use_container_width=True, help="Force recalculation if values don't update"):
+        # Debug: Show what we're refreshing with
+        st.toast(f"🔍 Refreshing with {st.session_state.get('num_closers_main', 8)} closers", icon="🔄")
         st.cache_data.clear()
         st.rerun()
 
@@ -532,35 +534,81 @@ pnl_data = {
 deal_econ = DealEconomicsManager.get_current_deal_economics()
 marketing_spend = metrics['total_marketing_spend']  # ✅ Single source of truth!
 
+# Store previous metrics for delta calculation
+if 'prev_metrics' not in st.session_state:
+    st.session_state.prev_metrics = None
+
+# Calculate deltas if we have previous metrics
+current_vals = {
+    'revenue': gtm_metrics['monthly_revenue_immediate'],
+    'sales': gtm_metrics['monthly_sales'],
+    'leads': gtm_metrics['monthly_leads'],
+    'close_rate': gtm_metrics['blended_close_rate'],
+    'ltv_cac': unit_econ['ltv_cac'],
+    'payback': unit_econ['payback_months'],
+    'deal_value': deal_econ['avg_deal_value'],
+    'commissions': comm_calc['total_commission'],
+    'marketing': marketing_spend,
+    'ebitda': pnl_data['ebitda'],
+    'ebitda_margin': pnl_data['ebitda_margin']
+}
+
+# Calculate deltas
+deltas = {}
+if st.session_state.prev_metrics:
+    for key, val in current_vals.items():
+        prev = st.session_state.prev_metrics.get(key, val)
+        deltas[key] = val - prev if prev != 0 else 0
+else:
+    deltas = {key: None for key in current_vals.keys()}
+
+# Update previous metrics for next comparison
+st.session_state.prev_metrics = current_vals.copy()
+
 # TOP KPI ROW - All key metrics visible at once
 st.markdown("### 📊 Key Performance Indicators")
 kpi_row1 = st.columns(6)
 with kpi_row1[0]:
-    st.metric("💰 Monthly Revenue", f"${gtm_metrics['monthly_revenue_immediate']:,.0f}")
+    st.metric("💰 Monthly Revenue", f"${current_vals['revenue']:,.0f}", 
+              delta=f"${deltas['revenue']:,.0f}" if deltas['revenue'] is not None else None)
 with kpi_row1[1]:
-    st.metric("📈 Monthly Sales", f"{gtm_metrics['monthly_sales']:.1f}")
+    st.metric("📈 Monthly Sales", f"{current_vals['sales']:.1f}",
+              delta=f"{deltas['sales']:.1f}" if deltas['sales'] is not None else None)
 with kpi_row1[2]:
-    st.metric("📊 Leads", f"{gtm_metrics['monthly_leads']:,.0f}")
+    st.metric("📊 Leads", f"{current_vals['leads']:,.0f}",
+              delta=f"{deltas['leads']:,.0f}" if deltas['leads'] is not None else None)
 with kpi_row1[3]:
-    st.metric("🎯 Close Rate", f"{gtm_metrics['blended_close_rate']:.1%}")
+    st.metric("🎯 Close Rate", f"{current_vals['close_rate']:.1%}",
+              delta=f"{deltas['close_rate']:.1%}" if deltas['close_rate'] is not None else None)
 with kpi_row1[4]:
-    color = "normal" if unit_econ['ltv_cac'] >= 3 else "inverse"
-    st.metric("🎯 LTV:CAC", f"{unit_econ['ltv_cac']:.1f}:1", delta_color=color)
+    color = "normal" if current_vals['ltv_cac'] >= 3 else "inverse"
+    st.metric("🎯 LTV:CAC", f"{current_vals['ltv_cac']:.1f}:1",
+              delta=f"{deltas['ltv_cac']:.1f}" if deltas['ltv_cac'] is not None else None,
+              delta_color=color)
 with kpi_row1[5]:
-    st.metric("⏱️ Payback", f"{unit_econ['payback_months']:.0f}mo")
+    st.metric("⏱️ Payback", f"{current_vals['payback']:.0f}mo",
+              delta=f"{deltas['payback']:.0f}mo" if deltas['payback'] is not None else None,
+              delta_color="inverse")  # Lower payback is better
 
 kpi_row2 = st.columns(6)
 with kpi_row2[0]:
-    st.metric("💎 Deal Value", f"${deal_econ['avg_deal_value']:,.0f}")
+    st.metric("💎 Deal Value", f"${current_vals['deal_value']:,.0f}",
+              delta=f"${deltas['deal_value']:,.0f}" if deltas['deal_value'] is not None else None)
 with kpi_row2[1]:
-    st.metric("💸 Total Commissions", f"${comm_calc['total_commission']:,.0f}")
+    st.metric("💸 Total Commissions", f"${current_vals['commissions']:,.0f}",
+              delta=f"${deltas['commissions']:,.0f}" if deltas['commissions'] is not None else None,
+              delta_color="inverse")  # Lower commissions better for margin
 with kpi_row2[2]:
-    st.metric("📣 Marketing", f"${marketing_spend:,.0f}")
+    st.metric("📣 Marketing", f"${current_vals['marketing']:,.0f}",
+              delta=f"${deltas['marketing']:,.0f}" if deltas['marketing'] is not None else None)
 with kpi_row2[3]:
-    ebitda_color = "normal" if pnl_data['ebitda'] > 0 else "inverse"
-    st.metric("💎 EBITDA", f"${pnl_data['ebitda']:,.0f}", delta_color=ebitda_color)
+    ebitda_color = "normal" if current_vals['ebitda'] > 0 else "inverse"
+    st.metric("💎 EBITDA", f"${current_vals['ebitda']:,.0f}",
+              delta=f"${deltas['ebitda']:,.0f}" if deltas['ebitda'] is not None else None,
+              delta_color=ebitda_color)
 with kpi_row2[4]:
-    st.metric("📊 EBITDA Margin", f"{pnl_data['ebitda_margin']:.1f}%")
+    st.metric("📊 EBITDA Margin", f"{current_vals['ebitda_margin']:.1f}%",
+              delta=f"{deltas['ebitda_margin']:.1f}%" if deltas['ebitda_margin'] is not None else None)
 with kpi_row2[5]:
     policy = DealEconomicsManager.get_commission_policy()
     st.metric("💸 Comm Policy", "Upfront" if policy == 'upfront' else "Full")
@@ -2688,6 +2736,25 @@ with tab5:
                 delta="Healthy" if setter_util < 75 else "High" if setter_util < 90 else "OVERLOAD",
                 delta_color=setter_color
             )
+            
+            st.markdown("**💰 Annual Team Costs**")
+            # Calculate team costs from compensation structure
+            closer_base = st.session_state.get('closer_base', 0)
+            setter_base = st.session_state.get('setter_base', 0)
+            manager_base = st.session_state.get('manager_base', 0)
+            bench_base = st.session_state.get('bench_base', 0)
+            
+            closers_cost = num_closers * closer_base
+            setters_cost = num_setters * setter_base
+            managers_cost = num_managers * manager_base
+            bench_cost = num_bench * bench_base
+            total_base = closers_cost + setters_cost + managers_cost + bench_cost
+            
+            st.caption(f"• Closers: {num_closers} × ${closer_base:,.0f} = ${closers_cost:,.0f}")
+            st.caption(f"• Setters: {num_setters} × ${setter_base:,.0f} = ${setters_cost:,.0f}")
+            st.caption(f"• Managers: {num_managers} × ${manager_base:,.0f} = ${managers_cost:,.0f}")
+            st.caption(f"• Bench: {num_bench} × ${bench_base:,.0f} = ${bench_cost:,.0f}")
+            st.metric("**Total Base Salaries**", f"${total_base:,.0f}")
         
         with team_cols[2]:
             st.markdown("**Capacity Analysis Chart**")
