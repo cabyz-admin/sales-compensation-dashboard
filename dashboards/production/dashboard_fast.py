@@ -2453,13 +2453,19 @@ with tab5:
                     help="Total contract value"
                 )
             with calc_cols[1]:
+                # Get stored value and clamp to reasonable range for direct input
+                stored_length = int(st.session_state.get('contract_length_months', 12))
+                # Clamp to max if coming from Insurance mode (which can be 216+ months)
+                clamped_length = min(stored_length, 600)  # Max 50 years
+                
                 contract_length = st.number_input(
                     "Contract Length (Months)",
                     min_value=1,
-                    max_value=60,
-                    value=int(st.session_state.get('contract_length_months', 12)),
+                    max_value=600,  # Increased to handle insurance contracts (up to 50 years)
+                    value=clamped_length,
                     step=1,
-                    key="direct_contract_length_input"
+                    key="direct_contract_length_input",
+                    help="Contract duration (max 50 years = 600 months)"
                 )
             with calc_cols[2]:
                 monthly_value = avg_deal_value / contract_length if contract_length > 0 else 0
