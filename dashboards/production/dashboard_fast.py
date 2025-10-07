@@ -2709,10 +2709,21 @@ with tab5:
         
         with team_cols[0]:
             st.markdown("**Team Size**")
-            num_closers = st.number_input("Closers", 1, 50, st.session_state.get('num_closers_main', 8), key="num_closers_main")
-            num_setters = st.number_input("Setters", 0, 50, st.session_state.get('num_setters_main', 4), key="num_setters_main")
-            num_managers = st.number_input("Managers", 0, 20, st.session_state.get('num_managers_main', 2), key="num_managers_main")
-            num_bench = st.number_input("Bench", 0, 20, st.session_state.get('num_benchs_main', 2), key="num_benchs_main")
+            # Ensure keys exist before widgets (defensive programming)
+            if 'num_closers_main' not in st.session_state:
+                st.session_state.num_closers_main = 8
+            if 'num_setters_main' not in st.session_state:
+                st.session_state.num_setters_main = 4
+            if 'num_managers_main' not in st.session_state:
+                st.session_state.num_managers_main = 2
+            if 'num_benchs_main' not in st.session_state:
+                st.session_state.num_benchs_main = 2
+            
+            # Now create widgets - they'll use existing session_state values
+            num_closers = st.number_input("Closers", 1, 50, key="num_closers_main")
+            num_setters = st.number_input("Setters", 0, 50, key="num_setters_main")
+            num_managers = st.number_input("Managers", 0, 20, key="num_managers_main")
+            num_bench = st.number_input("Bench", 0, 20, key="num_benchs_main")
             
             st.markdown("**Capacity Settings**")
             meetings_per_closer = st.number_input(
