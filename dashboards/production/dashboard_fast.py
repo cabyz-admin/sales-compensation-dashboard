@@ -485,29 +485,15 @@ def generate_alerts(gtm_metrics, unit_econ, pnl_data):
 st.title("💎 ULTIMATE Sales Compensation Dashboard")
 st.caption("⚡ 10X Faster • 📊 Full Features • 🎯 Accurate Calculations")
 
-# Debug toggle in sidebar
-with st.sidebar:
-    st.session_state.debug_mode = st.checkbox("🐛 Debug Mode", value=st.session_state.get('debug_mode', False), help="Show diagnostic information")
-
 # Architecture status
 col_status, col_refresh = st.columns([4, 1])
 with col_status:
     st.info("⚙️ **Calculation Engine v1.0** • Math verified with 19 passing tests • Changes apply immediately")
 with col_refresh:
     if st.button("🔄 Refresh Metrics", use_container_width=True, help="Force recalculation if values don't update"):
-        # DEBUG: Capture values BEFORE clearing cache
-        debug_values = {
-            'num_closers_main': st.session_state.get('num_closers_main', 'NOT SET'),
-            'num_setters_main': st.session_state.get('num_setters_main', 'NOT SET'),
-            'num_managers_main': st.session_state.get('num_managers_main', 'NOT SET'),
-            'num_benchs_main': st.session_state.get('num_benchs_main', 'NOT SET'),
-        }
-        
         # Clear cache but DON'T reset session state values
         st.cache_data.clear()
-        
-        # DEBUG: Verify values AFTER clearing cache (should be same)
-        st.toast(f"✅ Refreshed! Team: {debug_values['num_closers_main']}C, {debug_values['num_setters_main']}S, {debug_values['num_managers_main']}M, {debug_values['num_benchs_main']}B", icon="🔄")
+        st.toast("✅ Metrics refreshed! Values preserved.", icon="🔄")
         st.rerun()
 
 # ============= ✨ NEW ARCHITECTURE - Single Source of Truth =============
@@ -515,14 +501,6 @@ with col_refresh:
 
 # Get all business metrics from the new architecture adapter
 # This uses: models.py → engine.py → engine_pnl.py (single source of truth)
-# DEBUG: Log team values RIGHT BEFORE computing metrics
-if st.session_state.get('debug_mode', False):
-    st.sidebar.write("🐛 DEBUG - Team values when computing metrics:")
-    st.sidebar.write(f"Closers: {st.session_state.get('num_closers_main', 'NOT SET')}")
-    st.sidebar.write(f"Setters: {st.session_state.get('num_setters_main', 'NOT SET')}")
-    st.sidebar.write(f"Managers: {st.session_state.get('num_managers_main', 'NOT SET')}")
-    st.sidebar.write(f"Bench: {st.session_state.get('num_benchs_main', 'NOT SET')}")
-
 metrics = DashboardAdapter.get_metrics()
 
 # Extract metrics for backward compatibility with existing UI code
@@ -2731,7 +2709,7 @@ with tab5:
         
         with team_cols[0]:
             st.markdown("**Team Size**")
-            # Ensure keys exist before widgets (defensive programming)
+            # Ensure session state keys exist with defaults (widgets will use these via key parameter)
             if 'num_closers_main' not in st.session_state:
                 st.session_state.num_closers_main = 8
             if 'num_setters_main' not in st.session_state:
@@ -2741,19 +2719,11 @@ with tab5:
             if 'num_benchs_main' not in st.session_state:
                 st.session_state.num_benchs_main = 2
             
-            # DEBUG: Show current session state values
-            if st.session_state.get('debug_mode', False):
-                st.caption(f"🐛 Session State: C={st.session_state.num_closers_main}, S={st.session_state.num_setters_main}, M={st.session_state.num_managers_main}, B={st.session_state.num_benchs_main}")
-            
-            # Now create widgets - they'll use existing session_state values
+            # Widgets with ONLY key parameter - let Streamlit manage the value via the key
             num_closers = st.number_input("Closers", 1, 50, key="num_closers_main")
             num_setters = st.number_input("Setters", 0, 50, key="num_setters_main")
             num_managers = st.number_input("Managers", 0, 20, key="num_managers_main")
             num_bench = st.number_input("Bench", 0, 20, key="num_benchs_main")
-            
-            # DEBUG: Show widget values after creation
-            if st.session_state.get('debug_mode', False):
-                st.caption(f"🐛 Widget Values: C={num_closers}, S={num_setters}, M={num_managers}, B={num_bench}")
             
             st.markdown("**Capacity Settings**")
             meetings_per_closer = st.number_input(
