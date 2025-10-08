@@ -2333,11 +2333,18 @@ with tab5:
         
         if "Insurance" in calc_method:
             # Insurance-specific: Monthly Premium × Commission Rate × Contract Years
+            # Ensure defaults exist before widgets (prevents circular reference)
+            if 'monthly_premium' not in st.session_state:
+                st.session_state.monthly_premium = 3000
+            if 'insurance_commission_rate' not in st.session_state:
+                st.session_state.insurance_commission_rate = 2.7
+            if 'insurance_contract_years' not in st.session_state:
+                st.session_state.insurance_contract_years = 18
+            
             with calc_cols[0]:
                 monthly_premium = st.number_input(
                     "Monthly Premium ($)",
                     min_value=0,
-                    value=int(st.session_state.get('monthly_premium', 3000)),
                     step=100,
                     key="monthly_premium",
                     help="Customer's monthly insurance premium"
@@ -2347,7 +2354,6 @@ with tab5:
                     "Commission Rate (%)",
                     min_value=0.0,
                     max_value=100.0,
-                    value=st.session_state.get('insurance_commission_rate', 2.7),
                     step=0.1,
                     key="insurance_commission_rate",
                     help="Your commission % (e.g., 2.7%)"
@@ -2357,7 +2363,6 @@ with tab5:
                     "Contract Term (Years)",
                     min_value=1,
                     max_value=50,
-                    value=int(st.session_state.get('insurance_contract_years', 18)),
                     step=1,
                     key="insurance_contract_years"
                 )
@@ -2376,11 +2381,16 @@ with tab5:
             
         elif "Subscription" in calc_method:
             # Subscription: MRR × Contract Term
+            # Ensure defaults exist before widgets
+            if 'mrr' not in st.session_state:
+                st.session_state.mrr = 5000
+            if 'sub_term_months' not in st.session_state:
+                st.session_state.sub_term_months = 12
+            
             with calc_cols[0]:
                 mrr = st.number_input(
                     "Monthly Recurring Revenue",
                     min_value=0,
-                    value=int(st.session_state.get('mrr', 5000)),
                     step=500,
                     key="mrr"
                 )
@@ -2389,7 +2399,6 @@ with tab5:
                     "Contract Term (Months)",
                     min_value=1,
                     max_value=60,
-                    value=int(st.session_state.get('sub_term_months', 12)),
                     step=1,
                     key="sub_term_months"
                 )
@@ -2407,11 +2416,16 @@ with tab5:
             
         elif "Commission" in calc_method:
             # Commission-based: Total Contract × Commission %
+            # Ensure defaults exist before widgets
+            if 'total_contract_value' not in st.session_state:
+                st.session_state.total_contract_value = 100000
+            if 'contract_commission_pct' not in st.session_state:
+                st.session_state.contract_commission_pct = 10.0
+            
             with calc_cols[0]:
                 total_contract = st.number_input(
                     "Total Contract Value ($)",
                     min_value=0,
-                    value=int(st.session_state.get('total_contract_value', 100000)),
                     step=5000,
                     key="total_contract_value"
                 )
@@ -2420,18 +2434,21 @@ with tab5:
                     "Your Commission (%)",
                     min_value=0.0,
                     max_value=100.0,
-                    value=st.session_state.get('contract_commission_pct', 10.0),
                     step=0.5,
                     key="contract_commission_pct"
                 )
             with calc_cols[2]:
+                # For commission mode, we need to get contract_length but can't use it as key
+                # since Direct Value mode also uses it. Use a separate input for display.
+                if 'commission_contract_length' not in st.session_state:
+                    st.session_state.commission_contract_length = 12
+                
                 contract_length = st.number_input(
                     "Contract Length (Months)",
                     min_value=1,
                     max_value=60,
-                    value=int(st.session_state.get('contract_length_months', 12)),
                     step=1,
-                    key="contract_length_months"
+                    key="commission_contract_length"
                 )
             
             avg_deal_value = total_contract * (commission_pct / 100)
