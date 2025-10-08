@@ -2526,11 +2526,14 @@ with tab5:
             st.caption(f"**Deferred:** ${deferred_cash:,.0f} ({deferred_pct:.0f}%)")
             
             if deferred_pct > 0:
+                # Ensure default exists before widget
+                if 'deferred_timing_months' not in st.session_state:
+                    st.session_state.deferred_timing_months = 18
+                
                 deferred_timing = st.number_input(
                     "Deferred Payment Month",
                     min_value=1,
                     max_value=60,
-                    value=st.session_state.deferred_timing_months,
                     step=1,
                     key="deferred_timing_months",
                     help="Month when deferred payment is received"
@@ -2743,11 +2746,18 @@ with tab5:
             num_bench = st.number_input("Bench", 0, 20, key="num_benchs_main")
             
             st.markdown("**Capacity Settings**")
+            # Ensure defaults exist before widgets
+            if 'meetings_per_closer' not in st.session_state:
+                st.session_state.meetings_per_closer = 3.0
+            if 'working_days' not in st.session_state:
+                st.session_state.working_days = 20
+            if 'meetings_per_setter' not in st.session_state:
+                st.session_state.meetings_per_setter = 2.0
+            
             meetings_per_closer = st.number_input(
                 "Meetings/Closer/Day",
                 min_value=0.1,
                 max_value=10.0,
-                value=st.session_state.get('meetings_per_closer', 3.0),
                 step=0.5,
                 key="meetings_per_closer",
                 help="Average meetings each closer can run per working day"
@@ -2756,7 +2766,6 @@ with tab5:
                 "Working Days/Month",
                 min_value=10,
                 max_value=26,
-                value=st.session_state.get('working_days', 20),
                 step=1,
                 key="working_days",
                 help="Number of active selling days per month"
@@ -2765,7 +2774,6 @@ with tab5:
                 "Meetings Booked/Setter/Day",
                 min_value=0.1,
                 max_value=20.0,
-                value=st.session_state.get('meetings_per_setter', 2.0),
                 step=0.5,
                 key="meetings_per_setter",
                 help="Average meetings each setter confirms and books per day"
@@ -3028,19 +3036,35 @@ with tab5:
     with st.expander("💵 Compensation Configuration", expanded=False):
         st.info("💡 **2-Tier Comp Model**: Base Salary (guaranteed) + Commission % (unlimited upside) • Changes apply immediately")
         
+        # Ensure defaults exist before widgets
+        if 'closer_base' not in st.session_state:
+            st.session_state.closer_base = 32000
+        if 'closer_commission_pct' not in st.session_state:
+            st.session_state.closer_commission_pct = 20.0
+        if 'setter_base' not in st.session_state:
+            st.session_state.setter_base = 16000
+        if 'setter_commission_pct' not in st.session_state:
+            st.session_state.setter_commission_pct = 3.0
+        if 'manager_base' not in st.session_state:
+            st.session_state.manager_base = 72000
+        if 'manager_commission_pct' not in st.session_state:
+            st.session_state.manager_commission_pct = 5.0
+        if 'bench_base' not in st.session_state:
+            st.session_state.bench_base = 12500
+        
         comp_cols = st.columns(4)
         
         with comp_cols[0]:
             st.markdown("**🎯 Closer**")
             closer_base = st.number_input(
                 "Base Salary (Annual $)", 
-                0, 200000, st.session_state.get('closer_base', 32000), 1000, 
+                0, 200000, step=1000, 
                 key="closer_base",
                 help="Annual salary + commission on deals"
             )
             closer_comm = st.number_input(
                 "Commission % (Per Deal)", 
-                0.0, 50.0, st.session_state.get('closer_commission_pct', 20.0), 0.5, 
+                0.0, 50.0, step=0.5, 
                 key="closer_commission_pct",
                 help="Percentage of each deal value (unlimited upside)"
             )
@@ -3049,13 +3073,13 @@ with tab5:
             st.markdown("**📞 Setter**")
             setter_base = st.number_input(
                 "Base Salary (Annual $)", 
-                0, 200000, st.session_state.get('setter_base', 16000), 1000, 
+                0, 200000, step=1000, 
                 key="setter_base",
                 help="Annual salary + commission on deals"
             )
             setter_comm = st.number_input(
                 "Commission % (Per Deal)", 
-                0.0, 50.0, st.session_state.get('setter_commission_pct', 3.0), 0.5, 
+                0.0, 50.0, step=0.5, 
                 key="setter_commission_pct",
                 help="Percentage of each deal value (unlimited upside)"
             )
@@ -3064,13 +3088,13 @@ with tab5:
             st.markdown("**👔 Manager**")
             manager_base = st.number_input(
                 "Base Salary (Annual $)", 
-                0, 300000, st.session_state.get('manager_base', 72000), 1000, 
+                0, 300000, step=1000, 
                 key="manager_base",
                 help="Annual salary + team override commission"
             )
             manager_comm = st.number_input(
                 "Commission % (Per Deal)", 
-                0.0, 50.0, st.session_state.get('manager_commission_pct', 5.0), 0.5, 
+                0.0, 50.0, step=0.5, 
                 key="manager_commission_pct",
                 help="Percentage of each deal value (team override)"
             )
@@ -3079,7 +3103,7 @@ with tab5:
             st.markdown("**🔧 Bench**")
             bench_base = st.number_input(
                 "Base Salary (Annual $)", 
-                0, 200000, st.session_state.get('bench_base', 12500), 1000, 
+                0, 200000, step=1000, 
                 key="bench_base",
                 help="Annual salary for bench/training roles"
             )
@@ -3089,14 +3113,22 @@ with tab5:
     with st.expander("🏢 Operating Costs", expanded=False):
         st.info("💡 Monthly operating expenses • Changes apply immediately")
         
+        # Ensure defaults exist before widgets
+        if 'office_rent' not in st.session_state:
+            st.session_state.office_rent = 20000
+        if 'software_costs' not in st.session_state:
+            st.session_state.software_costs = 10000
+        if 'other_opex' not in st.session_state:
+            st.session_state.other_opex = 5000
+        
         ops_cols = st.columns(3)
         
         with ops_cols[0]:
-            rent = st.number_input("Office Rent ($)", 0, 100000, st.session_state.get('office_rent', 20000), 500, key="office_rent")
+            rent = st.number_input("Office Rent ($)", 0, 100000, step=500, key="office_rent")
         with ops_cols[1]:
-            software = st.number_input("Software ($)", 0, 50000, st.session_state.get('software_costs', 10000), 100, key="software_costs")
+            software = st.number_input("Software ($)", 0, 50000, step=100, key="software_costs")
         with ops_cols[2]:
-            opex = st.number_input("Other OpEx ($)", 0, 100000, st.session_state.get('other_opex', 5000), 500, key="other_opex")
+            opex = st.number_input("Other OpEx ($)", 0, 100000, step=500, key="other_opex")
         
         # Show total
         total_opex = rent + software + opex
@@ -3110,11 +3142,14 @@ with tab5:
         
         with stake_cols[0]:
             st.markdown("**Configuration**")
+            # Ensure default exists before widget
+            if 'stakeholder_pct' not in st.session_state:
+                st.session_state.stakeholder_pct = 10.0
+            
             stakeholder_pct = st.number_input(
                 "Stakeholder Profit Share (%)",
                 min_value=0.0,
                 max_value=50.0,
-                value=st.session_state.get('stakeholder_pct', 10.0),
                 step=0.5,
                 key="stakeholder_pct",
                 help="Percentage of EBITDA distributed to stakeholders/owners"
