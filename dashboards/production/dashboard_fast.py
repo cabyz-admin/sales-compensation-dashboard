@@ -2362,12 +2362,24 @@ with tab5:
         # Info box showing how template and calculator work together
         st.info("💡 **How it works:** Select a template above to pre-fill values, OR choose a calculation method manually. Click 'Apply' when ready.")
 
+        # Get the index for the default value
+        calc_methods = ["💰 Direct Value", "🏥 Insurance (Premium-Based)", "📊 Subscription (MRR)", "📋 Commission % of Contract"]
+        default_method = st.session_state.get('deal_calc_method', '💰 Direct Value')
+        try:
+            default_index = calc_methods.index(default_method)
+        except ValueError:
+            default_index = 0
+
         calc_method = st.selectbox(
             "Calculation Method",
-            ["💰 Direct Value", "🏥 Insurance (Premium-Based)", "📊 Subscription (MRR)", "📋 Commission % of Contract"],
-            key="deal_calc_method",
+            calc_methods,
+            index=default_index,
+            key="calc_deal_calc_method",
             help="Choose the method that matches your business model (templates auto-select this)"
         )
+
+        # Sync back to actual session state
+        st.session_state['deal_calc_method'] = calc_method
 
         # Show current committed values
         current_deal_value = st.session_state.get('avg_deal_value', 0)
