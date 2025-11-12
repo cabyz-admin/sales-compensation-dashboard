@@ -2281,7 +2281,10 @@ with tab5:
             )
 
         with template_col:
-            if business_type != "Custom" and st.button("📋 Load Template", use_container_width=True, type="primary"):
+            template_disabled = business_type == "Custom"
+            template_help = "Select a business type first" if template_disabled else "Load template values into calculator inputs"
+
+            if st.button("📋 Load Template", use_container_width=True, type="primary", disabled=template_disabled, help=template_help):
                 # Templates now set CALCULATOR inputs, not final values
                 # This prevents widget key collision
                 templates = {
@@ -2356,11 +2359,14 @@ with tab5:
         # Modular Deal Value Calculator
         st.markdown("### 🧮 Deal Value Calculator")
 
+        # Info box showing how template and calculator work together
+        st.info("💡 **How it works:** Select a template above to pre-fill values, OR choose a calculation method manually. Click 'Apply' when ready.")
+
         calc_method = st.selectbox(
             "Calculation Method",
             ["💰 Direct Value", "🏥 Insurance (Premium-Based)", "📊 Subscription (MRR)", "📋 Commission % of Contract"],
             key="deal_calc_method",
-            help="Choose the method that matches your business model"
+            help="Choose the method that matches your business model (templates auto-select this)"
         )
 
         # Show current committed values
@@ -2368,7 +2374,25 @@ with tab5:
         current_contract_length = st.session_state.get('contract_length_months', 12)
 
         if current_deal_value > 0:
-            st.info(f"📊 **Current Deal Value:** ${current_deal_value:,.0f} over {current_contract_length} months")
+            st.success(f"✅ **Current Committed Value:** ${current_deal_value:,.0f} over {current_contract_length} months")
+        else:
+            st.warning("⚠️ **No deal value set yet.** Use calculator below and click 'Apply Calculator Values'.")
+
+        # Check if calculator method matches loaded template
+        selected_business_type = st.session_state.get('business_type', 'Custom')
+        if selected_business_type != 'Custom':
+            # Check if method was changed from template
+            template_method_map = {
+                "Insurance (Long-term)": "🏥 Insurance (Premium-Based)",
+                "Insurance (Allianz Optimax)": "🏥 Insurance (Premium-Based)",
+                "SaaS/Subscription": "📊 Subscription (MRR)",
+                "Consulting/Services": "💰 Direct Value",
+                "Agency/Retainer": "📊 Subscription (MRR)",
+                "One-Time Sale": "💰 Direct Value"
+            }
+            expected_method = template_method_map.get(selected_business_type)
+            if expected_method and calc_method != expected_method:
+                st.warning(f"⚠️ **Method mismatch:** You selected '{selected_business_type}' template (expects '{expected_method}'), but calculator is set to '{calc_method}'. Template values may not appear correctly.")
 
         # Calculator UI based on method
         st.markdown("**Calculator Inputs:**")
