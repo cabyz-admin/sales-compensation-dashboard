@@ -2263,105 +2263,131 @@ with tab5:
     
     # Deal Economics - Enhanced
     with st.expander("💰 Deal Economics & Payment Terms", expanded=True):
-        st.info("💡 Configure your deal structure - applies to all calculations")
-        
-        # Business Type Selector
+        st.info("💡 Configure your deal structure - choose calculator method, then click Apply")
+
+        # Business Type Selector with Template System
+        st.markdown("### 📋 Quick Start Templates")
+        template_info = st.empty()
+
         biz_type_col, template_col = st.columns([2, 1])
-        
+
         with biz_type_col:
             business_type = st.selectbox(
-                "Business Type",
-                ["Custom", "Insurance", "Allianz - Optimax Plus", "SaaS/Subscription", "Consulting/Services", "Agency/Retainer", "One-Time Sale"],
+                "Business Type Template",
+                ["Custom", "Insurance (Long-term)", "Insurance (Allianz Optimax)", "SaaS/Subscription", "Consulting/Services", "Agency/Retainer", "One-Time Sale"],
                 index=0,
                 key="business_type",
-                help="Select a business type for pre-configured deal economics"
+                help="Select a template to pre-fill calculator with typical values for your industry"
             )
-        
+
         with template_col:
-            if business_type != "Custom" and st.button("📋 Apply Template", use_container_width=True):
-                # Apply business type templates
+            if business_type != "Custom" and st.button("📋 Load Template", use_container_width=True, type="primary"):
+                # Templates now set CALCULATOR inputs, not final values
+                # This prevents widget key collision
                 templates = {
-                    "Insurance": {
-                        'avg_deal_value': 45000,
-                        'upfront_payment_pct': 70.0,
-                        'contract_length_months': 18,
-                        'deferred_timing_months': 18
+                    "Insurance (Long-term)": {
+                        'deal_calc_method': "🏥 Insurance (Premium-Based)",
+                        'calc_monthly_premium': 2000.0,
+                        'calc_insurance_commission_rate': 2.7,
+                        'calc_insurance_contract_years': 25,
+                        'calc_upfront_pct': 70.0,
+                        'calc_deferred_months': 18,
+                        'calc_gov_cost': 0.0,
+                        'calc_commission_policy': 'upfront'
                     },
-                    "Allianz - Optimax Plus": {
-                        'avg_deal_value': 48600,  # 3000 MXN/month * 18 months * 2.7% * 20 MXN/USD
-                        'upfront_payment_pct': 70.0,
-                        'contract_length_months': 18,
-                        'deferred_timing_months': 18
+                    "Insurance (Allianz Optimax)": {
+                        'deal_calc_method': "🏥 Insurance (Premium-Based)",
+                        'calc_monthly_premium': 3000.0,
+                        'calc_insurance_commission_rate': 2.7,
+                        'calc_insurance_contract_years': 18,
+                        'calc_upfront_pct': 70.0,
+                        'calc_deferred_months': 18,
+                        'calc_gov_cost': 0.0,
+                        'calc_commission_policy': 'upfront'
                     },
                     "SaaS/Subscription": {
-                        'avg_deal_value': 60000,
-                        'upfront_payment_pct': 100.0,
-                        'contract_length_months': 12,
-                        'deferred_timing_months': 0
+                        'deal_calc_method': "📊 Subscription (MRR)",
+                        'calc_mrr': 5000.0,
+                        'calc_sub_term_months': 12,
+                        'calc_upfront_pct': 100.0,
+                        'calc_deferred_months': 0,
+                        'calc_gov_cost': 10.0,
+                        'calc_commission_policy': 'upfront'
                     },
                     "Consulting/Services": {
-                        'avg_deal_value': 50000,
-                        'upfront_payment_pct': 50.0,
-                        'contract_length_months': 3,
-                        'deferred_timing_months': 3
+                        'deal_calc_method': "💰 Direct Value",
+                        'calc_direct_deal_value': 50000.0,
+                        'calc_direct_contract_months': 3,
+                        'calc_upfront_pct': 50.0,
+                        'calc_deferred_months': 3,
+                        'calc_gov_cost': 10.0,
+                        'calc_commission_policy': 'upfront'
                     },
                     "Agency/Retainer": {
-                        'avg_deal_value': 72000,
-                        'upfront_payment_pct': 100.0,
-                        'contract_length_months': 12,
-                        'deferred_timing_months': 0
+                        'deal_calc_method': "📊 Subscription (MRR)",
+                        'calc_mrr': 6000.0,
+                        'calc_sub_term_months': 12,
+                        'calc_upfront_pct': 100.0,
+                        'calc_deferred_months': 0,
+                        'calc_gov_cost': 10.0,
+                        'calc_commission_policy': 'full'
                     },
                     "One-Time Sale": {
-                        'avg_deal_value': 10000,
-                        'upfront_payment_pct': 100.0,
-                        'contract_length_months': 1,
-                        'deferred_timing_months': 0
+                        'deal_calc_method': "💰 Direct Value",
+                        'calc_direct_deal_value': 10000.0,
+                        'calc_direct_contract_months': 1,
+                        'calc_upfront_pct': 100.0,
+                        'calc_deferred_months': 0,
+                        'calc_gov_cost': 10.0,
+                        'calc_commission_policy': 'upfront'
                     }
                 }
-                
+
                 if business_type in templates:
                     template = templates[business_type]
+                    # Set calculator widget values (these are temporary, not committed yet)
                     for key, value in template.items():
                         st.session_state[key] = value
-                    st.cache_data.clear()  # Clear caches to force recalculation
-                    st.success(f"✅ Applied {business_type} template!")
-                    st.rerun()  # Refresh UI to show new values immediately
+                    st.success(f"✅ Loaded {business_type} template! Review values below and click 'Apply Calculator Values' to commit.")
+                    st.rerun()  # Refresh to show template values in calculator widgets
         
         st.markdown("---")
-        
+
         # Modular Deal Value Calculator
-        st.markdown("**💡 Deal Value Calculation Method**")
-        calc_method_col, info_col = st.columns([2, 1])
-        
-        with calc_method_col:
-            calc_method = st.selectbox(
-                "How do you calculate deal value?",
-                ["💰 Direct Value", "🏥 Insurance (Premium-Based)", "📊 Subscription (MRR)", "📋 Commission % of Contract"],
-                key="deal_calc_method",
-                help="Choose the method that matches your business model"
-            )
-        
-        with info_col:
-            if "Insurance" in calc_method:
-                st.info("Perfect for insurance brokers!")
-            elif "Subscription" in calc_method:
-                st.info("Ideal for SaaS/subscriptions")
-            elif "Commission" in calc_method:
-                st.info("For commission-based sales")
-            else:
-                st.info("Simple direct entry")
-        
-        # Calculator based on method
+        st.markdown("### 🧮 Deal Value Calculator")
+
+        calc_method = st.selectbox(
+            "Calculation Method",
+            ["💰 Direct Value", "🏥 Insurance (Premium-Based)", "📊 Subscription (MRR)", "📋 Commission % of Contract"],
+            key="deal_calc_method",
+            help="Choose the method that matches your business model"
+        )
+
+        # Show current committed values
+        current_deal_value = st.session_state.get('avg_deal_value', 0)
+        current_contract_length = st.session_state.get('contract_length_months', 12)
+
+        if current_deal_value > 0:
+            st.info(f"📊 **Current Deal Value:** ${current_deal_value:,.0f} over {current_contract_length} months")
+
+        # Calculator UI based on method
+        st.markdown("**Calculator Inputs:**")
         calc_cols = st.columns(3)
-        
+
+        # Variables to store calculated values (will be committed on Apply button)
+        calculated_deal_value = 0
+        calculated_contract_length = 12
+
         if "Insurance" in calc_method:
             # Insurance-specific: Monthly Premium × Commission Rate × Contract Years
+            # Use calc_ prefixed keys to avoid widget collision
             with calc_cols[0]:
                 monthly_premium = st.number_input(
                     "Monthly Premium ($)",
-                    min_value=0,
-                    step=100,
-                    key="monthly_premium",
+                    min_value=0.0,
+                    value=float(st.session_state.get('calc_monthly_premium', 2000.0)),
+                    step=100.0,
+                    key="calc_monthly_premium",
                     help="Customer's monthly insurance premium"
                 )
             with calc_cols[1]:
@@ -2369,8 +2395,9 @@ with tab5:
                     "Commission Rate (%)",
                     min_value=0.0,
                     max_value=100.0,
+                    value=float(st.session_state.get('calc_insurance_commission_rate', 2.7)),
                     step=0.1,
-                    key="insurance_commission_rate",
+                    key="calc_insurance_commission_rate",
                     help="Your commission % (e.g., 2.7%)"
                 )
             with calc_cols[2]:
@@ -2378,146 +2405,167 @@ with tab5:
                     "Contract Term (Years)",
                     min_value=1,
                     max_value=50,
+                    value=int(st.session_state.get('calc_insurance_contract_years', 25)),
                     step=1,
-                    key="insurance_contract_years"
+                    key="calc_insurance_contract_years",
+                    help="How many years the policy lasts"
                 )
-            
-            # Calculate
+
+            # Calculate PREVIEW (not committed yet)
             total_premium = monthly_premium * 12 * contract_years
-            avg_deal_value = total_premium * (commission_rate / 100)
-            contract_length = contract_years * 12
-            
-            # Store to the ACTUAL keys the engine uses
-            st.session_state['avg_deal_value'] = avg_deal_value
-            st.session_state['contract_length_months'] = contract_length
-            
-            st.success(f"💰 **Your Commission**: ${avg_deal_value:,.0f}")
-            st.caption(f"💡 ${monthly_premium:,.0f}/mo × 12 × {contract_years}y × {commission_rate}% = ${avg_deal_value:,.0f}")
+            calculated_deal_value = total_premium * (commission_rate / 100)
+            calculated_contract_length = contract_years * 12
+
+            # Show preview
+            st.markdown("**📊 Calculated Values (Preview):**")
+            preview_cols = st.columns(3)
+            with preview_cols[0]:
+                st.metric("Total Premium", f"${total_premium:,.0f}")
+            with preview_cols[1]:
+                st.metric("Your Commission", f"${calculated_deal_value:,.0f}", help="This is your deal value")
+            with preview_cols[2]:
+                st.metric("Contract Length", f"{calculated_contract_length} months")
             
         elif "Subscription" in calc_method:
             # Subscription: MRR × Contract Term
             with calc_cols[0]:
                 mrr = st.number_input(
                     "Monthly Recurring Revenue",
-                    min_value=0,
-                    step=500,
-                    key="mrr"
+                    min_value=0.0,
+                    value=float(st.session_state.get('calc_mrr', 5000.0)),
+                    step=500.0,
+                    key="calc_mrr",
+                    help="Monthly recurring revenue per customer"
                 )
             with calc_cols[1]:
                 sub_term = st.number_input(
                     "Contract Term (Months)",
                     min_value=1,
                     max_value=60,
+                    value=int(st.session_state.get('calc_sub_term_months', 12)),
                     step=1,
-                    key="sub_term_months"
+                    key="calc_sub_term_months"
                 )
             with calc_cols[2]:
                 st.metric("Total Contract Value", f"${mrr * sub_term:,.0f}")
-            
-            avg_deal_value = mrr * sub_term
-            contract_length = sub_term
-            
-            # Store to the ACTUAL keys the engine uses
-            st.session_state['avg_deal_value'] = avg_deal_value
-            st.session_state['contract_length_months'] = contract_length
-            
-            st.caption(f"💡 ${mrr:,.0f}/mo × {sub_term} months = ${avg_deal_value:,.0f}")
-            
+
+            # Calculate PREVIEW
+            calculated_deal_value = mrr * sub_term
+            calculated_contract_length = sub_term
+
+            st.caption(f"💡 ${mrr:,.0f}/mo × {sub_term} months = ${calculated_deal_value:,.0f}")
+
         elif "Commission" in calc_method:
             # Commission-based: Total Contract × Commission %
             with calc_cols[0]:
                 total_contract = st.number_input(
                     "Total Contract Value ($)",
-                    min_value=0,
-                    step=5000,
-                    key="total_contract_value"
+                    min_value=0.0,
+                    value=float(st.session_state.get('calc_total_contract_value', 100000.0)),
+                    step=5000.0,
+                    key="calc_total_contract_value"
                 )
             with calc_cols[1]:
                 commission_pct = st.number_input(
                     "Your Commission (%)",
                     min_value=0.0,
                     max_value=100.0,
+                    value=float(st.session_state.get('calc_contract_commission_pct', 10.0)),
                     step=0.5,
-                    key="contract_commission_pct"
+                    key="calc_contract_commission_pct"
                 )
             with calc_cols[2]:
-                # For commission mode, we need to get contract_length but can't use it as key
-                # since Direct Value mode also uses it. Use a separate input for display.
                 contract_length = st.number_input(
                     "Contract Length (Months)",
                     min_value=1,
                     max_value=60,
+                    value=int(st.session_state.get('calc_commission_contract_length', 12)),
                     step=1,
-                    key="commission_contract_length"
+                    key="calc_commission_contract_length"
                 )
-            
-            avg_deal_value = total_contract * (commission_pct / 100)
-            
-            # Store to the ACTUAL keys the engine uses
-            st.session_state['avg_deal_value'] = avg_deal_value
-            st.session_state['contract_length_months'] = contract_length
-            
-            st.caption(f"💡 ${total_contract:,.0f} × {commission_pct}% = ${avg_deal_value:,.0f}")
-            
+
+            # Calculate PREVIEW
+            calculated_deal_value = total_contract * (commission_pct / 100)
+            calculated_contract_length = contract_length
+
+            st.caption(f"💡 ${total_contract:,.0f} × {commission_pct}% = ${calculated_deal_value:,.0f}")
+
         else:  # Direct Value
             with calc_cols[0]:
-                avg_deal_value = st.number_input(
+                avg_deal_value_input = st.number_input(
                     "Average Deal Value ($)",
-                    min_value=0,
-                    value=int(st.session_state.get('avg_deal_value', 50000)),
-                    step=1000,
-                    key="direct_deal_value_input",
+                    min_value=0.0,
+                    value=float(st.session_state.get('calc_direct_deal_value', 50000.0)),
+                    step=1000.0,
+                    key="calc_direct_deal_value",
                     help="Total contract value"
                 )
             with calc_cols[1]:
-                # Get stored value and clamp to reasonable range for direct input
-                stored_length = int(st.session_state.get('contract_length_months', 12))
-                # Clamp to max if coming from Insurance mode (which can be 216+ months)
-                clamped_length = min(stored_length, 600)  # Max 50 years
-                
-                contract_length = st.number_input(
+                contract_length_input = st.number_input(
                     "Contract Length (Months)",
                     min_value=1,
-                    max_value=600,  # Increased to handle insurance contracts (up to 50 years)
-                    value=clamped_length,
+                    max_value=600,
+                    value=int(st.session_state.get('calc_direct_contract_months', 12)),
                     step=1,
-                    key="direct_contract_length_input",
+                    key="calc_direct_contract_months",
                     help="Contract duration (max 50 years = 600 months)"
                 )
             with calc_cols[2]:
-                monthly_value = avg_deal_value / contract_length if contract_length > 0 else 0
+                monthly_value = avg_deal_value_input / contract_length_input if contract_length_input > 0 else 0
                 st.metric("Monthly Value", f"${monthly_value:,.0f}")
-            
-            # Store to the ACTUAL keys the engine uses (consistent with other calculators)
-            st.session_state['avg_deal_value'] = avg_deal_value
-            st.session_state['contract_length_months'] = contract_length
+
+            # Set calculated values
+            calculated_deal_value = avg_deal_value_input
+            calculated_contract_length = contract_length_input
         
+        # Apply Calculator Button - THIS commits the values
         st.markdown("---")
-        
-        # Payment Terms Section (keeping existing structure)
+        apply_col1, apply_col2, apply_col3 = st.columns([1, 2, 1])
+
+        with apply_col2:
+            if st.button("✅ Apply Calculator Values", use_container_width=True, type="primary", help="Commit these values to your model"):
+                # NOW we commit to the actual session state keys
+                st.session_state['avg_deal_value'] = calculated_deal_value
+                st.session_state['contract_length_months'] = calculated_contract_length
+                st.cache_data.clear()  # Clear caches to force recalculation
+                st.success(f"✅ Deal value set to ${calculated_deal_value:,.0f}!")
+                st.rerun()
+
+        st.markdown("---")
+
+        # Payment Terms Section (separate from calculator)
+        st.markdown("### 💳 Payment Terms & Policies")
+        # These sections use separate widget keys prefixed with calc_ to avoid collisions
         deal_cols = st.columns(3)
-        
+
+        # Get current committed values
+        committed_deal_value = st.session_state.get('avg_deal_value', 0)
+        committed_contract_length = st.session_state.get('contract_length_months', 12)
+
         with deal_cols[0]:
             st.markdown("**Deal Summary**")
-            st.metric("💰 Deal Value", f"${avg_deal_value:,.0f}")
-            monthly_value = avg_deal_value / contract_length if contract_length > 0 else 0
-            st.caption(f"📅 Contract: {contract_length} months")
+            st.metric("💰 Deal Value", f"${committed_deal_value:,.0f}")
+            monthly_value = committed_deal_value / committed_contract_length if committed_contract_length > 0 else 0
+            st.caption(f"📅 Contract: {committed_contract_length} months")
             st.caption(f"💵 Monthly: ${monthly_value:,.0f}")
-        
+
         with deal_cols[1]:
             st.markdown("**Payment Terms**")
             upfront_pct = st.slider(
                 "Upfront Payment %",
                 0.0,
                 100.0,
-                st.session_state.upfront_payment_pct,
+                float(st.session_state.get('calc_upfront_pct', st.session_state.get('upfront_payment_pct', 70.0))),
                 5.0,
-                key="upfront_payment_pct",
+                key="calc_upfront_pct",
                 help="Percentage paid upfront"
             )
-            
+
+            # Update the actual session state key (this one is safe to update directly)
+            st.session_state['upfront_payment_pct'] = upfront_pct
+
             # Use cached calculation for payment splits
-            payment_splits = calculate_deal_cash_splits(avg_deal_value, upfront_pct)
+            payment_splits = calculate_deal_cash_splits(committed_deal_value, upfront_pct)
             upfront_cash = payment_splits['upfront_cash']
             deferred_cash = payment_splits['deferred_cash']
             deferred_pct = payment_splits['deferred_pct']
@@ -2530,43 +2578,52 @@ with tab5:
                     "Deferred Payment Month",
                     min_value=1,
                     max_value=60,
+                    value=int(st.session_state.get('calc_deferred_months', st.session_state.get('deferred_timing_months', 18))),
                     step=1,
-                    key="deferred_timing_months",
+                    key="calc_deferred_months",
                     help="Month when deferred payment is received"
                 )
-        
+                st.session_state['deferred_timing_months'] = deferred_timing
+
         with deal_cols[2]:
             st.markdown("**Commission Policy**")
+
+            # Get current policy
+            current_policy = st.session_state.get('calc_commission_policy', st.session_state.get('commission_policy', 'upfront'))
+
             commission_policy = st.radio(
                 "Calculate Commissions From:",
                 ["Upfront Cash Only", "Full Deal Value"],
-                index=0 if st.session_state.commission_policy == 'upfront' else 1,
-                key="commission_policy_selector",
+                index=0 if current_policy == 'upfront' else 1,
+                key="calc_commission_policy_selector",
                 help="Choose what amount to use as commission base"
             )
-            
+
             if "Upfront" in commission_policy:
-                st.session_state.commission_policy = 'upfront'
+                st.session_state['commission_policy'] = 'upfront'
+                st.session_state['calc_commission_policy'] = 'upfront'
                 comm_base = upfront_cash
             else:
-                st.session_state.commission_policy = 'full'
-                comm_base = avg_deal_value
-            
+                st.session_state['commission_policy'] = 'full'
+                st.session_state['calc_commission_policy'] = 'full'
+                comm_base = committed_deal_value
+
             st.caption(f"**Commission Base:** ${comm_base:,.0f}")
-            
+
             # Government costs
             st.markdown("**Government Costs**")
             gov_cost = st.slider(
                 "Gov Fees/Taxes (%)",
                 0.0,
                 20.0,
-                st.session_state.get('government_cost_pct', 10.0),
+                float(st.session_state.get('calc_gov_cost', st.session_state.get('government_cost_pct', 10.0))),
                 0.5,
-                key="government_cost_pct",
+                key="calc_gov_cost",
                 help="Government fees, taxes, regulatory costs (% of revenue)",
                 format="%.1f%%"
             )
-            
+            st.session_state['government_cost_pct'] = gov_cost
+
             # Show GRR/NRR settings
             st.markdown("**Revenue Retention**")
             grr = st.slider(
