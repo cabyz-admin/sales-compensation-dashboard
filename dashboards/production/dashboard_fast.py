@@ -2897,11 +2897,35 @@ with tab5:
         
         with team_cols[0]:
             st.markdown("**Team Size**")
-            # Widgets with ONLY key parameter - let Streamlit manage the value via the key
-            num_closers = st.number_input("Closers", 1, 50, key="num_closers_main")
-            num_setters = st.number_input("Setters", 0, 50, key="num_setters_main")
-            num_managers = st.number_input("Managers", 0, 20, key="num_managers_main")
-            num_bench = st.number_input("Bench", 0, 20, key="num_benchs_main")
+            # Explicit value parameter prevents reset to min_value on every render
+            num_closers = st.number_input(
+                "Closers",
+                min_value=1,
+                max_value=50,
+                value=st.session_state.get('num_closers_main', 8),
+                key="num_closers_main"
+            )
+            num_setters = st.number_input(
+                "Setters",
+                min_value=0,
+                max_value=50,
+                value=st.session_state.get('num_setters_main', 2),
+                key="num_setters_main"
+            )
+            num_managers = st.number_input(
+                "Managers",
+                min_value=0,
+                max_value=20,
+                value=st.session_state.get('num_managers_main', 1),
+                key="num_managers_main"
+            )
+            num_bench = st.number_input(
+                "Bench",
+                min_value=0,
+                max_value=20,
+                value=st.session_state.get('num_benchs_main', 0),
+                key="num_benchs_main"
+            )
             
             st.markdown("**Capacity Settings")
             meetings_per_closer = st.number_input(
@@ -3191,14 +3215,20 @@ with tab5:
         with comp_cols[0]:
             st.markdown("**🎯 Closer**")
             closer_base = st.number_input(
-                "Base Salary (Annual $)", 
-                0, 200000, step=1000, 
+                "Base Salary (Annual $)",
+                min_value=0,
+                max_value=200000,
+                value=st.session_state.get('closer_base', 32000),
+                step=1000,
                 key="closer_base",
                 help="Annual salary + commission on deals"
             )
             closer_comm = st.number_input(
-                "Commission % (Per Deal)", 
-                0.0, 50.0, step=0.5, 
+                "Commission % (Per Deal)",
+                min_value=0.0,
+                max_value=50.0,
+                value=st.session_state.get('closer_commission_pct', 10.0),
+                step=0.5,
                 key="closer_commission_pct",
                 help="Percentage of each deal value (unlimited upside)"
             )
@@ -3206,14 +3236,20 @@ with tab5:
         with comp_cols[1]:
             st.markdown("**📞 Setter**")
             setter_base = st.number_input(
-                "Base Salary (Annual $)", 
-                0, 200000, step=1000, 
+                "Base Salary (Annual $)",
+                min_value=0,
+                max_value=200000,
+                value=st.session_state.get('setter_base', 28000),
+                step=1000,
                 key="setter_base",
                 help="Annual salary + commission on deals"
             )
             setter_comm = st.number_input(
-                "Commission % (Per Deal)", 
-                0.0, 50.0, step=0.5, 
+                "Commission % (Per Deal)",
+                min_value=0.0,
+                max_value=50.0,
+                value=st.session_state.get('setter_commission_pct', 5.0),
+                step=0.5,
                 key="setter_commission_pct",
                 help="Percentage of each deal value (unlimited upside)"
             )
@@ -3221,14 +3257,20 @@ with tab5:
         with comp_cols[2]:
             st.markdown("**👔 Manager**")
             manager_base = st.number_input(
-                "Base Salary (Annual $)", 
-                0, 300000, step=1000, 
+                "Base Salary (Annual $)",
+                min_value=0,
+                max_value=300000,
+                value=st.session_state.get('manager_base', 60000),
+                step=1000,
                 key="manager_base",
                 help="Annual salary + team override commission"
             )
             manager_comm = st.number_input(
-                "Commission % (Per Deal)", 
-                0.0, 50.0, step=0.5, 
+                "Commission % (Per Deal)",
+                min_value=0.0,
+                max_value=50.0,
+                value=st.session_state.get('manager_commission_pct', 2.0),
+                step=0.5,
                 key="manager_commission_pct",
                 help="Percentage of each deal value (team override)"
             )
@@ -3236,8 +3278,11 @@ with tab5:
         with comp_cols[3]:
             st.markdown("**🔧 Bench**")
             bench_base = st.number_input(
-                "Base Salary (Annual $)", 
-                0, 200000, step=1000, 
+                "Base Salary (Annual $)",
+                min_value=0,
+                max_value=200000,
+                value=st.session_state.get('bench_base', 24000),
+                step=1000,
                 key="bench_base",
                 help="Annual salary for bench/training roles"
             )
