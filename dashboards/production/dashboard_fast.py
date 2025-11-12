@@ -195,18 +195,18 @@ def initialize_session_state():
         'working_days': 20,
         'meetings_per_setter': 2.0,
         
-        # Compensation
-        'closer_base': 32000,
-        'closer_variable': 48000,
-        'closer_commission_pct': 20.0,
-        'setter_base': 16000,
-        'setter_variable': 24000,
-        'setter_commission_pct': 3.0,
-        'manager_base': 72000,
-        'manager_variable': 48000,
-        'manager_commission_pct': 5.0,
-        'bench_base': 12500,
-        'bench_variable': 12500,
+        # Compensation (Commission-only model by default for insurance)
+        'closer_base': 0,
+        'closer_variable': 0,
+        'closer_commission_pct': 10.0,
+        'setter_base': 0,
+        'setter_variable': 0,
+        'setter_commission_pct': 5.0,
+        'manager_base': 0,
+        'manager_variable': 0,
+        'manager_commission_pct': 3.0,
+        'bench_base': 0,
+        'bench_variable': 0,
         
         # Operating Costs
         'office_rent': 20000,
@@ -506,7 +506,7 @@ st.caption("⚡ 10X Faster • 📊 Full Features • 🎯 Accurate Calculations
 # Architecture status
 col_status, col_refresh = st.columns([4, 1])
 with col_status:
-    st.info("⚙️ **Calculation Engine v1.0** • Math verified with 19 passing tests • Changes apply immediately")
+    st.info("⚙️ **Dashboard v3.1** • Math verified with 19 passing tests • Widget persistence fixes applied")
 with col_refresh:
     if st.button("🔄 Refresh Metrics", use_container_width=True, help="Force recalculation if values don't update"):
         # Clear ALL caches including DashboardAdapter cache
@@ -2932,6 +2932,7 @@ with tab5:
                 "Meetings/Closer/Day",
                 min_value=0.1,
                 max_value=10.0,
+                value=st.session_state.get('meetings_per_closer', 3.0),
                 step=0.5,
                 key="meetings_per_closer",
                 help="Average meetings each closer can run per working day"
@@ -2940,6 +2941,7 @@ with tab5:
                 "Working Days/Month",
                 min_value=10,
                 max_value=26,
+                value=st.session_state.get('working_days', 20),
                 step=1,
                 key="working_days",
                 help="Number of active selling days per month"
@@ -2948,6 +2950,7 @@ with tab5:
                 "Meetings Booked/Setter/Day",
                 min_value=0.1,
                 max_value=20.0,
+                value=st.session_state.get('meetings_per_setter', 2.0),
                 step=0.5,
                 key="meetings_per_setter",
                 help="Average meetings each setter confirms and books per day"
@@ -3218,7 +3221,7 @@ with tab5:
                 "Base Salary (Annual $)",
                 min_value=0,
                 max_value=200000,
-                value=st.session_state.get('closer_base', 32000),
+                value=st.session_state.get('closer_base', 0),
                 step=1000,
                 key="closer_base",
                 help="Annual salary + commission on deals"
@@ -3239,7 +3242,7 @@ with tab5:
                 "Base Salary (Annual $)",
                 min_value=0,
                 max_value=200000,
-                value=st.session_state.get('setter_base', 28000),
+                value=st.session_state.get('setter_base', 0),
                 step=1000,
                 key="setter_base",
                 help="Annual salary + commission on deals"
@@ -3260,7 +3263,7 @@ with tab5:
                 "Base Salary (Annual $)",
                 min_value=0,
                 max_value=300000,
-                value=st.session_state.get('manager_base', 60000),
+                value=st.session_state.get('manager_base', 0),
                 step=1000,
                 key="manager_base",
                 help="Annual salary + team override commission"
@@ -3269,7 +3272,7 @@ with tab5:
                 "Commission % (Per Deal)",
                 min_value=0.0,
                 max_value=50.0,
-                value=st.session_state.get('manager_commission_pct', 2.0),
+                value=st.session_state.get('manager_commission_pct', 3.0),
                 step=0.5,
                 key="manager_commission_pct",
                 help="Percentage of each deal value (team override)"
@@ -3281,7 +3284,7 @@ with tab5:
                 "Base Salary (Annual $)",
                 min_value=0,
                 max_value=200000,
-                value=st.session_state.get('bench_base', 24000),
+                value=st.session_state.get('bench_base', 0),
                 step=1000,
                 key="bench_base",
                 help="Annual salary for bench/training roles"
