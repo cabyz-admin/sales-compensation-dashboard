@@ -2260,7 +2260,70 @@ with tab4:
 with tab5:
     st.header("⚙️ Configuration")
     st.caption("Configure deal economics, team, compensation, and operating costs")
-    
+
+    # Check for pending config import BEFORE any widgets are created
+    # This prevents widget key collision errors
+    if st.session_state.get('_pending_config_import'):
+        loaded_config = st.session_state.get('_pending_config_data')
+        if loaded_config:
+            # Apply configuration to session state
+            if 'deal_economics' in loaded_config:
+                de = loaded_config['deal_economics']
+                st.session_state['avg_deal_value'] = de.get('avg_deal_value', 50000)
+                st.session_state['contract_length_months'] = de.get('contract_length_months', 12)
+                st.session_state['upfront_payment_pct'] = de.get('upfront_payment_pct', 70.0)
+                st.session_state['deferred_timing_months'] = de.get('deferred_timing_months', 18)
+                st.session_state['commission_policy'] = de.get('commission_policy', 'upfront')
+                st.session_state['government_cost_pct'] = de.get('government_cost_pct', 10.0)
+                st.session_state['grr_rate'] = de.get('grr_rate', 0.9)
+                st.session_state['deal_calc_method'] = de.get('deal_calc_method', '💰 Direct Value')
+                st.session_state['monthly_premium'] = de.get('monthly_premium', 3000)
+                st.session_state['insurance_commission_rate'] = de.get('insurance_commission_rate', 2.7)
+                st.session_state['insurance_contract_years'] = de.get('insurance_contract_years', 18)
+                st.session_state['mrr'] = de.get('mrr', 5000)
+                st.session_state['sub_term_months'] = de.get('sub_term_months', 12)
+                st.session_state['total_contract_value'] = de.get('total_contract_value', 100000)
+                st.session_state['contract_commission_pct'] = de.get('contract_commission_pct', 10.0)
+
+            if 'team' in loaded_config:
+                t = loaded_config['team']
+                st.session_state['num_closers_main'] = t.get('closers', 8)
+                st.session_state['num_setters_main'] = t.get('setters', 4)
+                st.session_state['num_managers_main'] = t.get('managers', 2)
+                st.session_state['num_benchs_main'] = t.get('bench', 2)
+
+            if 'compensation' in loaded_config:
+                c = loaded_config['compensation']
+                if 'closer' in c:
+                    st.session_state['closer_base'] = c['closer'].get('base', 32000)
+                    st.session_state['closer_variable'] = c['closer'].get('variable', 48000)
+                    st.session_state['closer_commission_pct'] = c['closer'].get('commission_pct', 20.0)
+                if 'setter' in c:
+                    st.session_state['setter_base'] = c['setter'].get('base', 16000)
+                    st.session_state['setter_variable'] = c['setter'].get('variable', 24000)
+                    st.session_state['setter_commission_pct'] = c['setter'].get('commission_pct', 3.0)
+                if 'manager' in c:
+                    st.session_state['manager_base'] = c['manager'].get('base', 72000)
+                    st.session_state['manager_variable'] = c['manager'].get('variable', 48000)
+                    st.session_state['manager_commission_pct'] = c['manager'].get('commission_pct', 5.0)
+
+            if 'operating_costs' in loaded_config:
+                oc = loaded_config['operating_costs']
+                st.session_state['office_rent'] = oc.get('office_rent', 20000)
+                st.session_state['software_costs'] = oc.get('software_costs', 10000)
+                st.session_state['other_opex'] = oc.get('other_opex', 5000)
+
+            if 'gtm_channels' in loaded_config:
+                st.session_state['gtm_channels'] = loaded_config['gtm_channels']
+
+            # Clear the pending flags
+            st.session_state['_pending_config_import'] = False
+            st.session_state['_pending_config_data'] = None
+
+            st.cache_data.clear()  # Clear caches
+            st.success("✅ Configuration imported successfully!")
+            st.rerun()  # Rerun to render with new values
+
     # Deal Economics - Enhanced
     with st.expander("💰 Deal Economics & Payment Terms", expanded=True):
         st.info("💡 Configure your deal structure - choose calculator method, then click Apply")
@@ -2378,8 +2441,8 @@ with tab5:
             help="Choose the method that matches your business model (templates auto-select this)"
         )
 
-        # Sync back to actual session state
-        st.session_state['deal_calc_method'] = calc_method
+        # DON'T sync on every render - only sync when Apply button is clicked
+        # This prevents circular reference issues where changing method resets other values
 
         # Show current committed values
         current_deal_value = st.session_state.get('avg_deal_value', 0)
@@ -2563,6 +2626,7 @@ with tab5:
                 # NOW we commit to the actual session state keys
                 st.session_state['avg_deal_value'] = calculated_deal_value
                 st.session_state['contract_length_months'] = calculated_contract_length
+                st.session_state['deal_calc_method'] = calc_method  # Sync method on Apply
                 st.cache_data.clear()  # Clear caches to force recalculation
                 st.success(f"✅ Deal value set to ${calculated_deal_value:,.0f}!")
                 st.rerun()
@@ -3352,60 +3416,10 @@ with tab5:
                 loaded_config = json.load(uploaded_file)
                 
                 if st.button("✅ Apply Uploaded Config", use_container_width=True):
-                    # Apply loaded configuration
-                    if 'deal_economics' in loaded_config:
-                        de = loaded_config['deal_economics']
-                        st.session_state['avg_deal_value'] = de.get('avg_deal_value', 50000)
-                        st.session_state['contract_length_months'] = de.get('contract_length_months', 12)
-                        st.session_state['upfront_payment_pct'] = de.get('upfront_payment_pct', 70.0)
-                        st.session_state['deferred_timing_months'] = de.get('deferred_timing_months', 18)
-                        st.session_state['commission_policy'] = de.get('commission_policy', 'upfront')
-                        st.session_state['government_cost_pct'] = de.get('government_cost_pct', 10.0)
-                        st.session_state['grr_rate'] = de.get('grr_rate', 0.9)
-                        # Deal calculation method parameters
-                        st.session_state['deal_calc_method'] = de.get('deal_calc_method', '💰 Direct Value')
-                        st.session_state['monthly_premium'] = de.get('monthly_premium', 3000)
-                        st.session_state['insurance_commission_rate'] = de.get('insurance_commission_rate', 2.7)
-                        st.session_state['insurance_contract_years'] = de.get('insurance_contract_years', 18)
-                        st.session_state['mrr'] = de.get('mrr', 5000)
-                        st.session_state['sub_term_months'] = de.get('sub_term_months', 12)
-                        st.session_state['total_contract_value'] = de.get('total_contract_value', 100000)
-                        st.session_state['contract_commission_pct'] = de.get('contract_commission_pct', 10.0)
-                    
-                    if 'team' in loaded_config:
-                        t = loaded_config['team']
-                        st.session_state['num_closers_main'] = t.get('closers', 8)
-                        st.session_state['num_setters_main'] = t.get('setters', 4)
-                        st.session_state['num_managers_main'] = t.get('managers', 2)
-                        st.session_state['num_benchs_main'] = t.get('bench', 2)
-                    
-                    if 'compensation' in loaded_config:
-                        c = loaded_config['compensation']
-                        if 'closer' in c:
-                            st.session_state['closer_base'] = c['closer'].get('base', 32000)
-                            st.session_state['closer_variable'] = c['closer'].get('variable', 48000)
-                            st.session_state['closer_commission_pct'] = c['closer'].get('commission_pct', 20.0)
-                        if 'setter' in c:
-                            st.session_state['setter_base'] = c['setter'].get('base', 16000)
-                            st.session_state['setter_variable'] = c['setter'].get('variable', 24000)
-                            st.session_state['setter_commission_pct'] = c['setter'].get('commission_pct', 3.0)
-                        if 'manager' in c:
-                            st.session_state['manager_base'] = c['manager'].get('base', 72000)
-                            st.session_state['manager_variable'] = c['manager'].get('variable', 48000)
-                            st.session_state['manager_commission_pct'] = c['manager'].get('commission_pct', 5.0)
-                    
-                    if 'operating_costs' in loaded_config:
-                        oc = loaded_config['operating_costs']
-                        st.session_state['office_rent'] = oc.get('office_rent', 20000)
-                        st.session_state['software_costs'] = oc.get('software_costs', 10000)
-                        st.session_state['other_opex'] = oc.get('other_opex', 5000)
-                    
-                    if 'gtm_channels' in loaded_config:
-                        st.session_state['gtm_channels'] = loaded_config['gtm_channels']
-
-                    st.cache_data.clear()  # Clear caches to force recalculation
-                    st.success("✅ Configuration loaded!")
-                    st.rerun()  # Refresh UI to show imported values immediately
+                    # Set pending import flag - will be applied BEFORE widgets render on next pass
+                    st.session_state['_pending_config_import'] = True
+                    st.session_state['_pending_config_data'] = loaded_config
+                    st.rerun()  # Rerun immediately - import happens at top of Tab 5
             
             except Exception as e:
                 st.error(f"❌ Error loading config: {str(e)}")
@@ -3422,62 +3436,11 @@ with tab5:
             if st.button("✅ Apply Pasted Config") and pasted_config:
                 try:
                     loaded_config = json.loads(pasted_config)
-                    
-                    # Apply same logic as file upload
-                    if 'deal_economics' in loaded_config:
-                        de = loaded_config['deal_economics']
-                        st.session_state['avg_deal_value'] = de.get('avg_deal_value', 50000)
-                        st.session_state['contract_length_months'] = de.get('contract_length_months', 12)
-                        st.session_state['upfront_payment_pct'] = de.get('upfront_payment_pct', 70.0)
-                        st.session_state['deferred_timing_months'] = de.get('deferred_timing_months', 18)
-                        st.session_state['commission_policy'] = de.get('commission_policy', 'upfront')
-                        st.session_state['government_cost_pct'] = de.get('government_cost_pct', 10.0)
-                        st.session_state['grr_rate'] = de.get('grr_rate', 0.9)
-                        # Deal calculation method parameters
-                        st.session_state['deal_calc_method'] = de.get('deal_calc_method', '💰 Direct Value')
-                        st.session_state['monthly_premium'] = de.get('monthly_premium', 3000)
-                        st.session_state['insurance_commission_rate'] = de.get('insurance_commission_rate', 2.7)
-                        st.session_state['insurance_contract_years'] = de.get('insurance_contract_years', 18)
-                        st.session_state['mrr'] = de.get('mrr', 5000)
-                        st.session_state['sub_term_months'] = de.get('sub_term_months', 12)
-                        st.session_state['total_contract_value'] = de.get('total_contract_value', 100000)
-                        st.session_state['contract_commission_pct'] = de.get('contract_commission_pct', 10.0)
-                    
-                    if 'team' in loaded_config:
-                        t = loaded_config['team']
-                        st.session_state['num_closers_main'] = t.get('closers', 8)
-                        st.session_state['num_setters_main'] = t.get('setters', 4)
-                        st.session_state['num_managers_main'] = t.get('managers', 2)
-                        st.session_state['num_benchs_main'] = t.get('bench', 2)
-                    
-                    if 'compensation' in loaded_config:
-                        c = loaded_config['compensation']
-                        if 'closer' in c:
-                            st.session_state['closer_base'] = c['closer'].get('base', 32000)
-                            st.session_state['closer_variable'] = c['closer'].get('variable', 48000)
-                            st.session_state['closer_commission_pct'] = c['closer'].get('commission_pct', 20.0)
-                        if 'setter' in c:
-                            st.session_state['setter_base'] = c['setter'].get('base', 16000)
-                            st.session_state['setter_variable'] = c['setter'].get('variable', 24000)
-                            st.session_state['setter_commission_pct'] = c['setter'].get('commission_pct', 3.0)
-                        if 'manager' in c:
-                            st.session_state['manager_base'] = c['manager'].get('base', 72000)
-                            st.session_state['manager_variable'] = c['manager'].get('variable', 48000)
-                            st.session_state['manager_commission_pct'] = c['manager'].get('commission_pct', 5.0)
-                    
-                    if 'operating_costs' in loaded_config:
-                        oc = loaded_config['operating_costs']
-                        st.session_state['office_rent'] = oc.get('office_rent', 20000)
-                        st.session_state['software_costs'] = oc.get('software_costs', 10000)
-                        st.session_state['other_opex'] = oc.get('other_opex', 5000)
-                    
-                    if 'gtm_channels' in loaded_config:
-                        st.session_state['gtm_channels'] = loaded_config['gtm_channels']
+                    # Set pending import flag - will be applied BEFORE widgets render on next pass
+                    st.session_state['_pending_config_import'] = True
+                    st.session_state['_pending_config_data'] = loaded_config
+                    st.rerun()  # Rerun immediately - import happens at top of Tab 5
 
-                    st.cache_data.clear()  # Clear caches to force recalculation
-                    st.success("✅ Configuration applied!")
-                    st.rerun()  # Refresh UI to show pasted values immediately
-                
                 except Exception as e:
                     st.error(f"❌ Error parsing JSON: {str(e)}")
 
