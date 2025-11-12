@@ -2641,17 +2641,31 @@ with tab5:
         st.markdown("---")
         st.markdown("**📊 Deal Economics Summary**")
         summary_cols = st.columns(5)
-        
+
+        # Recalculate for summary display
+        summary_deal_value = committed_deal_value
+        summary_contract_length = committed_contract_length
+        summary_upfront_pct = st.session_state.get('upfront_payment_pct', 70.0)
+        summary_payment_splits = calculate_deal_cash_splits(summary_deal_value, summary_upfront_pct)
+        summary_monthly = summary_deal_value / summary_contract_length if summary_contract_length > 0 else 0
+
+        # Get commission base based on policy
+        current_policy = st.session_state.get('commission_policy', 'upfront')
+        if current_policy == 'upfront':
+            summary_comm_base = summary_payment_splits['upfront_cash']
+        else:
+            summary_comm_base = summary_deal_value
+
         with summary_cols[0]:
-            st.metric("Total Contract", f"${avg_deal_value:,.0f}")
+            st.metric("Total Contract", f"${summary_deal_value:,.0f}")
         with summary_cols[1]:
-            st.metric("Upfront Cash", f"${upfront_cash:,.0f}")
+            st.metric("Upfront Cash", f"${summary_payment_splits['upfront_cash']:,.0f}")
         with summary_cols[2]:
-            st.metric("Deferred Cash", f"${deferred_cash:,.0f}")
+            st.metric("Deferred Cash", f"${summary_payment_splits['deferred_cash']:,.0f}")
         with summary_cols[3]:
-            st.metric("Commission Base", f"${comm_base:,.0f}")
+            st.metric("Commission Base", f"${summary_comm_base:,.0f}")
         with summary_cols[4]:
-            st.metric("Monthly Value", f"${monthly_value:,.0f}")
+            st.metric("Monthly Value", f"${summary_monthly:,.0f}")
     
     # Revenue Targets
     with st.expander("🎯 Revenue Targets", expanded=False):
