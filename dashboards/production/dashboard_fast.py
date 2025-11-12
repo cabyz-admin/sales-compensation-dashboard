@@ -2654,12 +2654,13 @@ with tab5:
                 "GRR (Gross Revenue Retention)",
                 0.0,
                 1.5,
-                st.session_state.grr_rate,
+                float(st.session_state.get('calc_grr_rate', st.session_state.get('grr_rate', 0.95))),
                 0.05,
-                key="grr_rate",
+                key="calc_grr_rate",
                 help="Expected revenue retention rate",
                 format="%.0f%%"
             )
+            st.session_state['grr_rate'] = grr
         
         # Deal Economics Summary
         st.markdown("---")
