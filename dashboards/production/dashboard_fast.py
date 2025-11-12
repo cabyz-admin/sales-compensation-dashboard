@@ -173,11 +173,27 @@ def initialize_session_state():
         'commission_policy': 'upfront',
         'government_cost_pct': 10.0,  # Government fees/taxes
         
+        # Deal Calculator Selection & Parameters
+        'deal_calc_method': '💰 Direct Value',
+        'monthly_premium': 3000,  # Insurance calculator
+        'insurance_commission_rate': 2.7,
+        'insurance_contract_years': 18,
+        'mrr': 5000,  # Subscription calculator
+        'sub_term_months': 12,
+        'total_contract_value': 100000,  # Commission calculator
+        'contract_commission_pct': 10.0,
+        'commission_contract_length': 12,
+        
         # Team
         'num_closers_main': 8,
         'num_setters_main': 4,
         'num_managers_main': 2,
         'num_benchs_main': 2,
+        
+        # Team Capacity
+        'meetings_per_closer': 3.0,
+        'working_days': 20,
+        'meetings_per_setter': 2.0,
         
         # Compensation
         'closer_base': 32000,
@@ -197,6 +213,9 @@ def initialize_session_state():
         'software_costs': 10000,
         'other_opex': 5000,
         
+        # Profit Distribution
+        'stakeholder_pct': 10.0,
+        
         # GTM Channels
         'gtm_channels': [{
             'id': 'channel_1',
@@ -213,7 +232,6 @@ def initialize_session_state():
         
         # Other
         'grr_rate': 0.90,
-        'working_days': 20,
         'projection_months': 18,
     }
     
@@ -491,9 +509,12 @@ with col_status:
     st.info("⚙️ **Calculation Engine v1.0** • Math verified with 19 passing tests • Changes apply immediately")
 with col_refresh:
     if st.button("🔄 Refresh Metrics", use_container_width=True, help="Force recalculation if values don't update"):
-        # Clear cache but DON'T reset session state values
+        # Clear ALL caches including DashboardAdapter cache
         st.cache_data.clear()
-        st.toast("✅ Metrics refreshed! Values preserved.", icon="🔄")
+        # Force DashboardAdapter to recompute on next access by clearing its specific cache
+        if hasattr(st.session_state, '_dashboard_adapter_last_cache_key'):
+            del st.session_state._dashboard_adapter_last_cache_key
+        st.toast("✅ Metrics refreshed! All caches cleared, values preserved.", icon="🔄")
         st.rerun()
 
 # ============= ✨ NEW ARCHITECTURE - Single Source of Truth =============
@@ -2162,10 +2183,11 @@ with tab4:
         # New revenue (use cached calculation)
         new_cash_splits = calculate_deal_cash_splits(new_deal_value, tab4_deal_econ['upfront_pct'])
         new_revenue = new_sales * new_cash_splits['upfront_cash']
-        
-        # Recalculate commissions
-        new_comm_pct = comm_calc['commission_rate'] / 100
-        new_comm = new_revenue * new_comm_pct
+
+        # Recalculate commissions - scale from baseline
+        # Calculate effective commission rate from baseline data
+        baseline_comm_rate = (comm_calc['total_commission'] / baseline_revenue) if baseline_revenue > 0 else 0
+        new_comm = new_revenue * baseline_comm_rate
         
         # New EBITDA
         total_opex = st.session_state.office_rent + st.session_state.software_costs + st.session_state.other_opex
@@ -2301,8 +2323,9 @@ with tab5:
                     template = templates[business_type]
                     for key, value in template.items():
                         st.session_state[key] = value
-                    st.success(f"✅ Applied {business_type} template! Change any value below to update.")
-                    # Note: Removed st.rerun() - let widgets update naturally on next interaction
+                    st.cache_data.clear()  # Clear caches to force recalculation
+                    st.success(f"✅ Applied {business_type} template!")
+                    st.rerun()  # Refresh UI to show new values immediately
         
         st.markdown("---")
         
@@ -2333,14 +2356,6 @@ with tab5:
         
         if "Insurance" in calc_method:
             # Insurance-specific: Monthly Premium × Commission Rate × Contract Years
-            # Ensure defaults exist before widgets (prevents circular reference)
-            if 'monthly_premium' not in st.session_state:
-                st.session_state.monthly_premium = 3000
-            if 'insurance_commission_rate' not in st.session_state:
-                st.session_state.insurance_commission_rate = 2.7
-            if 'insurance_contract_years' not in st.session_state:
-                st.session_state.insurance_contract_years = 18
-            
             with calc_cols[0]:
                 monthly_premium = st.number_input(
                     "Monthly Premium ($)",
@@ -2381,12 +2396,6 @@ with tab5:
             
         elif "Subscription" in calc_method:
             # Subscription: MRR × Contract Term
-            # Ensure defaults exist before widgets
-            if 'mrr' not in st.session_state:
-                st.session_state.mrr = 5000
-            if 'sub_term_months' not in st.session_state:
-                st.session_state.sub_term_months = 12
-            
             with calc_cols[0]:
                 mrr = st.number_input(
                     "Monthly Recurring Revenue",
@@ -2416,12 +2425,6 @@ with tab5:
             
         elif "Commission" in calc_method:
             # Commission-based: Total Contract × Commission %
-            # Ensure defaults exist before widgets
-            if 'total_contract_value' not in st.session_state:
-                st.session_state.total_contract_value = 100000
-            if 'contract_commission_pct' not in st.session_state:
-                st.session_state.contract_commission_pct = 10.0
-            
             with calc_cols[0]:
                 total_contract = st.number_input(
                     "Total Contract Value ($)",
@@ -2440,9 +2443,6 @@ with tab5:
             with calc_cols[2]:
                 # For commission mode, we need to get contract_length but can't use it as key
                 # since Direct Value mode also uses it. Use a separate input for display.
-                if 'commission_contract_length' not in st.session_state:
-                    st.session_state.commission_contract_length = 12
-                
                 contract_length = st.number_input(
                     "Contract Length (Months)",
                     min_value=1,
@@ -2526,10 +2526,6 @@ with tab5:
             st.caption(f"**Deferred:** ${deferred_cash:,.0f} ({deferred_pct:.0f}%)")
             
             if deferred_pct > 0:
-                # Ensure default exists before widget
-                if 'deferred_timing_months' not in st.session_state:
-                    st.session_state.deferred_timing_months = 18
-                
                 deferred_timing = st.number_input(
                     "Deferred Payment Month",
                     min_value=1,
@@ -2729,31 +2725,13 @@ with tab5:
         
         with team_cols[0]:
             st.markdown("**Team Size**")
-            # Ensure session state keys exist with defaults (widgets will use these via key parameter)
-            if 'num_closers_main' not in st.session_state:
-                st.session_state.num_closers_main = 8
-            if 'num_setters_main' not in st.session_state:
-                st.session_state.num_setters_main = 4
-            if 'num_managers_main' not in st.session_state:
-                st.session_state.num_managers_main = 2
-            if 'num_benchs_main' not in st.session_state:
-                st.session_state.num_benchs_main = 2
-            
             # Widgets with ONLY key parameter - let Streamlit manage the value via the key
             num_closers = st.number_input("Closers", 1, 50, key="num_closers_main")
             num_setters = st.number_input("Setters", 0, 50, key="num_setters_main")
             num_managers = st.number_input("Managers", 0, 20, key="num_managers_main")
             num_bench = st.number_input("Bench", 0, 20, key="num_benchs_main")
             
-            st.markdown("**Capacity Settings**")
-            # Ensure defaults exist before widgets
-            if 'meetings_per_closer' not in st.session_state:
-                st.session_state.meetings_per_closer = 3.0
-            if 'working_days' not in st.session_state:
-                st.session_state.working_days = 20
-            if 'meetings_per_setter' not in st.session_state:
-                st.session_state.meetings_per_setter = 2.0
-            
+            st.markdown("**Capacity Settings")
             meetings_per_closer = st.number_input(
                 "Meetings/Closer/Day",
                 min_value=0.1,
@@ -3036,22 +3014,6 @@ with tab5:
     with st.expander("💵 Compensation Configuration", expanded=False):
         st.info("💡 **2-Tier Comp Model**: Base Salary (guaranteed) + Commission % (unlimited upside) • Changes apply immediately")
         
-        # Ensure defaults exist before widgets
-        if 'closer_base' not in st.session_state:
-            st.session_state.closer_base = 32000
-        if 'closer_commission_pct' not in st.session_state:
-            st.session_state.closer_commission_pct = 20.0
-        if 'setter_base' not in st.session_state:
-            st.session_state.setter_base = 16000
-        if 'setter_commission_pct' not in st.session_state:
-            st.session_state.setter_commission_pct = 3.0
-        if 'manager_base' not in st.session_state:
-            st.session_state.manager_base = 72000
-        if 'manager_commission_pct' not in st.session_state:
-            st.session_state.manager_commission_pct = 5.0
-        if 'bench_base' not in st.session_state:
-            st.session_state.bench_base = 12500
-        
         comp_cols = st.columns(4)
         
         with comp_cols[0]:
@@ -3113,14 +3075,6 @@ with tab5:
     with st.expander("🏢 Operating Costs", expanded=False):
         st.info("💡 Monthly operating expenses • Changes apply immediately")
         
-        # Ensure defaults exist before widgets
-        if 'office_rent' not in st.session_state:
-            st.session_state.office_rent = 20000
-        if 'software_costs' not in st.session_state:
-            st.session_state.software_costs = 10000
-        if 'other_opex' not in st.session_state:
-            st.session_state.other_opex = 5000
-        
         ops_cols = st.columns(3)
         
         with ops_cols[0]:
@@ -3142,10 +3096,6 @@ with tab5:
         
         with stake_cols[0]:
             st.markdown("**Configuration**")
-            # Ensure default exists before widget
-            if 'stakeholder_pct' not in st.session_state:
-                st.session_state.stakeholder_pct = 10.0
-            
             stakeholder_pct = st.number_input(
                 "Stakeholder Profit Share (%)",
                 min_value=0.0,
@@ -3344,9 +3294,10 @@ with tab5:
                     
                     if 'gtm_channels' in loaded_config:
                         st.session_state['gtm_channels'] = loaded_config['gtm_channels']
-                    
-                    st.success("✅ Configuration loaded! Interact with any widget to see changes.")
-                    # Note: Removed st.rerun() to prevent page refresh
+
+                    st.cache_data.clear()  # Clear caches to force recalculation
+                    st.success("✅ Configuration loaded!")
+                    st.rerun()  # Refresh UI to show imported values immediately
             
             except Exception as e:
                 st.error(f"❌ Error loading config: {str(e)}")
@@ -3414,9 +3365,10 @@ with tab5:
                     
                     if 'gtm_channels' in loaded_config:
                         st.session_state['gtm_channels'] = loaded_config['gtm_channels']
-                    
-                    st.success("✅ Configuration applied! Interact with any widget to see changes.")
-                    # Note: Removed st.rerun() to prevent page refresh
+
+                    st.cache_data.clear()  # Clear caches to force recalculation
+                    st.success("✅ Configuration applied!")
+                    st.rerun()  # Refresh UI to show pasted values immediately
                 
                 except Exception as e:
                     st.error(f"❌ Error parsing JSON: {str(e)}")
