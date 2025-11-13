@@ -208,13 +208,18 @@ def initialize_session_state():
         'bench_base': 0,
         'bench_variable': 0,
 
-        # OTE (On-Target Earnings) & Quotas
-        'closer_ote': 60000,  # Annual OTE
-        'closer_quota_deals': 5.0,  # Monthly quota
-        'setter_ote': 48000,
-        'setter_quota_meetings': 40.0,  # Monthly booked meetings
-        'manager_ote': 90000,
-        'manager_quota_team_deals': 40.0,  # Team deals per month
+        # OTE (On-Target Earnings) - Monthly
+        'closer_ote_monthly': 5000,  # Monthly OTE
+        'setter_ote_monthly': 4000,
+        'manager_ote_monthly': 7500,
+
+        # Quota calculation mode
+        'quota_calculation_mode': 'Auto (Based on Capacity)',
+
+        # Manual quota overrides (only used if mode = Manual)
+        'closer_quota_deals_manual': 5.0,
+        'setter_quota_meetings_manual': 40.0,
+        'manager_quota_team_deals_manual': 40.0,
 
         # Operating Costs
         'office_rent': 20000,
@@ -514,7 +519,7 @@ st.caption("⚡ 10X Faster • 📊 Full Features • 🎯 Accurate Calculations
 # Architecture status
 col_status, col_refresh = st.columns([4, 1])
 with col_status:
-    st.info("⚙️ **Dashboard v3.3** • Math verified with 19 passing tests • All 18 widgets now persist correctly • NEW: OTE tracking & Team Performance tab")
+    st.info("⚙️ **Dashboard v3.4** • Math verified with 19 passing tests • All 18 widgets now persist correctly • NEW: Smart OTE system with dynamic quotas")
 with col_refresh:
     if st.button("🔄 Refresh Metrics", use_container_width=True, help="Force recalculation if values don't update"):
         # Clear ALL caches including DashboardAdapter cache
@@ -2328,12 +2333,13 @@ with tab5:
 
             if 'ote_quotas' in loaded_config:
                 ote = loaded_config['ote_quotas']
-                st.session_state['closer_ote'] = ote.get('closer_ote', 60000)
-                st.session_state['closer_quota_deals'] = ote.get('closer_quota_deals', 5.0)
-                st.session_state['setter_ote'] = ote.get('setter_ote', 48000)
-                st.session_state['setter_quota_meetings'] = ote.get('setter_quota_meetings', 40.0)
-                st.session_state['manager_ote'] = ote.get('manager_ote', 90000)
-                st.session_state['manager_quota_team_deals'] = ote.get('manager_quota_team_deals', 40.0)
+                st.session_state['closer_ote_monthly'] = ote.get('closer_ote_monthly', 5000)
+                st.session_state['setter_ote_monthly'] = ote.get('setter_ote_monthly', 4000)
+                st.session_state['manager_ote_monthly'] = ote.get('manager_ote_monthly', 7500)
+                st.session_state['quota_calculation_mode'] = ote.get('quota_calculation_mode', 'Auto (Based on Capacity)')
+                st.session_state['closer_quota_deals_manual'] = ote.get('closer_quota_deals_manual', 5.0)
+                st.session_state['setter_quota_meetings_manual'] = ote.get('setter_quota_meetings_manual', 40.0)
+                st.session_state['manager_quota_team_deals_manual'] = ote.get('manager_quota_team_deals_manual', 40.0)
 
             if 'gtm_channels' in loaded_config:
                 st.session_state['gtm_channels'] = loaded_config['gtm_channels']
@@ -3385,88 +3391,138 @@ with tab5:
 
     # OTE & Quota Configuration
     with st.expander("🎯 OTE & Quota Configuration", expanded=False):
-        st.info("💡 Define On-Target Earnings (OTE) and monthly quotas per role • Used for performance tracking in Team Performance tab")
+        st.info("💡 Define Monthly OTE per role • Quotas auto-calculate based on your team capacity and conversion rates")
 
+        # Quota calculation mode
+        st.markdown("**📊 Quota Calculation Method:**")
+        quota_mode_cols = st.columns(2)
+
+        with quota_mode_cols[0]:
+            quota_mode = st.radio(
+                "How should quotas be calculated?",
+                ["Auto (Based on Capacity)", "Manual Override"],
+                key="quota_calculation_mode",
+                help="Auto: Quotas calculated from team capacity and conversion rates\nManual: You set quotas directly"
+            )
+
+        with quota_mode_cols[1]:
+            if quota_mode == "Auto (Based on Capacity)":
+                st.success("✅ Quotas will reflect your actual business metrics")
+                st.caption("• Quota = Marketing Spend ÷ Team Size ÷ CPM")
+                st.caption("• Adjusts automatically when you change inputs")
+            else:
+                st.warning("⚠️ Manual quotas - ensure they align with capacity")
+                st.caption("• You control quota targets")
+                st.caption("• Check Tab 6 to see if quotas are achievable")
+
+        st.markdown("---")
         ote_cols = st.columns(3)
 
         with ote_cols[0]:
             st.markdown("**🎯 Closer**")
-            closer_ote = st.number_input(
-                "Annual OTE ($)",
+            closer_ote_monthly = st.number_input(
+                "Monthly OTE ($)",
                 min_value=0,
-                max_value=500000,
-                value=st.session_state.get('closer_ote', 60000),
-                step=5000,
-                key="closer_ote",
-                help="On-Target Earnings if hitting quota (base + expected commission)"
-            )
-            closer_quota_deals = st.number_input(
-                "Monthly Quota (Deals)",
-                min_value=0.0,
-                max_value=100.0,
-                value=st.session_state.get('closer_quota_deals', 5.0),
-                step=0.5,
-                key="closer_quota_deals",
-                help="Number of deals expected per closer per month"
+                max_value=50000,
+                value=st.session_state.get('closer_ote_monthly', 5000),
+                step=500,
+                key="closer_ote_monthly",
+                help="Monthly On-Target Earnings (base + expected commission at quota)"
             )
 
-            # Calculate what OTE implies
-            closer_ote_monthly = closer_ote / 12
-            st.caption(f"💰 OTE Monthly: ${closer_ote_monthly:,.0f}")
+            # Calculate or get quota
+            if quota_mode == "Auto (Based on Capacity)":
+                # Auto-calculate quota from actual performance
+                num_closers = st.session_state.get('num_closers_main', 8)
+                expected_deals = gtm_metrics['monthly_sales']  # Total deals expected
+                closer_quota_deals = expected_deals / num_closers if num_closers > 0 else 0
+
+                st.caption(f"📊 **Auto Quota:** {closer_quota_deals:.1f} deals/mo")
+                st.caption(f"   (Based on {expected_deals:.0f} total deals ÷ {num_closers} closers)")
+            else:
+                closer_quota_deals = st.number_input(
+                    "Monthly Quota (Deals)",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=st.session_state.get('closer_quota_deals_manual', 5.0),
+                    step=0.5,
+                    key="closer_quota_deals_manual",
+                    help="Number of deals expected per closer per month"
+                )
+
+            # Show what OTE requires
+            st.caption(f"💰 Annual OTE: ${closer_ote_monthly * 12:,.0f}")
             if closer_quota_deals > 0:
                 comm_per_deal_needed = (closer_ote_monthly - (st.session_state.get('closer_base', 0) / 12)) / closer_quota_deals
                 st.caption(f"📊 Requires ${comm_per_deal_needed:,.0f} commission/deal")
 
         with ote_cols[1]:
             st.markdown("**📞 Setter**")
-            setter_ote = st.number_input(
-                "Annual OTE ($)",
+            setter_ote_monthly = st.number_input(
+                "Monthly OTE ($)",
                 min_value=0,
-                max_value=300000,
-                value=st.session_state.get('setter_ote', 48000),
-                step=5000,
-                key="setter_ote",
-                help="On-Target Earnings if hitting quota"
-            )
-            setter_quota_meetings = st.number_input(
-                "Monthly Quota (Meetings Booked)",
-                min_value=0.0,
-                max_value=200.0,
-                value=st.session_state.get('setter_quota_meetings', 40.0),
-                step=5.0,
-                key="setter_quota_meetings",
-                help="Number of meetings expected per setter per month"
+                max_value=30000,
+                value=st.session_state.get('setter_ote_monthly', 4000),
+                step=500,
+                key="setter_ote_monthly",
+                help="Monthly On-Target Earnings"
             )
 
-            setter_ote_monthly = setter_ote / 12
-            st.caption(f"💰 OTE Monthly: ${setter_ote_monthly:,.0f}")
+            # Calculate or get quota
+            if quota_mode == "Auto (Based on Capacity)":
+                # Auto-calculate from capacity
+                num_setters = st.session_state.get('num_setters_main', 2)
+                meetings_per_setter_capacity = st.session_state.get('meetings_per_setter', 2.0)
+                working_days = st.session_state.get('working_days', 20)
+                setter_quota_meetings = meetings_per_setter_capacity * working_days
+
+                st.caption(f"📊 **Auto Quota:** {setter_quota_meetings:.0f} meetings/mo")
+                st.caption(f"   ({meetings_per_setter_capacity:.1f}/day × {working_days} days)")
+            else:
+                setter_quota_meetings = st.number_input(
+                    "Monthly Quota (Meetings)",
+                    min_value=0.0,
+                    max_value=200.0,
+                    value=st.session_state.get('setter_quota_meetings_manual', 40.0),
+                    step=5.0,
+                    key="setter_quota_meetings_manual"
+                )
+
+            st.caption(f"💰 Annual OTE: ${setter_ote_monthly * 12:,.0f}")
             if setter_quota_meetings > 0:
                 comm_per_meeting = (setter_ote_monthly - (st.session_state.get('setter_base', 0) / 12)) / setter_quota_meetings
                 st.caption(f"📊 Requires ${comm_per_meeting:,.0f} per meeting")
 
         with ote_cols[2]:
             st.markdown("**👔 Manager**")
-            manager_ote = st.number_input(
-                "Annual OTE ($)",
+            manager_ote_monthly = st.number_input(
+                "Monthly OTE ($)",
                 min_value=0,
-                max_value=500000,
-                value=st.session_state.get('manager_ote', 90000),
-                step=5000,
-                key="manager_ote",
-                help="On-Target Earnings if team hits quota"
-            )
-            manager_quota_team_deals = st.number_input(
-                "Monthly Quota (Team Deals)",
-                min_value=0.0,
-                max_value=500.0,
-                value=st.session_state.get('manager_quota_team_deals', 40.0),
-                step=5.0,
-                key="manager_quota_team_deals",
-                help="Total deals expected from managed team per month"
+                max_value=50000,
+                value=st.session_state.get('manager_ote_monthly', 7500),
+                step=500,
+                key="manager_ote_monthly",
+                help="Monthly On-Target Earnings"
             )
 
-            manager_ote_monthly = manager_ote / 12
-            st.caption(f"💰 OTE Monthly: ${manager_ote_monthly:,.0f}")
+            # Calculate or get quota
+            if quota_mode == "Auto (Based on Capacity)":
+                # Auto-calculate from team performance
+                manager_quota_team_deals = gtm_metrics['monthly_sales']  # Total team deals
+
+                st.caption(f"📊 **Auto Quota:** {manager_quota_team_deals:.0f} team deals/mo")
+                st.caption(f"   (Total deals from all closers)")
+            else:
+                manager_quota_team_deals = st.number_input(
+                    "Monthly Quota (Team Deals)",
+                    min_value=0.0,
+                    max_value=500.0,
+                    value=st.session_state.get('manager_quota_team_deals_manual', 40.0),
+                    step=5.0,
+                    key="manager_quota_team_deals_manual"
+                )
+
+            st.caption(f"💰 Annual OTE: ${manager_ote_monthly * 12:,.0f}")
             if manager_quota_team_deals > 0:
                 override_per_deal = (manager_ote_monthly - (st.session_state.get('manager_base', 0) / 12)) / manager_quota_team_deals
                 st.caption(f"📊 Requires ${override_per_deal:,.0f} override/deal")
@@ -3540,12 +3596,13 @@ with tab5:
                     }
                 },
                 "ote_quotas": {
-                    "closer_ote": st.session_state.get('closer_ote', 60000),
-                    "closer_quota_deals": st.session_state.get('closer_quota_deals', 5.0),
-                    "setter_ote": st.session_state.get('setter_ote', 48000),
-                    "setter_quota_meetings": st.session_state.get('setter_quota_meetings', 40.0),
-                    "manager_ote": st.session_state.get('manager_ote', 90000),
-                    "manager_quota_team_deals": st.session_state.get('manager_quota_team_deals', 40.0)
+                    "closer_ote_monthly": st.session_state.get('closer_ote_monthly', 5000),
+                    "setter_ote_monthly": st.session_state.get('setter_ote_monthly', 4000),
+                    "manager_ote_monthly": st.session_state.get('manager_ote_monthly', 7500),
+                    "quota_calculation_mode": st.session_state.get('quota_calculation_mode', 'Auto (Based on Capacity)'),
+                    "closer_quota_deals_manual": st.session_state.get('closer_quota_deals_manual', 5.0),
+                    "setter_quota_meetings_manual": st.session_state.get('setter_quota_meetings_manual', 40.0),
+                    "manager_quota_team_deals_manual": st.session_state.get('manager_quota_team_deals_manual', 40.0)
                 },
                 "operating_costs": {
                     "office_rent": st.session_state.office_rent,
@@ -3628,18 +3685,28 @@ with tab6:
     num_setters = st.session_state.get('num_setters_main', 2)
     num_managers = st.session_state.get('num_managers_main', 1)
 
-    # Get OTE targets
-    closer_ote_annual = st.session_state.get('closer_ote', 60000)
-    closer_ote_monthly = closer_ote_annual / 12
-    closer_quota_deals = st.session_state.get('closer_quota_deals', 5.0)
+    # Get OTE targets (now monthly)
+    closer_ote_monthly = st.session_state.get('closer_ote_monthly', 5000)
+    setter_ote_monthly = st.session_state.get('setter_ote_monthly', 4000)
+    manager_ote_monthly = st.session_state.get('manager_ote_monthly', 7500)
 
-    setter_ote_annual = st.session_state.get('setter_ote', 48000)
-    setter_ote_monthly = setter_ote_annual / 12
-    setter_quota_meetings = st.session_state.get('setter_quota_meetings', 40.0)
+    # Get quotas based on mode
+    quota_mode = st.session_state.get('quota_calculation_mode', 'Auto (Based on Capacity)')
 
-    manager_ote_annual = st.session_state.get('manager_ote', 90000)
-    manager_ote_monthly = manager_ote_annual / 12
-    manager_quota_team_deals = st.session_state.get('manager_quota_team_deals', 40.0)
+    if quota_mode == "Auto (Based on Capacity)":
+        # Auto-calculate quotas from business metrics
+        closer_quota_deals = gtm_metrics['monthly_sales'] / num_closers if num_closers > 0 else 0
+
+        meetings_per_setter_capacity = st.session_state.get('meetings_per_setter', 2.0)
+        working_days = st.session_state.get('working_days', 20)
+        setter_quota_meetings = meetings_per_setter_capacity * working_days
+
+        manager_quota_team_deals = gtm_metrics['monthly_sales']
+    else:
+        # Manual quotas
+        closer_quota_deals = st.session_state.get('closer_quota_deals_manual', 5.0)
+        setter_quota_meetings = st.session_state.get('setter_quota_meetings_manual', 40.0)
+        manager_quota_team_deals = st.session_state.get('manager_quota_team_deals_manual', 40.0)
 
     # Get actual performance
     monthly_sales = gtm_metrics['monthly_sales']
