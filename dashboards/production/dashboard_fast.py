@@ -506,7 +506,7 @@ st.caption("⚡ 10X Faster • 📊 Full Features • 🎯 Accurate Calculations
 # Architecture status
 col_status, col_refresh = st.columns([4, 1])
 with col_status:
-    st.info("⚙️ **Dashboard v3.1** • Math verified with 19 passing tests • Widget persistence fixes applied")
+    st.info("⚙️ **Dashboard v3.2** • Math verified with 19 passing tests • All 18 widgets now persist correctly")
 with col_refresh:
     if st.button("🔄 Refresh Metrics", use_container_width=True, help="Force recalculation if values don't update"):
         # Clear ALL caches including DashboardAdapter cache
@@ -1016,36 +1016,40 @@ with tab1:
                 st.markdown("**Conversion Rates**")
                 contact_rate = st.slider(
                     "Contact %",
-                    0, 100,
-                    int(channel.get('contact_rate', 0.6) * 100),
-                    5,
+                    min_value=0,
+                    max_value=100,
+                    value=int(st.session_state.gtm_channels[idx].get('contact_rate', 0.6) * 100),
+                    step=5,
                     key=f"ch_contact_{channel['id']}"
                 ) / 100
                 st.session_state.gtm_channels[idx]['contact_rate'] = contact_rate
-                
+
                 meeting_rate = st.slider(
                     "Meeting %",
-                    0, 100,
-                    int(channel.get('meeting_rate', 0.3) * 100),
-                    5,
+                    min_value=0,
+                    max_value=100,
+                    value=int(st.session_state.gtm_channels[idx].get('meeting_rate', 0.3) * 100),
+                    step=5,
                     key=f"ch_meeting_{channel['id']}"
                 ) / 100
                 st.session_state.gtm_channels[idx]['meeting_rate'] = meeting_rate
-                
+
                 show_up_rate = st.slider(
                     "Show-up %",
-                    0, 100,
-                    int(channel.get('show_up_rate', 0.7) * 100),
-                    5,
+                    min_value=0,
+                    max_value=100,
+                    value=int(st.session_state.gtm_channels[idx].get('show_up_rate', 0.7) * 100),
+                    step=5,
                     key=f"ch_showup_{channel['id']}"
                 ) / 100
                 st.session_state.gtm_channels[idx]['show_up_rate'] = show_up_rate
-                
+
                 close_rate = st.slider(
                     "Close %",
-                    0, 100,
-                    int(channel.get('close_rate', 0.25) * 100),
-                    5,
+                    min_value=0,
+                    max_value=100,
+                    value=int(st.session_state.gtm_channels[idx].get('close_rate', 0.25) * 100),
+                    step=5,
                     key=f"ch_close_{channel['id']}"
                 ) / 100
                 st.session_state.gtm_channels[idx]['close_rate'] = close_rate
