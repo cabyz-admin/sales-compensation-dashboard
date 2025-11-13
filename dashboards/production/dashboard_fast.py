@@ -207,7 +207,15 @@ def initialize_session_state():
         'manager_commission_pct': 3.0,
         'bench_base': 0,
         'bench_variable': 0,
-        
+
+        # OTE (On-Target Earnings) & Quotas
+        'closer_ote': 60000,  # Annual OTE
+        'closer_quota_deals': 5.0,  # Monthly quota
+        'setter_ote': 48000,
+        'setter_quota_meetings': 40.0,  # Monthly booked meetings
+        'manager_ote': 90000,
+        'manager_quota_team_deals': 40.0,  # Team deals per month
+
         # Operating Costs
         'office_rent': 20000,
         'software_costs': 10000,
@@ -506,7 +514,7 @@ st.caption("⚡ 10X Faster • 📊 Full Features • 🎯 Accurate Calculations
 # Architecture status
 col_status, col_refresh = st.columns([4, 1])
 with col_status:
-    st.info("⚙️ **Dashboard v3.2** • Math verified with 19 passing tests • All 18 widgets now persist correctly")
+    st.info("⚙️ **Dashboard v3.3** • Math verified with 19 passing tests • All 18 widgets now persist correctly • NEW: OTE tracking & Team Performance tab")
 with col_refresh:
     if st.button("🔄 Refresh Metrics", use_container_width=True, help="Force recalculation if values don't update"):
         # Clear ALL caches including DashboardAdapter cache
@@ -785,12 +793,13 @@ with st.sidebar:
     st.markdown("---")
 
 # ============= TABS =============
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "🎯 GTM Command Center" if lang == 'en' else "🎯 Centro GTM",
-    "💰 Compensation Structure" if lang == 'en' else "💰 Estructura de Compensación", 
+    "💰 Compensation Structure" if lang == 'en' else "💰 Estructura de Compensación",
     "📊 Business Performance" if lang == 'en' else "📊 Desempeño del Negocio",
     "🔮 What-If Analysis" if lang == 'en' else "🔮 Análisis Hipotético",
-    "⚙️ Configuration" if lang == 'en' else "⚙️ Configuración"
+    "⚙️ Configuration" if lang == 'en' else "⚙️ Configuración",
+    "👥 Team Performance" if lang == 'en' else "👥 Desempeño del Equipo"
 ])
 
 # ============= TAB 1: GTM COMMAND CENTER =============
@@ -2317,6 +2326,15 @@ with tab5:
                 st.session_state['software_costs'] = oc.get('software_costs', 10000)
                 st.session_state['other_opex'] = oc.get('other_opex', 5000)
 
+            if 'ote_quotas' in loaded_config:
+                ote = loaded_config['ote_quotas']
+                st.session_state['closer_ote'] = ote.get('closer_ote', 60000)
+                st.session_state['closer_quota_deals'] = ote.get('closer_quota_deals', 5.0)
+                st.session_state['setter_ote'] = ote.get('setter_ote', 48000)
+                st.session_state['setter_quota_meetings'] = ote.get('setter_quota_meetings', 40.0)
+                st.session_state['manager_ote'] = ote.get('manager_ote', 90000)
+                st.session_state['manager_quota_team_deals'] = ote.get('manager_quota_team_deals', 40.0)
+
             if 'gtm_channels' in loaded_config:
                 st.session_state['gtm_channels'] = loaded_config['gtm_channels']
 
@@ -3364,7 +3382,102 @@ with tab5:
                 st.warning("⚠️ No positive EBITDA to distribute")
                 st.caption("EBITDA must be positive to distribute profits")
                 st.caption(f"Current EBITDA: ${pnl_data['ebitda']:,.0f}")
-    
+
+    # OTE & Quota Configuration
+    with st.expander("🎯 OTE & Quota Configuration", expanded=False):
+        st.info("💡 Define On-Target Earnings (OTE) and monthly quotas per role • Used for performance tracking in Team Performance tab")
+
+        ote_cols = st.columns(3)
+
+        with ote_cols[0]:
+            st.markdown("**🎯 Closer**")
+            closer_ote = st.number_input(
+                "Annual OTE ($)",
+                min_value=0,
+                max_value=500000,
+                value=st.session_state.get('closer_ote', 60000),
+                step=5000,
+                key="closer_ote",
+                help="On-Target Earnings if hitting quota (base + expected commission)"
+            )
+            closer_quota_deals = st.number_input(
+                "Monthly Quota (Deals)",
+                min_value=0.0,
+                max_value=100.0,
+                value=st.session_state.get('closer_quota_deals', 5.0),
+                step=0.5,
+                key="closer_quota_deals",
+                help="Number of deals expected per closer per month"
+            )
+
+            # Calculate what OTE implies
+            closer_ote_monthly = closer_ote / 12
+            st.caption(f"💰 OTE Monthly: ${closer_ote_monthly:,.0f}")
+            if closer_quota_deals > 0:
+                comm_per_deal_needed = (closer_ote_monthly - (st.session_state.get('closer_base', 0) / 12)) / closer_quota_deals
+                st.caption(f"📊 Requires ${comm_per_deal_needed:,.0f} commission/deal")
+
+        with ote_cols[1]:
+            st.markdown("**📞 Setter**")
+            setter_ote = st.number_input(
+                "Annual OTE ($)",
+                min_value=0,
+                max_value=300000,
+                value=st.session_state.get('setter_ote', 48000),
+                step=5000,
+                key="setter_ote",
+                help="On-Target Earnings if hitting quota"
+            )
+            setter_quota_meetings = st.number_input(
+                "Monthly Quota (Meetings Booked)",
+                min_value=0.0,
+                max_value=200.0,
+                value=st.session_state.get('setter_quota_meetings', 40.0),
+                step=5.0,
+                key="setter_quota_meetings",
+                help="Number of meetings expected per setter per month"
+            )
+
+            setter_ote_monthly = setter_ote / 12
+            st.caption(f"💰 OTE Monthly: ${setter_ote_monthly:,.0f}")
+            if setter_quota_meetings > 0:
+                comm_per_meeting = (setter_ote_monthly - (st.session_state.get('setter_base', 0) / 12)) / setter_quota_meetings
+                st.caption(f"📊 Requires ${comm_per_meeting:,.0f} per meeting")
+
+        with ote_cols[2]:
+            st.markdown("**👔 Manager**")
+            manager_ote = st.number_input(
+                "Annual OTE ($)",
+                min_value=0,
+                max_value=500000,
+                value=st.session_state.get('manager_ote', 90000),
+                step=5000,
+                key="manager_ote",
+                help="On-Target Earnings if team hits quota"
+            )
+            manager_quota_team_deals = st.number_input(
+                "Monthly Quota (Team Deals)",
+                min_value=0.0,
+                max_value=500.0,
+                value=st.session_state.get('manager_quota_team_deals', 40.0),
+                step=5.0,
+                key="manager_quota_team_deals",
+                help="Total deals expected from managed team per month"
+            )
+
+            manager_ote_monthly = manager_ote / 12
+            st.caption(f"💰 OTE Monthly: ${manager_ote_monthly:,.0f}")
+            if manager_quota_team_deals > 0:
+                override_per_deal = (manager_ote_monthly - (st.session_state.get('manager_base', 0) / 12)) / manager_quota_team_deals
+                st.caption(f"📊 Requires ${override_per_deal:,.0f} override/deal")
+
+        st.markdown("---")
+        st.markdown("**📊 OTE System Explained:**")
+        st.caption("• **OTE (On-Target Earnings)**: Total comp when hitting 100% of quota")
+        st.caption("• **Quota**: Expected performance level (deals/month, meetings/month, etc.)")
+        st.caption("• **OTE = Base + Commission at Quota**: For commission-only model, OTE = Commission at Quota")
+        st.caption("• **Go to Team Performance tab** to see actual vs target performance")
+
     # JSON Export/Import - Smart & Fast
     st.markdown("---")
     st.markdown("### 📋 Configuration Export/Import")
@@ -3426,6 +3539,14 @@ with tab5:
                         "variable": st.session_state.bench_variable
                     }
                 },
+                "ote_quotas": {
+                    "closer_ote": st.session_state.get('closer_ote', 60000),
+                    "closer_quota_deals": st.session_state.get('closer_quota_deals', 5.0),
+                    "setter_ote": st.session_state.get('setter_ote', 48000),
+                    "setter_quota_meetings": st.session_state.get('setter_quota_meetings', 40.0),
+                    "manager_ote": st.session_state.get('manager_ote', 90000),
+                    "manager_quota_team_deals": st.session_state.get('manager_quota_team_deals', 40.0)
+                },
                 "operating_costs": {
                     "office_rent": st.session_state.office_rent,
                     "software_costs": st.session_state.software_costs,
@@ -3433,7 +3554,7 @@ with tab5:
                 },
                 "gtm_channels": st.session_state.gtm_channels,
                 "timestamp": datetime.now().isoformat(),
-                "version": "1.0"
+                "version": "1.1"
             }
         
         config_json = json.dumps(build_config(), indent=2)
@@ -3495,6 +3616,335 @@ with tab5:
 
                 except Exception as e:
                     st.error(f"❌ Error parsing JSON: {str(e)}")
+
+# ============= TAB 6: TEAM PERFORMANCE =============
+with tab6:
+    st.header("👥 Team Performance & OTE Tracking")
+    st.caption("Track actual performance vs On-Target Earnings (OTE) • Identify gaps and optimization opportunities")
+
+    # Calculate OTE metrics
+    # Get current team performance
+    num_closers = st.session_state.get('num_closers_main', 8)
+    num_setters = st.session_state.get('num_setters_main', 2)
+    num_managers = st.session_state.get('num_managers_main', 1)
+
+    # Get OTE targets
+    closer_ote_annual = st.session_state.get('closer_ote', 60000)
+    closer_ote_monthly = closer_ote_annual / 12
+    closer_quota_deals = st.session_state.get('closer_quota_deals', 5.0)
+
+    setter_ote_annual = st.session_state.get('setter_ote', 48000)
+    setter_ote_monthly = setter_ote_annual / 12
+    setter_quota_meetings = st.session_state.get('setter_quota_meetings', 40.0)
+
+    manager_ote_annual = st.session_state.get('manager_ote', 90000)
+    manager_ote_monthly = manager_ote_annual / 12
+    manager_quota_team_deals = st.session_state.get('manager_quota_team_deals', 40.0)
+
+    # Get actual performance
+    monthly_sales = gtm_metrics['monthly_sales']
+    total_meetings_scheduled = gtm_metrics.get('total_meetings_scheduled', 0)
+
+    # Calculate per-person actuals
+    deals_per_closer = monthly_sales / num_closers if num_closers > 0 else 0
+    meetings_per_setter = total_meetings_scheduled / num_setters if num_setters > 0 else 0
+    team_deals_per_manager = monthly_sales / num_managers if num_managers > 0 else 0
+
+    # Get actual earnings from comp breakdown
+    closer_pool = comm_calc['closer_pool']
+    setter_pool = comm_calc['setter_pool']
+    manager_pool = comm_calc['manager_pool']
+
+    closer_base_monthly = st.session_state.get('closer_base', 0) / 12
+    setter_base_monthly = st.session_state.get('setter_base', 0) / 12
+    manager_base_monthly = st.session_state.get('manager_base', 0) / 12
+
+    actual_closer_monthly = (closer_pool / num_closers if num_closers > 0 else 0) + closer_base_monthly
+    actual_setter_monthly = (setter_pool / num_setters if num_setters > 0 else 0) + setter_base_monthly
+    actual_manager_monthly = (manager_pool / num_managers if num_managers > 0 else 0) + manager_base_monthly
+
+    # Calculate attainment %
+    closer_attainment = (actual_closer_monthly / closer_ote_monthly * 100) if closer_ote_monthly > 0 else 0
+    setter_attainment = (actual_setter_monthly / setter_ote_monthly * 100) if setter_ote_monthly > 0 else 0
+    manager_attainment = (actual_manager_monthly / manager_ote_monthly * 100) if manager_ote_monthly > 0 else 0
+
+    # Calculate quota attainment
+    closer_quota_attainment = (deals_per_closer / closer_quota_deals * 100) if closer_quota_deals > 0 else 0
+    setter_quota_attainment = (meetings_per_setter / setter_quota_meetings * 100) if setter_quota_meetings > 0 else 0
+    manager_quota_attainment = (team_deals_per_manager / manager_quota_team_deals * 100) if manager_quota_team_deals > 0 else 0
+
+    # === SUMMARY METRICS ===
+    st.markdown("### 📊 Performance Summary")
+    summary_cols = st.columns(4)
+
+    with summary_cols[0]:
+        avg_attainment = (closer_attainment + setter_attainment + manager_attainment) / 3
+        color = "normal" if avg_attainment >= 80 else "inverse"
+        st.metric("Team Avg Attainment", f"{avg_attainment:.0f}%",
+                  delta=f"{avg_attainment - 100:.0f}% vs target",
+                  delta_color=color)
+
+    with summary_cols[1]:
+        total_ote_monthly = (closer_ote_monthly * num_closers +
+                            setter_ote_monthly * num_setters +
+                            manager_ote_monthly * num_managers)
+        total_actual_monthly = (actual_closer_monthly * num_closers +
+                               actual_setter_monthly * num_setters +
+                               actual_manager_monthly * num_managers)
+        st.metric("Total OTE (Monthly)", f"${total_ote_monthly:,.0f}")
+        st.metric("Total Actual", f"${total_actual_monthly:,.0f}")
+
+    with summary_cols[2]:
+        ote_gap = total_actual_monthly - total_ote_monthly
+        gap_color = "normal" if ote_gap >= 0 else "inverse"
+        st.metric("OTE Gap", f"${ote_gap:,.0f}",
+                  delta=f"{(ote_gap/total_ote_monthly*100):.1f}% vs OTE" if total_ote_monthly > 0 else None,
+                  delta_color=gap_color)
+
+    with summary_cols[3]:
+        # Team efficiency: Revenue per $ of OTE
+        if total_ote_monthly > 0:
+            revenue_per_ote = gtm_metrics['monthly_revenue_immediate'] / total_ote_monthly
+            st.metric("Revenue per $1 OTE", f"${revenue_per_ote:.2f}")
+            st.caption("💡 Higher = more efficient")
+
+    st.markdown("---")
+
+    # === ROLE-BY-ROLE BREAKDOWN ===
+    st.markdown("### 🎯 Role Performance Breakdown")
+
+    # Closer Performance
+    with st.expander("**🎯 Closer Performance**", expanded=True):
+        closer_perf_cols = st.columns([2, 1, 1, 1])
+
+        with closer_perf_cols[0]:
+            st.markdown("**Performance Metrics**")
+            st.metric("Deals/Closer/Month", f"{deals_per_closer:.1f}",
+                     delta=f"{deals_per_closer - closer_quota_deals:.1f} vs quota")
+            st.metric("Quota Attainment", f"{closer_quota_attainment:.0f}%")
+
+            # Visual progress bar
+            progress_val = min(closer_quota_attainment / 100, 1.5)  # Cap at 150%
+            st.progress(min(progress_val, 1.0))
+            if closer_quota_attainment >= 100:
+                st.success(f"✅ Exceeding quota by {closer_quota_attainment - 100:.0f}%")
+            elif closer_quota_attainment >= 80:
+                st.warning(f"⚠️ At {closer_quota_attainment:.0f}% of quota")
+            else:
+                st.error(f"🚨 Below quota - need {closer_quota_deals - deals_per_closer:.1f} more deals/closer")
+
+        with closer_perf_cols[1]:
+            st.markdown("**OTE Tracking**")
+            st.metric("Monthly OTE", f"${closer_ote_monthly:,.0f}")
+            st.metric("Actual Earnings", f"${actual_closer_monthly:,.0f}")
+            st.metric("OTE Attainment", f"{closer_attainment:.0f}%")
+
+        with closer_perf_cols[2]:
+            st.markdown("**Team Total**")
+            st.metric("Total Closers", f"{num_closers}")
+            st.metric("Team OTE", f"${closer_ote_monthly * num_closers:,.0f}")
+            st.metric("Team Actual", f"${actual_closer_monthly * num_closers:,.0f}")
+
+        with closer_perf_cols[3]:
+            st.markdown("**Gap Analysis**")
+            closer_gap = actual_closer_monthly - closer_ote_monthly
+            st.metric("Gap per Person", f"${closer_gap:,.0f}",
+                     delta_color="normal" if closer_gap >= 0 else "inverse")
+            team_gap = closer_gap * num_closers
+            st.metric("Team Gap", f"${team_gap:,.0f}")
+
+            # Recommendation
+            if closer_attainment < 80:
+                deals_needed = (closer_quota_deals - deals_per_closer) * num_closers
+                st.caption(f"💡 Need {deals_needed:.0f} more deals/mo to hit OTE")
+
+    # Setter Performance
+    with st.expander("**📞 Setter Performance**", expanded=True):
+        setter_perf_cols = st.columns([2, 1, 1, 1])
+
+        with setter_perf_cols[0]:
+            st.markdown("**Performance Metrics**")
+            st.metric("Meetings/Setter/Month", f"{meetings_per_setter:.1f}",
+                     delta=f"{meetings_per_setter - setter_quota_meetings:.1f} vs quota")
+            st.metric("Quota Attainment", f"{setter_quota_attainment:.0f}%")
+
+            progress_val = min(setter_quota_attainment / 100, 1.5)
+            st.progress(min(progress_val, 1.0))
+            if setter_quota_attainment >= 100:
+                st.success(f"✅ Exceeding quota by {setter_quota_attainment - 100:.0f}%")
+            elif setter_quota_attainment >= 80:
+                st.warning(f"⚠️ At {setter_quota_attainment:.0f}% of quota")
+            else:
+                st.error(f"🚨 Below quota - need {setter_quota_meetings - meetings_per_setter:.1f} more meetings/setter")
+
+        with setter_perf_cols[1]:
+            st.markdown("**OTE Tracking**")
+            st.metric("Monthly OTE", f"${setter_ote_monthly:,.0f}")
+            st.metric("Actual Earnings", f"${actual_setter_monthly:,.0f}")
+            st.metric("OTE Attainment", f"{setter_attainment:.0f}%")
+
+        with setter_perf_cols[2]:
+            st.markdown("**Team Total**")
+            st.metric("Total Setters", f"{num_setters}")
+            st.metric("Team OTE", f"${setter_ote_monthly * num_setters:,.0f}")
+            st.metric("Team Actual", f"${actual_setter_monthly * num_setters:,.0f}")
+
+        with setter_perf_cols[3]:
+            st.markdown("**Gap Analysis**")
+            setter_gap = actual_setter_monthly - setter_ote_monthly
+            st.metric("Gap per Person", f"${setter_gap:,.0f}",
+                     delta_color="normal" if setter_gap >= 0 else "inverse")
+            team_gap = setter_gap * num_setters
+            st.metric("Team Gap", f"${team_gap:,.0f}")
+
+            if setter_attainment < 80:
+                meetings_needed = (setter_quota_meetings - meetings_per_setter) * num_setters
+                st.caption(f"💡 Need {meetings_needed:.0f} more meetings/mo to hit OTE")
+
+    # Manager Performance
+    with st.expander("**👔 Manager Performance**", expanded=True):
+        manager_perf_cols = st.columns([2, 1, 1, 1])
+
+        with manager_perf_cols[0]:
+            st.markdown("**Performance Metrics**")
+            st.metric("Team Deals/Manager", f"{team_deals_per_manager:.1f}",
+                     delta=f"{team_deals_per_manager - manager_quota_team_deals:.1f} vs quota")
+            st.metric("Quota Attainment", f"{manager_quota_attainment:.0f}%")
+
+            progress_val = min(manager_quota_attainment / 100, 1.5)
+            st.progress(min(progress_val, 1.0))
+            if manager_quota_attainment >= 100:
+                st.success(f"✅ Team exceeding quota by {manager_quota_attainment - 100:.0f}%")
+            elif manager_quota_attainment >= 80:
+                st.warning(f"⚠️ Team at {manager_quota_attainment:.0f}% of quota")
+            else:
+                st.error(f"🚨 Team below quota - need {manager_quota_team_deals - team_deals_per_manager:.1f} more deals/manager")
+
+        with manager_perf_cols[1]:
+            st.markdown("**OTE Tracking**")
+            st.metric("Monthly OTE", f"${manager_ote_monthly:,.0f}")
+            st.metric("Actual Earnings", f"${actual_manager_monthly:,.0f}")
+            st.metric("OTE Attainment", f"{manager_attainment:.0f}%")
+
+        with manager_perf_cols[2]:
+            st.markdown("**Team Total**")
+            st.metric("Total Managers", f"{num_managers}")
+            st.metric("Team OTE", f"${manager_ote_monthly * num_managers:,.0f}")
+            st.metric("Team Actual", f"${actual_manager_monthly * num_managers:,.0f}")
+
+        with manager_perf_cols[3]:
+            st.markdown("**Gap Analysis**")
+            manager_gap = actual_manager_monthly - manager_ote_monthly
+            st.metric("Gap per Person", f"${manager_gap:,.0f}",
+                     delta_color="normal" if manager_gap >= 0 else "inverse")
+            team_gap = manager_gap * num_managers
+            st.metric("Team Gap", f"${team_gap:,.0f}")
+
+    st.markdown("---")
+
+    # === STRATEGIC INSIGHTS ===
+    st.markdown("### 💡 Strategic Insights & Recommendations")
+
+    insights_cols = st.columns(2)
+
+    with insights_cols[0]:
+        st.markdown("**🎯 Performance Gaps**")
+
+        # Identify biggest gaps
+        gaps = {
+            'Closers': closer_attainment,
+            'Setters': setter_attainment,
+            'Managers': manager_attainment
+        }
+        sorted_gaps = sorted(gaps.items(), key=lambda x: x[1])
+
+        for role, attainment in sorted_gaps:
+            if attainment < 100:
+                gap_pct = 100 - attainment
+                st.warning(f"⚠️ **{role}**: {gap_pct:.0f}% below OTE")
+
+                # Specific recommendations
+                if role == 'Closers':
+                    deals_gap = closer_quota_deals - deals_per_closer
+                    st.caption(f"  • Need {deals_gap:.1f} more deals/closer/month")
+                    st.caption(f"  • Or increase close rate by {gap_pct * 0.8:.0f}%")
+                    st.caption(f"  • Or add {(deals_gap * num_closers) / closer_quota_deals:.1f} more closers")
+                elif role == 'Setters':
+                    meetings_gap = setter_quota_meetings - meetings_per_setter
+                    st.caption(f"  • Need {meetings_gap:.0f} more meetings/setter/month")
+                    st.caption(f"  • Increase marketing by ${meetings_gap * num_setters * 100:,.0f}")
+                elif role == 'Managers':
+                    st.caption(f"  • Team performance cascades from closers/setters")
+                    st.caption(f"  • Focus on improving team quota attainment")
+            else:
+                st.success(f"✅ **{role}**: Exceeding OTE by {attainment - 100:.0f}%")
+
+    with insights_cols[1]:
+        st.markdown("**📊 OTE Efficiency Analysis**")
+
+        # OTE vs Revenue analysis
+        if total_ote_monthly > 0:
+            ote_as_pct_revenue = (total_ote_monthly / gtm_metrics['monthly_revenue_immediate'] * 100) if gtm_metrics['monthly_revenue_immediate'] > 0 else 0
+            st.metric("OTE as % of Revenue", f"{ote_as_pct_revenue:.1f}%")
+
+            if ote_as_pct_revenue > 30:
+                st.error("🚨 OTE cost is high relative to revenue")
+                st.caption("  • Consider: Lower OTE targets")
+                st.caption("  • Or: Improve conversion rates to boost revenue")
+            elif ote_as_pct_revenue > 20:
+                st.warning("⚠️ OTE cost is moderate")
+                st.caption("  • Healthy for early-stage companies")
+            else:
+                st.success("✅ OTE cost is efficient")
+                st.caption("  • Well-optimized compensation structure")
+
+        # Break-even analysis
+        st.markdown("**🎯 Break-Even Points**")
+
+        # How many deals needed to hit OTE?
+        commission_base = st.session_state.get('avg_deal_value', 50000) * (st.session_state.get('upfront_payment_pct', 70.0) / 100)
+        closer_comm_pct = st.session_state.get('closer_commission_pct', 10.0) / 100
+
+        if closer_comm_pct > 0 and commission_base > 0:
+            comm_per_deal = commission_base * closer_comm_pct
+            deals_for_ote = (closer_ote_monthly - closer_base_monthly) / comm_per_deal if comm_per_deal > 0 else 0
+
+            st.caption(f"• Closer needs **{deals_for_ote:.1f} deals/mo** to hit OTE")
+            st.caption(f"• Current: **{deals_per_closer:.1f} deals/mo** (quota: {closer_quota_deals:.1f})")
+
+            if deals_for_ote > closer_quota_deals:
+                st.warning(f"⚠️ OTE requires {deals_for_ote - closer_quota_deals:.1f} more deals than quota!")
+                st.caption("  • OTE may be set too high")
+                st.caption("  • Or commission % too low")
+            elif deals_for_ote < closer_quota_deals * 0.9:
+                st.info("💡 OTE achievable below quota - consider raising OTE or quota")
+
+    st.markdown("---")
+
+    # === COMPARISON TABLE ===
+    st.markdown("### 📋 Performance Comparison Table")
+
+    import pandas as pd
+
+    comparison_data = {
+        'Role': ['Closer', 'Setter', 'Manager'],
+        'Headcount': [num_closers, num_setters, num_managers],
+        'Monthly OTE': [f"${closer_ote_monthly:,.0f}", f"${setter_ote_monthly:,.0f}", f"${manager_ote_monthly:,.0f}"],
+        'Actual Earnings': [f"${actual_closer_monthly:,.0f}", f"${actual_setter_monthly:,.0f}", f"${actual_manager_monthly:,.0f}"],
+        'OTE Attainment': [f"{closer_attainment:.0f}%", f"{setter_attainment:.0f}%", f"{manager_attainment:.0f}%"],
+        'Quota': [f"{closer_quota_deals:.1f} deals", f"{setter_quota_meetings:.0f} mtgs", f"{manager_quota_team_deals:.0f} team deals"],
+        'Actual': [f"{deals_per_closer:.1f} deals", f"{meetings_per_setter:.0f} mtgs", f"{team_deals_per_manager:.1f} team deals"],
+        'Quota Attainment': [f"{closer_quota_attainment:.0f}%", f"{setter_quota_attainment:.0f}%", f"{manager_quota_attainment:.0f}%"]
+    }
+
+    df = pd.DataFrame(comparison_data)
+    st.dataframe(df, use_container_width=True, hide_index=True)
+
+    st.caption("💡 **How to use this tab:**")
+    st.caption("• Set OTE & quotas in Configuration tab")
+    st.caption("• Monitor actual vs target performance here")
+    st.caption("• Use insights to identify gaps and optimize team structure")
+    st.caption("• Track trends over time to inform hiring/comp decisions")
 
 # ============= FOOTER =============
 st.markdown("---")
