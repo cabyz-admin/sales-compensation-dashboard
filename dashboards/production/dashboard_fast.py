@@ -519,7 +519,7 @@ st.caption("⚡ 10X Faster • 📊 Full Features • 🎯 Accurate Calculations
 # Architecture status
 col_status, col_refresh = st.columns([4, 1])
 with col_status:
-    st.info("⚙️ **Dashboard v3.6** • Math verified with 19 passing tests • NEW: Setter Activity Planning for full workflow modeling")
+    st.info("⚙️ **Dashboard v3.7** • Holistic GTM→Team validation • Real-time capacity warnings • Sales cadence-aware")
 with col_refresh:
     if st.button("🔄 Refresh Metrics", use_container_width=True, help="Force recalculation if values don't update"):
         # Clear ALL caches including DashboardAdapter cache
@@ -1146,6 +1146,74 @@ with tab1:
                 )
                 st.session_state.gtm_channels[idx]['enabled'] = enabled
     
+    # ===== CAPACITY VALIDATION =====
+    st.markdown("---")
+    st.markdown("### ⚡ Team Capacity Validation")
+
+    from modules.capacity_validator import validate_capacity
+
+    capacity = validate_capacity(
+        st.session_state.gtm_channels,
+        st.session_state.get('num_setters_main', 4),
+        st.session_state.get('num_closers_main', 8),
+        st.session_state.get('working_days', 20),
+        calls_per_lead=3,  # TODO: Make configurable
+        avg_call_mins=8,
+        max_hours_per_day=6
+    )
+
+    cap_cols = st.columns([2, 1, 1])
+
+    with cap_cols[0]:
+        st.markdown("**📊 Setter Workload (Per Person/Day)**")
+        work_cols = st.columns(4)
+        with work_cols[0]:
+            st.metric("Leads", f"{capacity['daily_leads_per_setter']:.1f}")
+        with work_cols[1]:
+            st.metric("Calls", f"{capacity['daily_calls_per_setter']:.1f}")
+        with work_cols[2]:
+            st.metric("Hours", f"{capacity['daily_hours_per_setter']:.1f}h")
+        with work_cols[3]:
+            st.metric("Meetings", f"{capacity['daily_meetings_per_setter']:.1f}")
+
+    with cap_cols[1]:
+        st.markdown("**🎯 Setter Capacity**")
+        if capacity['setter_status'] == 'CRITICAL':
+            st.error(f"🚨 {capacity['setter_capacity_pct']:.0f}%")
+            st.caption("OVERLOAD")
+        elif capacity['setter_status'] == 'WARNING':
+            st.warning(f"⚠️ {capacity['setter_capacity_pct']:.0f}%")
+            st.caption("High")
+        else:
+            st.success(f"✅ {capacity['setter_capacity_pct']:.0f}%")
+            st.caption("Healthy")
+
+    with cap_cols[2]:
+        st.markdown("**💼 Closer Capacity**")
+        if capacity['closer_status'] == 'CRITICAL':
+            st.error(f"🚨 {capacity['closer_utilization_pct']:.0f}%")
+            st.caption("OVERLOAD")
+        elif capacity['closer_status'] == 'WARNING':
+            st.warning(f"⚠️ {capacity['closer_utilization_pct']:.0f}%")
+            st.caption("High")
+        else:
+            st.success(f"✅ {capacity['closer_utilization_pct']:.0f}%")
+            st.caption("Healthy")
+
+    # Show warnings
+    if capacity['warnings']:
+        for warning in capacity['warnings']:
+            if '🚨' in warning:
+                st.error(warning)
+            else:
+                st.info(warning)
+
+    # Show suggestions
+    if capacity['suggestions']:
+        with st.expander("💡 Fix Capacity Issues", expanded=capacity['setter_status'] == 'CRITICAL'):
+            for i, suggestion in enumerate(capacity['suggestions'], 1):
+                st.caption(f"{i}. {suggestion}")
+
     # Channel Performance Comparison
     if gtm_metrics.get('channels_breakdown'):
         st.markdown("---")
