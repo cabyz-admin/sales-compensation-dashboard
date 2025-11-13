@@ -519,7 +519,7 @@ st.caption("⚡ 10X Faster • 📊 Full Features • 🎯 Accurate Calculations
 # Architecture status
 col_status, col_refresh = st.columns([4, 1])
 with col_status:
-    st.info("⚙️ **Dashboard v3.5** • Math verified with 19 passing tests • NEW: AI Strategic Advisor powered by Claude Sonnet 4.5")
+    st.info("⚙️ **Dashboard v3.5.1** • Math verified with 19 passing tests • AI Strategic Advisor with conversational chat interface")
 with col_refresh:
     if st.button("🔄 Refresh Metrics", use_container_width=True, help="Force recalculation if values don't update"):
         # Clear ALL caches including DashboardAdapter cache
@@ -4132,28 +4132,44 @@ To use the AI Strategic Advisor, you need an Anthropic API key.
             st.markdown(st.session_state['last_ai_analysis'])
             st.markdown("---")
 
-        # Conversational Q&A
+        # Conversational Q&A with Chat Interface
         st.markdown("### 💬 Ask Strategic Questions")
         st.caption("Ask anything about your GTM strategy, unit economics, team structure, or growth plans")
 
-        question = st.text_area(
-            "Your Question",
-            placeholder="Example: How should I allocate my next $50K in marketing spend?\n\nExample: Should I hire more closers or setters first?\n\nExample: What's my biggest constraint right now?",
-            height=100,
-            key="ai_question_input"
-        )
+        # Initialize chat history in session state
+        if "ai_chat_messages" not in st.session_state:
+            st.session_state.ai_chat_messages = []
 
-        if st.button("🤔 Get Answer", type="secondary", disabled=not question):
-            if question:
+        # Display chat history
+        for message in st.session_state.ai_chat_messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+
+        # Chat input
+        if prompt := st.chat_input("Ask a strategic question...", key="ai_chat_input"):
+            # Add user message to chat history
+            st.session_state.ai_chat_messages.append({"role": "user", "content": prompt})
+
+            # Display user message
+            with st.chat_message("user"):
+                st.markdown(prompt)
+
+            # Get AI response
+            with st.chat_message("assistant"):
                 with st.spinner("🤔 Thinking..."):
                     # Include last analysis as context if available
                     context = st.session_state.get('last_ai_analysis', None)
-                    answer = advisor.ask_question(question, ai_metrics, context)
+                    response = advisor.ask_question(prompt, ai_metrics, context)
+                    st.markdown(response)
 
-                    st.markdown("---")
-                    st.markdown(f"**Q:** {question}")
-                    st.markdown(answer)
-                    st.markdown("---")
+            # Add assistant response to chat history
+            st.session_state.ai_chat_messages.append({"role": "assistant", "content": response})
+
+        # Clear chat history button
+        if st.session_state.ai_chat_messages:
+            if st.button("🗑️ Clear Chat History"):
+                st.session_state.ai_chat_messages = []
+                st.rerun()
 
         # Scenario Analysis
         st.markdown("### 🔮 Scenario Analysis")
