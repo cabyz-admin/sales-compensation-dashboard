@@ -3421,15 +3421,17 @@ with tab5:
 
         with ote_cols[0]:
             st.markdown("**🎯 Closer**")
-            closer_ote_monthly = st.number_input(
+            closer_ote_monthly_input = st.number_input(
                 "Monthly OTE ($)",
                 min_value=0,
                 max_value=50000,
                 value=st.session_state.get('closer_ote_monthly', 5000),
                 step=500,
-                key="closer_ote_monthly",
+                key="closer_ote_monthly_widget",
                 help="Monthly On-Target Earnings (base + expected commission at quota)"
             )
+            # Update session state explicitly
+            st.session_state['closer_ote_monthly'] = closer_ote_monthly_input
 
             # Calculate or get quota
             if quota_mode == "Auto (Based on Capacity)":
@@ -3452,22 +3454,27 @@ with tab5:
                 )
 
             # Show what OTE requires
-            st.caption(f"💰 Annual OTE: ${closer_ote_monthly * 12:,.0f}")
-            if closer_quota_deals > 0:
-                comm_per_deal_needed = (closer_ote_monthly - (st.session_state.get('closer_base', 0) / 12)) / closer_quota_deals
+            st.caption(f"💰 Annual OTE: ${closer_ote_monthly_input * 12:,.0f}")
+            if quota_mode == "Auto (Based on Capacity)" and closer_quota_deals > 0:
+                comm_per_deal_needed = (closer_ote_monthly_input - (st.session_state.get('closer_base', 0) / 12)) / closer_quota_deals
+                st.caption(f"📊 Requires ${comm_per_deal_needed:,.0f} commission/deal")
+            elif quota_mode == "Manual Override" and closer_quota_deals > 0:
+                comm_per_deal_needed = (closer_ote_monthly_input - (st.session_state.get('closer_base', 0) / 12)) / closer_quota_deals
                 st.caption(f"📊 Requires ${comm_per_deal_needed:,.0f} commission/deal")
 
         with ote_cols[1]:
             st.markdown("**📞 Setter**")
-            setter_ote_monthly = st.number_input(
+            setter_ote_monthly_input = st.number_input(
                 "Monthly OTE ($)",
                 min_value=0,
                 max_value=30000,
                 value=st.session_state.get('setter_ote_monthly', 4000),
                 step=500,
-                key="setter_ote_monthly",
+                key="setter_ote_monthly_widget",
                 help="Monthly On-Target Earnings"
             )
+            # Update session state explicitly
+            st.session_state['setter_ote_monthly'] = setter_ote_monthly_input
 
             # Calculate or get quota
             if quota_mode == "Auto (Based on Capacity)":
@@ -3489,22 +3496,24 @@ with tab5:
                     key="setter_quota_meetings_manual"
                 )
 
-            st.caption(f"💰 Annual OTE: ${setter_ote_monthly * 12:,.0f}")
+            st.caption(f"💰 Annual OTE: ${setter_ote_monthly_input * 12:,.0f}")
             if setter_quota_meetings > 0:
-                comm_per_meeting = (setter_ote_monthly - (st.session_state.get('setter_base', 0) / 12)) / setter_quota_meetings
+                comm_per_meeting = (setter_ote_monthly_input - (st.session_state.get('setter_base', 0) / 12)) / setter_quota_meetings
                 st.caption(f"📊 Requires ${comm_per_meeting:,.0f} per meeting")
 
         with ote_cols[2]:
             st.markdown("**👔 Manager**")
-            manager_ote_monthly = st.number_input(
+            manager_ote_monthly_input = st.number_input(
                 "Monthly OTE ($)",
                 min_value=0,
                 max_value=50000,
                 value=st.session_state.get('manager_ote_monthly', 7500),
                 step=500,
-                key="manager_ote_monthly",
+                key="manager_ote_monthly_widget",
                 help="Monthly On-Target Earnings"
             )
+            # Update session state explicitly
+            st.session_state['manager_ote_monthly'] = manager_ote_monthly_input
 
             # Calculate or get quota
             if quota_mode == "Auto (Based on Capacity)":
@@ -3523,9 +3532,9 @@ with tab5:
                     key="manager_quota_team_deals_manual"
                 )
 
-            st.caption(f"💰 Annual OTE: ${manager_ote_monthly * 12:,.0f}")
+            st.caption(f"💰 Annual OTE: ${manager_ote_monthly_input * 12:,.0f}")
             if manager_quota_team_deals > 0:
-                override_per_deal = (manager_ote_monthly - (st.session_state.get('manager_base', 0) / 12)) / manager_quota_team_deals
+                override_per_deal = (manager_ote_monthly_input - (st.session_state.get('manager_base', 0) / 12)) / manager_quota_team_deals
                 st.caption(f"📊 Requires ${override_per_deal:,.0f} override/deal")
 
         st.markdown("---")
