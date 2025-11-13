@@ -519,7 +519,7 @@ st.caption("⚡ 10X Faster • 📊 Full Features • 🎯 Accurate Calculations
 # Architecture status
 col_status, col_refresh = st.columns([4, 1])
 with col_status:
-    st.info("⚙️ **Dashboard v3.4** • Math verified with 19 passing tests • All 18 widgets now persist correctly • NEW: Smart OTE system with dynamic quotas")
+    st.info("⚙️ **Dashboard v3.5** • Math verified with 19 passing tests • NEW: AI Strategic Advisor powered by Claude Sonnet 4.5")
 with col_refresh:
     if st.button("🔄 Refresh Metrics", use_container_width=True, help="Force recalculation if values don't update"):
         # Clear ALL caches including DashboardAdapter cache
@@ -798,13 +798,14 @@ with st.sidebar:
     st.markdown("---")
 
 # ============= TABS =============
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "🎯 GTM Command Center" if lang == 'en' else "🎯 Centro GTM",
     "💰 Compensation Structure" if lang == 'en' else "💰 Estructura de Compensación",
     "📊 Business Performance" if lang == 'en' else "📊 Desempeño del Negocio",
     "🔮 What-If Analysis" if lang == 'en' else "🔮 Análisis Hipotético",
     "⚙️ Configuration" if lang == 'en' else "⚙️ Configuración",
-    "👥 Team Performance" if lang == 'en' else "👥 Desempeño del Equipo"
+    "👥 Team Performance" if lang == 'en' else "👥 Desempeño del Equipo",
+    "🧠 AI Strategic Advisor" if lang == 'en' else "🧠 Asesor Estratégico IA"
 ])
 
 # ============= TAB 1: GTM COMMAND CENTER =============
@@ -4012,6 +4013,218 @@ with tab6:
     st.caption("• Monitor actual vs target performance here")
     st.caption("• Use insights to identify gaps and optimize team structure")
     st.caption("• Track trends over time to inform hiring/comp decisions")
+
+# ============= TAB 7: AI STRATEGIC ADVISOR =============
+with tab7:
+    st.header("🧠 AI Strategic Advisor")
+    st.caption("Powered by Claude Sonnet 4.5 • 180 IQ strategic analysis of your business metrics")
+
+    # Check for API key
+    api_key = st.session_state.get('anthropic_api_key', '')
+
+    if not api_key:
+        st.warning("⚠️ **API Key Required**")
+        st.markdown("""
+To use the AI Strategic Advisor, you need an Anthropic API key.
+
+**How to get one:**
+1. Go to [console.anthropic.com](https://console.anthropic.com)
+2. Sign up or log in
+3. Navigate to API Keys
+4. Create a new key
+5. Copy and paste it below
+        """)
+
+        api_key_input = st.text_input(
+            "Anthropic API Key",
+            type="password",
+            key="api_key_input",
+            help="Your API key will be stored in session state (not saved permanently)"
+        )
+
+        if st.button("💾 Save API Key"):
+            if api_key_input:
+                st.session_state['anthropic_api_key'] = api_key_input
+                st.success("✅ API Key saved! Refresh to use the advisor.")
+                st.rerun()
+            else:
+                st.error("❌ Please enter an API key")
+
+        st.info("💡 **Privacy Note:** Your API key is only stored in session state and is never saved to disk.")
+        st.stop()
+
+    # API key exists - show advisor interface
+    try:
+        from modules.ai_advisor import StrategyAdvisor
+        import pandas as pd
+
+        advisor = StrategyAdvisor(api_key=api_key)
+
+        # Gather comprehensive metrics for AI
+        ai_metrics = {
+            # Unit economics
+            'ltv_cac_ratio': unit_econ['ltv_cac'],
+            'cac': unit_econ['cac'],
+            'payback_months': unit_econ['payback_months'],
+            'gross_margin_pct': pnl_data['gross_margin'],
+            'ebitda_margin_pct': pnl_data['ebitda_margin'],
+
+            # Revenue & sales
+            'monthly_revenue': gtm_metrics['monthly_revenue_immediate'],
+            'monthly_sales': gtm_metrics['monthly_sales'],
+            'close_rate_pct': gtm_metrics['blended_close_rate'] * 100,
+            'marketing_spend': marketing_spend,
+
+            # Team
+            'num_closers': st.session_state.get('num_closers_main', 8),
+            'num_setters': st.session_state.get('num_setters_main', 2),
+            'deals_per_closer': gtm_metrics['monthly_sales'] / st.session_state.get('num_closers_main', 8) if st.session_state.get('num_closers_main', 8) > 0 else 0,
+            'closer_utilization': (gtm_metrics['total_meetings_held'] / (st.session_state.get('meetings_per_closer', 3.0) * st.session_state.get('working_days', 20) * st.session_state.get('num_closers_main', 8)) * 100) if st.session_state.get('num_closers_main', 8) > 0 else 0,
+
+            # OTE (from Tab 6 calculations - we need to recompute here)
+            'closer_ote_attainment': 0,  # Will calculate below
+            'setter_ote_attainment': 0,
+            'team_avg_attainment': 0,
+        }
+
+        # Calculate OTE attainment for AI context
+        closer_ote_monthly = st.session_state.get('closer_ote_monthly', 5000)
+        setter_ote_monthly = st.session_state.get('setter_ote_monthly', 4000)
+        closer_base_monthly = st.session_state.get('closer_base', 0) / 12
+        setter_base_monthly = st.session_state.get('setter_base', 0) / 12
+
+        num_closers = st.session_state.get('num_closers_main', 8)
+        num_setters = st.session_state.get('num_setters_main', 2)
+
+        actual_closer_monthly = (comm_calc['closer_pool'] / num_closers if num_closers > 0 else 0) + closer_base_monthly
+        actual_setter_monthly = (comm_calc['setter_pool'] / num_setters if num_setters > 0 else 0) + setter_base_monthly
+
+        ai_metrics['closer_ote_attainment'] = (actual_closer_monthly / closer_ote_monthly * 100) if closer_ote_monthly > 0 else 0
+        ai_metrics['setter_ote_attainment'] = (actual_setter_monthly / setter_ote_monthly * 100) if setter_ote_monthly > 0 else 0
+        ai_metrics['team_avg_attainment'] = (ai_metrics['closer_ote_attainment'] + ai_metrics['setter_ote_attainment']) / 2
+
+        # Main analysis section
+        st.markdown("### 🚀 One-Click Business Analysis")
+
+        col_analyze, col_clear = st.columns([3, 1])
+
+        with col_analyze:
+            if st.button("🧠 Analyze My Business", type="primary", use_container_width=True):
+                with st.spinner("🤔 Consulting with AI strategist... (this may take 10-20 seconds)"):
+                    analysis = advisor.analyze_business_health(ai_metrics)
+                    st.session_state['last_ai_analysis'] = analysis
+                    st.session_state['ai_analysis_timestamp'] = pd.Timestamp.now()
+
+        with col_clear:
+            if st.button("🗑️ Clear", use_container_width=True):
+                if 'last_ai_analysis' in st.session_state:
+                    del st.session_state['last_ai_analysis']
+                if 'ai_analysis_timestamp' in st.session_state:
+                    del st.session_state['ai_analysis_timestamp']
+                st.rerun()
+
+        # Show last analysis if exists
+        if 'last_ai_analysis' in st.session_state:
+            timestamp = st.session_state.get('ai_analysis_timestamp', pd.Timestamp.now())
+            st.caption(f"📅 Analysis from: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
+
+            st.markdown("---")
+            st.markdown(st.session_state['last_ai_analysis'])
+            st.markdown("---")
+
+        # Conversational Q&A
+        st.markdown("### 💬 Ask Strategic Questions")
+        st.caption("Ask anything about your GTM strategy, unit economics, team structure, or growth plans")
+
+        question = st.text_area(
+            "Your Question",
+            placeholder="Example: How should I allocate my next $50K in marketing spend?\n\nExample: Should I hire more closers or setters first?\n\nExample: What's my biggest constraint right now?",
+            height=100,
+            key="ai_question_input"
+        )
+
+        if st.button("🤔 Get Answer", type="secondary", disabled=not question):
+            if question:
+                with st.spinner("🤔 Thinking..."):
+                    # Include last analysis as context if available
+                    context = st.session_state.get('last_ai_analysis', None)
+                    answer = advisor.ask_question(question, ai_metrics, context)
+
+                    st.markdown("---")
+                    st.markdown(f"**Q:** {question}")
+                    st.markdown(answer)
+                    st.markdown("---")
+
+        # Scenario Analysis
+        st.markdown("### 🔮 Scenario Analysis")
+        st.caption("Model specific changes and get strategic recommendations")
+
+        scenario_examples = [
+            "What if I double my marketing spend?",
+            "What if I add 3 more closers?",
+            "What if I improve close rate by 10%?",
+            "What if I increase OTE by 20%?",
+            "What if I switch to 100% commission model?"
+        ]
+
+        scenario_col1, scenario_col2 = st.columns([3, 1])
+
+        with scenario_col1:
+            scenario = st.text_input(
+                "Scenario to Analyze",
+                placeholder="Describe the change you want to model...",
+                key="scenario_input"
+            )
+
+        with scenario_col2:
+            use_example = st.selectbox(
+                "Or pick example",
+                [""] + scenario_examples,
+                key="scenario_example"
+            )
+
+        if use_example:
+            scenario = use_example
+
+        if st.button("🔬 Analyze Scenario", disabled=not scenario):
+            if scenario:
+                with st.spinner("🔬 Analyzing scenario..."):
+                    scenario_analysis = advisor.scenario_analysis(scenario, ai_metrics)
+
+                    st.markdown("---")
+                    st.markdown(f"**Scenario:** {scenario}")
+                    st.markdown(scenario_analysis)
+                    st.markdown("---")
+
+        # Tips section
+        st.markdown("---")
+        st.markdown("### 💡 Tips for Better Analysis")
+
+        tips_col1, tips_col2 = st.columns(2)
+
+        with tips_col1:
+            st.markdown("**Good Questions:**")
+            st.caption("✅ 'What's my biggest growth constraint?'")
+            st.caption("✅ 'Should I hire more closers or increase marketing?'")
+            st.caption("✅ 'How do I improve my LTV:CAC ratio?'")
+            st.caption("✅ 'What comp structure maximizes EBITDA?'")
+
+        with tips_col2:
+            st.markdown("**Scenario Ideas:**")
+            st.caption("💡 Test hiring decisions")
+            st.caption("💡 Model marketing budget changes")
+            st.caption("💡 Compare comp structures")
+            st.caption("💡 Evaluate pricing changes")
+
+        # API usage notice
+        st.markdown("---")
+        st.info("💰 **API Usage:** Each analysis uses ~2,000-3,000 tokens (~$0.01-0.02 per request with Claude Sonnet). Monitor your usage in the [Anthropic Console](https://console.anthropic.com).")
+
+    except ImportError:
+        st.error("❌ **Error:** AI Advisor module not found. Make sure `modules/ai_advisor.py` exists.")
+    except Exception as e:
+        st.error(f"❌ **Error:** {str(e)}")
+        st.caption("Check your API key and try again.")
 
 # ============= FOOTER =============
 st.markdown("---")
