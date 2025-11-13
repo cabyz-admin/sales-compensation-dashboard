@@ -4079,7 +4079,7 @@ To use the AI Strategic Advisor, you need an Anthropic API key.
             'num_closers': st.session_state.get('num_closers_main', 8),
             'num_setters': st.session_state.get('num_setters_main', 2),
             'deals_per_closer': gtm_metrics['monthly_sales'] / st.session_state.get('num_closers_main', 8) if st.session_state.get('num_closers_main', 8) > 0 else 0,
-            'closer_utilization': (gtm_metrics['total_meetings_held'] / (st.session_state.get('meetings_per_closer', 3.0) * st.session_state.get('working_days', 20) * st.session_state.get('num_closers_main', 8)) * 100) if st.session_state.get('num_closers_main', 8) > 0 else 0,
+            'closer_utilization': (gtm_metrics['monthly_meetings_held'] / (st.session_state.get('meetings_per_closer', 3.0) * st.session_state.get('working_days', 20) * st.session_state.get('num_closers_main', 8)) * 100) if st.session_state.get('num_closers_main', 8) > 0 else 0,
 
             # OTE (from Tab 6 calculations - we need to recompute here)
             'closer_ote_attainment': 0,  # Will calculate below
