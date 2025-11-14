@@ -3242,6 +3242,387 @@ with tab5:
                 st.success("✅ Setter capacity healthy")
 
         # ===== NEW: Demand vs Supply Constraint Analysis =====
+            if 'discovery_call_pct' not in st.session_state:
+                st.session_state['setter_discovery_call_pct'] = 100.0  # 100% need discovery
+            if 'confirmation_call_pct' not in st.session_state:
+                st.session_state['setter_confirmation_call_pct'] = 80.0  # 80% need confirmation
+            if 'avg_call_duration_mins' not in st.session_state:
+                st.session_state['setter_avg_call_duration_mins'] = 8.0  # 8 min avg call
+            if 'setter_daily_hours' not in st.session_state:
+                st.session_state['setter_daily_hours'] = 6.0  # 6 productive hours/day
+
+            workflow_cols = st.columns(3)
+
+            with workflow_cols[0]:
+                st.markdown("**📊 Funnel Contact Rates**")
+
+                contact_rate = st.number_input(
+                    "Lead Contact Rate (%)",
+                    min_value=1.0,
+                    max_value=100.0,
+                    value=st.session_state.get('setter_contact_rate', 30.0),
+                    step=5.0,
+                    key="setter_contact_rate_widget",
+                    help="% of marketing leads that setters actually contact (vs automated workflows)"
+                )
+                st.session_state['setter_contact_rate'] = contact_rate
+
+                contacts_per_meeting = st.number_input(
+                    "Contacts Per Meeting Booked",
+                    min_value=1.0,
+                    max_value=50.0,
+                    value=st.session_state.get('setter_contacts_per_meeting', 5.0),
+                    step=0.5,
+                    key="setter_contacts_per_meeting_widget",
+                    help="How many contacts needed to book 1 meeting (1 ÷ contact-to-meeting rate)"
+                )
+                st.session_state['setter_contacts_per_meeting'] = contacts_per_meeting
+
+                # Calculate derived metric
+                contact_to_meeting_rate = (1 / contacts_per_meeting) * 100
+                st.caption(f"📈 Contact → Meeting Rate: **{contact_to_meeting_rate:.1f}%**")
+
+            with workflow_cols[1]:
+                st.markdown("**🔍 Qualification & Confirmation**")
+
+                discovery_call_pct = st.number_input(
+                    "Discovery Call Required (%)",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=st.session_state.get('setter_discovery_call_pct', 100.0),
+                    step=5.0,
+                    key="setter_discovery_call_pct_widget",
+                    help="% of contacts requiring a discovery/qualification call before booking"
+                )
+                st.session_state['setter_discovery_call_pct'] = discovery_call_pct
+
+                confirmation_call_pct = st.number_input(
+                    "Confirmation Call Required (%)",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=st.session_state.get('setter_confirmation_call_pct', 80.0),
+                    step=5.0,
+                    key="setter_confirmation_call_pct_widget",
+                    help="% of booked meetings requiring confirmation call"
+                )
+                st.session_state['setter_confirmation_call_pct'] = confirmation_call_pct
+
+                avg_call_duration = st.number_input(
+                    "Avg Call Duration (minutes)",
+                    min_value=1.0,
+                    max_value=60.0,
+                    value=st.session_state.get('setter_avg_call_duration_mins', 8.0),
+                    step=1.0,
+                    key="setter_avg_call_duration_mins_widget",
+                    help="Average time per call (cold, discovery, or confirmation)"
+                )
+                st.session_state['setter_avg_call_duration_mins'] = avg_call_duration
+
+            with workflow_cols[2]:
+                st.markdown("**⏰ Time Allocation**")
+
+                setter_daily_hours = st.number_input(
+                    "Productive Hours/Day",
+                    min_value=1.0,
+                    max_value=12.0,
+                    value=st.session_state.get('setter_daily_hours', 6.0),
+                    step=0.5,
+                    key="setter_daily_hours_widget",
+                    help="Hours per day available for calling (excluding admin, breaks, training)"
+                )
+                st.session_state['setter_daily_hours'] = setter_daily_hours
+
+                # Calculate capacity
+                minutes_per_day = setter_daily_hours * 60
+                max_calls_per_day = minutes_per_day / avg_call_duration
+
+                st.metric("Minutes Available/Day", f"{minutes_per_day:.0f}")
+                st.metric("Max Calls/Day (Theoretical)", f"{max_calls_per_day:.0f}")
+                st.caption("⚠️ Actual will be lower due to dial time, CRM work, etc.")
+
+            # ===== DAILY ACTIVITY CALCULATIONS =====
+            st.markdown("---")
+            st.markdown("### 📅 Daily Activity Breakdown (Per Setter)")
+
+            # Mode selector: Target-based vs GTM-based
+            planning_mode = st.radio(
+                "Planning Mode",
+                ["🎯 Target-Based (Plan)", "📊 GTM-Based (Actual Funnel)"],
+                help="Target: Plan based on meeting goals | GTM: Calculate based on actual GTM funnel leads and conversions",
+                horizontal=True
+            )
+
+            if planning_mode == "📊 GTM-Based (Actual Funnel)":
+                # ===== GTM-BASED MODE =====
+                st.info("💡 **GTM Mode:** Calculating setter activities based on your actual GTM Command Center funnel")
+
+                # Get GTM funnel metrics
+                gtm_leads_monthly = gtm_metrics['monthly_leads']
+                gtm_contacts_monthly = gtm_metrics['monthly_contacts']
+                gtm_meetings_scheduled_monthly = gtm_metrics['monthly_meetings_scheduled']
+                gtm_meetings_held_monthly = gtm_metrics['monthly_meetings_held']
+
+                # Calculate what setters need to handle
+                num_setters = st.session_state.get('num_setters_main', 4)
+
+                # Leads that setters need to contact (based on contact rate parameter)
+                leads_to_contact_monthly = gtm_leads_monthly * (contact_rate / 100)
+                leads_to_contact_daily = leads_to_contact_monthly / working_days
+                leads_per_setter_daily = leads_to_contact_daily / num_setters if num_setters > 0 else 0
+
+                # Actual contacts from GTM (already calculated)
+                contacts_monthly = gtm_contacts_monthly
+                contacts_daily = contacts_monthly / working_days
+                contacts_per_setter_daily = contacts_daily / num_setters if num_setters > 0 else 0
+
+                # Meetings to book (from GTM funnel)
+                meetings_to_book_monthly = gtm_meetings_scheduled_monthly
+                meetings_to_book_daily = meetings_to_book_monthly / working_days
+                meetings_per_setter_daily = meetings_to_book_daily / num_setters if num_setters > 0 else 0
+
+                # Discovery calls (based on contacts)
+                discovery_calls_daily = contacts_per_setter_daily * (discovery_call_pct / 100)
+
+                # Confirmation calls (based on meetings booked)
+                confirmation_calls_daily = meetings_per_setter_daily * (confirmation_call_pct / 100)
+
+                st.caption(f"📊 **From GTM Funnel:** {gtm_leads_monthly:.0f} leads/mo → {gtm_contacts_monthly:.0f} contacts/mo → {gtm_meetings_scheduled_monthly:.0f} meetings/mo")
+
+            else:
+                # ===== TARGET-BASED MODE =====
+                st.info("💡 **Target Mode:** Planning based on 'Meetings Booked/Setter/Day' target (from Team Configuration above)")
+
+                # Get target from main config
+                target_meetings_per_setter_per_day = st.session_state.get('meetings_per_setter', 2.0)
+                meetings_per_setter_daily = target_meetings_per_setter_per_day
+
+                # Calculate backward from target
+                contacts_per_setter_daily = meetings_per_setter_daily * contacts_per_meeting
+
+                # Discovery calls
+                discovery_calls_daily = contacts_per_setter_daily * (discovery_call_pct / 100)
+
+                # Confirmation calls
+                confirmation_calls_daily = meetings_per_setter_daily * (confirmation_call_pct / 100)
+
+                # For display
+                meetings_to_book_daily = meetings_per_setter_daily
+                contacts_needed_daily = contacts_per_setter_daily
+
+            # Common calculations for both modes
+            # Total calls per day
+            total_calls_daily = discovery_calls_daily + confirmation_calls_daily
+
+            # 6. Total time on calls
+            total_call_time_mins = total_calls_daily * avg_call_duration
+            total_call_time_hours = total_call_time_mins / 60
+
+            # 7. Time remaining for cold calling / admin
+            time_remaining_hours = setter_daily_hours - total_call_time_hours
+            time_remaining_pct = (time_remaining_hours / setter_daily_hours * 100) if setter_daily_hours > 0 else 0
+
+            # Display daily activities
+            activity_cols = st.columns(4)
+
+            with activity_cols[0]:
+                if planning_mode == "📊 GTM-Based (Actual Funnel)":
+                    st.markdown("**📊 GTM Funnel Output**")
+                    st.metric("Meetings to Book", f"{meetings_per_setter_daily:.1f}")
+                    st.caption("(From GTM Command Center)")
+
+                    st.metric("Contacts from Funnel", f"{contacts_per_setter_daily:.1f}")
+                    st.caption(f"(GTM contacts ÷ {num_setters} setters)")
+                else:
+                    st.markdown("**🎯 Target Output**")
+                    st.metric("Meetings to Book", f"{meetings_to_book_daily:.1f}")
+                    st.caption("(From 'Meetings Booked/Setter/Day' above)")
+
+                    st.metric("Contacts Needed", f"{contacts_needed_daily:.1f}")
+                    st.caption(f"(at {contacts_per_meeting:.1f} contacts/meeting)")
+
+            with activity_cols[1]:
+                st.markdown("**📞 Call Volume**")
+                st.metric("Discovery Calls", f"{discovery_calls_daily:.1f}")
+                st.caption(f"({discovery_call_pct:.0f}% of contacts)")
+
+                st.metric("Confirmation Calls", f"{confirmation_calls_daily:.1f}")
+                st.caption(f"({confirmation_call_pct:.0f}% of meetings)")
+
+                st.metric("**Total Calls/Day**", f"{total_calls_daily:.1f}", delta="Core activity")
+
+            with activity_cols[2]:
+                st.markdown("**⏰ Time Allocation**")
+                st.metric("Call Time", f"{total_call_time_hours:.1f}h")
+                st.caption(f"({total_call_time_mins:.0f} mins at {avg_call_duration:.0f}m/call)")
+
+                time_color = "normal" if time_remaining_pct > 20 else "inverse"
+                st.metric("Time Remaining", f"{time_remaining_hours:.1f}h",
+                         delta=f"{time_remaining_pct:.0f}% of day",
+                         delta_color=time_color)
+                st.caption("For cold calling, admin, CRM")
+
+            with activity_cols[3]:
+                st.markdown("**📊 Capacity Check**")
+
+                # Calculate if workload is feasible
+                utilization_pct = (total_call_time_hours / setter_daily_hours * 100) if setter_daily_hours > 0 else 0
+
+                if utilization_pct > 90:
+                    st.error(f"🚨 {utilization_pct:.0f}% Utilized")
+                    st.caption("⚠️ Overloaded! Reduce targets or hire more setters")
+                elif utilization_pct > 75:
+                    st.warning(f"⚠️ {utilization_pct:.0f}% Utilized")
+                    st.caption("High but manageable")
+                else:
+                    st.success(f"✅ {utilization_pct:.0f}% Utilized")
+                    st.caption("Healthy workload")
+
+                # Check if calls fit in day
+                if total_calls_daily > max_calls_per_day:
+                    st.error(f"❌ Can't fit {total_calls_daily:.0f} calls")
+                    st.caption(f"Max theoretical: {max_calls_per_day:.0f}")
+                else:
+                    st.success(f"✅ Calls fit in day")
+
+            # ===== MONTHLY ACTIVITY SUMMARY =====
+            st.markdown("---")
+            st.markdown("### 📊 Monthly Activity Summary (Per Setter)")
+
+            monthly_cols = st.columns(3)
+
+            with monthly_cols[0]:
+                if planning_mode == "📊 GTM-Based (Actual Funnel)":
+                    st.markdown("**📊 GTM Monthly Volume**")
+                    monthly_meetings_target = meetings_per_setter_daily * working_days
+                    monthly_contacts_needed = contacts_per_setter_daily * working_days
+
+                    st.metric("Meetings to Book", f"{monthly_meetings_target:.0f}")
+                    st.metric("Contacts from GTM", f"{monthly_contacts_needed:.0f}")
+                    st.caption(f"(From {gtm_meetings_scheduled_monthly:.0f} total GTM meetings)")
+                else:
+                    st.markdown("**🎯 Monthly Targets**")
+                    monthly_meetings_target = meetings_to_book_daily * working_days
+                    monthly_contacts_needed = contacts_needed_daily * working_days
+
+                    st.metric("Meetings to Book", f"{monthly_meetings_target:.0f}")
+                    st.metric("Contacts Required", f"{monthly_contacts_needed:.0f}")
+
+            with monthly_cols[1]:
+                st.markdown("**📞 Monthly Call Volume**")
+                monthly_discovery_calls = discovery_calls_daily * working_days
+                monthly_confirmation_calls = confirmation_calls_daily * working_days
+                monthly_total_calls = total_calls_daily * working_days
+
+                st.metric("Discovery Calls", f"{monthly_discovery_calls:.0f}")
+                st.metric("Confirmation Calls", f"{monthly_confirmation_calls:.0f}")
+                st.metric("**Total Calls**", f"{monthly_total_calls:.0f}", delta="per month")
+
+            with monthly_cols[2]:
+                st.markdown("**⏰ Monthly Time Investment**")
+                monthly_call_hours = total_call_time_hours * working_days
+                monthly_available_hours = setter_daily_hours * working_days
+
+                st.metric("Time on Calls", f"{monthly_call_hours:.0f}h")
+                st.metric("Total Available", f"{monthly_available_hours:.0f}h")
+                st.metric("Utilization", f"{utilization_pct:.0f}%")
+
+            # ===== TEAM-LEVEL VIEW =====
+            st.markdown("---")
+            st.markdown("### 👥 Team-Level Setter Activity")
+
+            team_activity_cols = st.columns(4)
+
+            num_setters = st.session_state.get('num_setters_main', 4)
+
+            with team_activity_cols[0]:
+                st.markdown("**🎯 Team Output**")
+                team_meetings_monthly = monthly_meetings_target * num_setters
+                team_contacts_monthly = monthly_contacts_needed * num_setters
+
+                st.metric("Team Size", f"{num_setters} setters")
+                st.metric("Meetings/Month", f"{team_meetings_monthly:.0f}")
+                st.metric("Contacts/Month", f"{team_contacts_monthly:.0f}")
+
+            with team_activity_cols[1]:
+                st.markdown("**📞 Team Call Volume**")
+                team_calls_daily = total_calls_daily * num_setters
+                team_calls_monthly = monthly_total_calls * num_setters
+
+                st.metric("Calls/Day", f"{team_calls_daily:.0f}")
+                st.metric("Calls/Month", f"{team_calls_monthly:.0f}")
+
+            with team_activity_cols[2]:
+                st.markdown("**⏰ Team Capacity**")
+                team_hours_monthly = monthly_available_hours * num_setters
+                team_call_hours_monthly = monthly_call_hours * num_setters
+
+                st.metric("Available Hours", f"{team_hours_monthly:.0f}h/mo")
+                st.metric("Call Hours", f"{team_call_hours_monthly:.0f}h/mo")
+
+            with team_activity_cols[3]:
+                st.markdown("**💡 Recommendations**")
+
+                if utilization_pct > 90:
+                    st.error("🚨 **Hire More Setters**")
+                    st.caption(f"Current: {num_setters}")
+                    setters_needed = num_setters * (utilization_pct / 75)  # Target 75%
+                    st.caption(f"Need: {setters_needed:.1f} setters")
+                elif utilization_pct < 50:
+                    st.warning("💡 **Underutilized**")
+                    st.caption("Can handle more meetings")
+                    potential_meetings = (setter_daily_hours / (total_call_time_hours / meetings_to_book_daily)) if total_call_time_hours > 0 else meetings_to_book_daily
+                    st.caption(f"Could book {potential_meetings:.1f}/day")
+                else:
+                    st.success("✅ **Well Staffed**")
+                    st.caption("Team capacity aligned")
+
+            # ===== INSIGHTS & PLANNING =====
+            st.markdown("---")
+            st.markdown("### 💡 Insights & Planning Guidance")
+
+            insight_cols = st.columns(2)
+
+            with insight_cols[0]:
+                st.markdown("**📊 Key Metrics**")
+                st.caption(f"• **{contacts_per_meeting:.1f} contacts** needed per meeting booked")
+                st.caption(f"• **{total_calls_daily:.1f} calls/day** per setter ({discovery_calls_daily:.1f} discovery + {confirmation_calls_daily:.1f} confirmation)")
+                st.caption(f"• **{total_call_time_hours:.1f} hours/day** on calls ({utilization_pct:.0f}% of available time)")
+                st.caption(f"• **{time_remaining_hours:.1f} hours/day** for cold outreach, admin, CRM work")
+
+                if time_remaining_hours < 1:
+                    st.error("⚠️ **Warning:** Less than 1 hour/day for cold calling. Setters may struggle to generate new pipeline.")
+                elif time_remaining_hours < 2:
+                    st.warning("💡 Consider increasing setter headcount or reducing meeting targets.")
+
+            with insight_cols[1]:
+                st.markdown("**🎯 What This Tells You**")
+
+                if utilization_pct > 85:
+                    st.markdown("""
+                    **🚨 Setters are maxed out:**
+                    - Little time for proactive outreach
+                    - May struggle with follow-ups
+                    - Consider hiring or reducing targets
+                    """)
+                elif utilization_pct > 65:
+                    st.markdown("""
+                    **✅ Healthy setter workload:**
+                    - Time for core activities
+                    - Buffer for unexpected work
+                    - Can handle slight growth
+                    """)
+                else:
+                    st.markdown("""
+                    **💡 Setters have capacity:**
+                    - Can increase meeting targets
+                    - Time for strategic outreach
+                    - Could take on special projects
+                    """)
+
+            st.markdown("---")
+            st.success("💡 **Recommendation:** Use this model to plan setter activities, set realistic expectations, and determine when to hire. Adjust 'Meetings Booked/Setter/Day' based on their actual capacity to sustain the full workflow.")
+
+        # ===== NEW: Demand vs Supply Constraint Analysis =====
         st.markdown("---")
         st.markdown("### 🎯 Demand vs Supply Analysis")
         
