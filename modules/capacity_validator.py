@@ -2,6 +2,7 @@
 Capacity Validator - Single source of truth for GTM → Team workload validation
 Extracts and enhances existing Tab 2 logic (lines 1564-1600)
 """
+import math
 
 def validate_capacity(gtm_channels, num_setters, num_closers, working_days=20,
                       calls_per_lead=3, avg_call_mins=8, max_hours_per_day=6):
