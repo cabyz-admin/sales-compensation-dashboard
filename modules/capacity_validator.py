@@ -75,7 +75,6 @@ def validate_capacity(gtm_channels, num_setters, num_closers, working_days=20,
         warnings.append(f"🚨 Setters at {setter_capacity_pct:.0f}% capacity ({shortfall_pct:.0f}% over limit)")
 
         # Calculate fixes
-        import math
         setters_needed = math.ceil(num_setters * (setter_capacity_pct / 85))
         additional_setters = setters_needed - num_setters
 
